@@ -76,7 +76,7 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1305310575610654}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.59, y: 0, z: 0}
+  m_LocalPosition: {x: 2, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 4626436379127922}
@@ -283,6 +283,14 @@ MonoBehaviour:
   velocitySynchronizationMode: 8
   positionThreshold: 0.01
   snapThreshold: 10
+  compressionPositionMode: 1
+  minPositionValue: {x: -40, y: -40, z: -40}
+  maxPositionValue: {x: 40, y: 40, z: 40}
+  compressionVelocityMode: 0
+  minVelocityValue: {x: 0, y: 0, z: 0}
+  maxVelocityValue: {x: 0, y: 0, z: 0}
+  precisionAfterCompression: {x: 0.0006103609, y: 0.0006103609, z: 0.0006103609}
+  returnedValueOnCurrentPosition: {x: 0.00061035156, y: 0.00061035156, z: 0.00061035156}
 --- !u!114 &114587962071652100
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -313,6 +321,14 @@ MonoBehaviour:
   rotationSynchronizationMode: 7
   angularVelocitySynchronizationMode: 7
   rotationThreshold: 0.1
+  compressionRotationMode: 1
+  minRotationValue: {x: 0, y: 0, z: 0}
+  maxRotationValue: {x: 360, y: 360, z: 360}
+  precisionAfterCompression: {x: 0.002746624, y: 0.002746624, z: 0.002746624}
+  returnedValueOnCurrentRotation: {x: 0, y: 0, z: 0}
+  compressionAngularVelocityMode: 1
+  minAngularVelocityValue: {x: 0, y: 0, z: 0}
+  maxAngularVelocityValue: {x: 0, y: 0, z: 0}
 --- !u!114 &114827670515834772
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -339,9 +355,14 @@ MonoBehaviour:
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
   networkMovementSynchronization: {fileID: 0}
-  transform: {fileID: 4205423996803326}
+  m_transform: {fileID: 4205423996803326}
   rotationSynchronizationMode: 7
   rotationThreshold: 0.1
+  compressionRotationMode: 1
+  minRotationValue: {x: 0, y: 0, z: 0}
+  maxRotationValue: {x: 360, y: 360, z: 360}
+  precisionAfterCompression: {x: 0.002746624, y: 0.002746624, z: 0.002746624}
+  returnedValueOnCurrentRotation: {x: 0, y: 0, z: 0}
 --- !u!114 &114932352318098096
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -373,6 +394,11 @@ MonoBehaviour:
   positionInterpolationMode: 1
   positionThreshold: 0.01
   snapThreshold: 10
+  compressionMode: 1
+  minPositionValue: {x: -40, y: -40, z: -40}
+  maxPositionValue: {x: 40, y: 40, z: 40}
+  precisionAfterCompression: {x: 0.0006103609, y: 0.0006103609, z: 0.0006103609}
+  returnedValueOnCurrentPosition: {x: 2.0001526, y: 0.00061035156, z: 0.00061035156}
 --- !u!114 &114989741402422030
 MonoBehaviour:
   m_ObjectHideFlags: 1

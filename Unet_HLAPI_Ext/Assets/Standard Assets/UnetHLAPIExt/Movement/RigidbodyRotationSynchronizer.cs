@@ -56,6 +56,25 @@ namespace BC_Solution.UnetNetwork
         [SerializeField]
         public float rotationThreshold = 0.1f;
 
+        [Header("Compression")]
+        public COMPRESS_MODE compressionRotationMode = COMPRESS_MODE.NONE;
+        public Vector3 minRotationValue;
+        public Vector3 maxRotationValue;
+
+#if UNITY_EDITOR
+        [Space(10)]
+        [SerializeField]
+        Vector3 precisionAfterCompression;
+        [SerializeField]
+        Vector3 returnedValueOnCurrentRotation;
+# endif
+
+        [Space(5)]
+        public COMPRESS_MODE compressionAngularVelocityMode = COMPRESS_MODE.NONE;
+        public Vector3 minAngularVelocityValue;
+        public Vector3 maxAngularVelocityValue;
+
+
         private Quaternion lastRotation = Quaternion.identity;
         private Quaternion rotationError = Quaternion.identity;
 
@@ -122,16 +141,16 @@ namespace BC_Solution.UnetNetwork
         {
             lastRotation = this.rigidbody.rotation;
 
-            SerializeVector3(rotationSynchronizationMode, this.rigidbody.rotation.eulerAngles, networkWriter);
-            SerializeVector3(angularVelocitySynchronizationMode, this.rigidbody.angularVelocity, networkWriter);
+            SerializeVector3(rotationSynchronizationMode, this.rigidbody.rotation.eulerAngles, networkWriter, compressionRotationMode, minRotationValue, maxRotationValue);
+            SerializeVector3(angularVelocitySynchronizationMode, this.rigidbody.angularVelocity, networkWriter, compressionAngularVelocityMode, minAngularVelocityValue, maxAngularVelocityValue);
         }
 
         public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
         {
             RigidbodyState newState = new RigidbodyState(this.rigidbody, relativeTime);
 
-            UnserializeVector3(rotationSynchronizationMode, ref newState.m_rotation, networkReader);
-            UnserializeVector3(angularVelocitySynchronizationMode, ref newState.m_angularVelocity, networkReader);
+            UnserializeVector3(rotationSynchronizationMode, ref newState.m_rotation, networkReader, compressionRotationMode, minRotationValue, maxRotationValue);
+            UnserializeVector3(angularVelocitySynchronizationMode, ref newState.m_angularVelocity, networkReader, compressionAngularVelocityMode, minAngularVelocityValue, maxAngularVelocityValue);
 
 
             int place = AddState(newState);
@@ -155,14 +174,34 @@ namespace BC_Solution.UnetNetwork
         {
             Vector3 val = Vector3.zero;
 
-            UnserializeVector3(rotationSynchronizationMode, ref val, networkReader);
+            UnserializeVector3(rotationSynchronizationMode, ref val, networkReader, compressionRotationMode, minRotationValue, maxRotationValue);
             this.rigidbody.rotation = Quaternion.Euler(val);
 
             val = Vector3.zero;
-            UnserializeVector3(angularVelocitySynchronizationMode, ref val, networkReader);
+            UnserializeVector3(angularVelocitySynchronizationMode, ref val, networkReader, compressionAngularVelocityMode, minAngularVelocityValue, maxAngularVelocityValue);
             this.rigidbody.angularVelocity = val;
 
             ResetStatesBuffer();
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            switch (compressionRotationMode)
+            {
+                case COMPRESS_MODE.USHORT:
+                    returnedValueOnCurrentRotation.x = Math.Decompress(Math.CompressToShort(this.rigidbody.rotation.eulerAngles.x, minRotationValue.x, maxRotationValue.x, out precisionAfterCompression.x), minRotationValue.x, maxRotationValue.x);
+                    returnedValueOnCurrentRotation.y = Math.Decompress(Math.CompressToShort(this.rigidbody.rotation.eulerAngles.y, minRotationValue.y, maxRotationValue.y, out precisionAfterCompression.y), minRotationValue.y, maxRotationValue.y);
+                    returnedValueOnCurrentRotation.z = Math.Decompress(Math.CompressToShort(this.rigidbody.rotation.eulerAngles.z, minRotationValue.z, maxRotationValue.z, out precisionAfterCompression.z), minRotationValue.z, maxRotationValue.z);
+                    break;
+
+                case COMPRESS_MODE.NONE:
+                    returnedValueOnCurrentRotation.x = this.rigidbody.rotation.eulerAngles.x;
+                    returnedValueOnCurrentRotation.y = this.rigidbody.rotation.eulerAngles.y;
+                    returnedValueOnCurrentRotation.z = this.rigidbody.rotation.eulerAngles.z;
+                    break;
+            }
+        }
+#endif
     }
 }

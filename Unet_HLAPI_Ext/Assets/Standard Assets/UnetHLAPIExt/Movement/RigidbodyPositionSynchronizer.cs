@@ -62,8 +62,26 @@ namespace BC_Solution.UnetNetwork
         public float positionThreshold = 0.01f;
         public float snapThreshold = 10f;
 
-        private Vector3 lastPosition = Vector3.zero;
+        [Header("Compression")]
+        public COMPRESS_MODE compressionPositionMode = COMPRESS_MODE.NONE;
+        public Vector3 minPositionValue;
+        public Vector3 maxPositionValue;
 
+        [Space(5)]
+        public COMPRESS_MODE compressionVelocityMode = COMPRESS_MODE.NONE;
+        public Vector3 minVelocityValue;
+        public Vector3 maxVelocityValue;
+
+#if UNITY_EDITOR
+        [Space(10)]
+        [SerializeField]
+        Vector3 precisionAfterCompression;
+        [SerializeField]
+        Vector3 returnedValueOnCurrentPosition;
+# endif
+
+
+        private Vector3 lastPosition = Vector3.zero;
         private Vector3 positionError = Vector3.zero;
 
 
@@ -157,16 +175,16 @@ namespace BC_Solution.UnetNetwork
         {
             lastPosition = this.rigidbody.position;
 
-            SerializeVector3(positionSynchronizationMode, this.rigidbody.position, networkWriter);
-            SerializeVector3(velocitySynchronizationMode, this.rigidbody.velocity, networkWriter);
+            SerializeVector3(positionSynchronizationMode, this.rigidbody.position, networkWriter, compressionPositionMode, minPositionValue, maxPositionValue);
+            SerializeVector3(velocitySynchronizationMode, this.rigidbody.velocity, networkWriter, compressionVelocityMode, minVelocityValue, maxVelocityValue);
         }
 
         public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
         {
             RigidbodyPositionState newState = new RigidbodyPositionState(this.rigidbody, relativeTime);
 
-            UnserializeVector3(positionSynchronizationMode, ref newState.m_position, networkReader);
-            UnserializeVector3(velocitySynchronizationMode, ref newState.m_velocity, networkReader);
+            UnserializeVector3(positionSynchronizationMode, ref newState.m_position, networkReader, compressionPositionMode, minPositionValue, maxPositionValue);
+            UnserializeVector3(velocitySynchronizationMode, ref newState.m_velocity, networkReader, compressionVelocityMode, minVelocityValue, maxVelocityValue);
 
 
             int place = AddState(newState);
@@ -182,14 +200,34 @@ namespace BC_Solution.UnetNetwork
         public override void ReceiveSync(NetworkReader networkReader)
         {
             Vector3 val = Vector3.zero;
-            UnserializeVector3(positionSynchronizationMode, ref val, networkReader);
+            UnserializeVector3(positionSynchronizationMode, ref val, networkReader, compressionPositionMode, minPositionValue, maxPositionValue);
             this.rigidbody.position = val;
 
             val = Vector3.zero;
-            UnserializeVector3(velocitySynchronizationMode, ref val, networkReader);
+            UnserializeVector3(velocitySynchronizationMode, ref val, networkReader, compressionVelocityMode, minVelocityValue, maxVelocityValue);
             this.rigidbody.velocity = val;
 
             ResetStatesBuffer();
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            switch (compressionPositionMode)
+            {
+                case COMPRESS_MODE.USHORT:
+                    returnedValueOnCurrentPosition.x = Math.Decompress(Math.CompressToShort(this.rigidbody.position.x, minPositionValue.x, maxPositionValue.x, out precisionAfterCompression.x), minPositionValue.x, maxPositionValue.x);
+                    returnedValueOnCurrentPosition.y = Math.Decompress(Math.CompressToShort(this.rigidbody.position.y, minPositionValue.y, maxPositionValue.y, out precisionAfterCompression.y), minPositionValue.y, maxPositionValue.y);
+                    returnedValueOnCurrentPosition.z = Math.Decompress(Math.CompressToShort(this.rigidbody.position.z, minPositionValue.z, maxPositionValue.z, out precisionAfterCompression.z), minPositionValue.z, maxPositionValue.z);
+                    break;
+
+                case COMPRESS_MODE.NONE:
+                    returnedValueOnCurrentPosition.x = this.rigidbody.position.x;
+                    returnedValueOnCurrentPosition.y = this.rigidbody.position.y;
+                    returnedValueOnCurrentPosition.z = this.rigidbody.position.z;
+                    break;
+            }
+        }
+#endif
     }
 }

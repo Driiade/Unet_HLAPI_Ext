@@ -57,6 +57,19 @@ namespace BC_Solution.UnetNetwork
         private Vector3 extrapolationVelocity;
         private Vector3 positionError = Vector3.zero;
 
+        [Header("Compression")]
+        public COMPRESS_MODE compressionMode = COMPRESS_MODE.NONE;
+        public Vector3 minPositionValue;
+        public Vector3 maxPositionValue;
+
+#if UNITY_EDITOR
+        [Space(10)]
+        [SerializeField]
+         Vector3 precisionAfterCompression;
+        [SerializeField]
+        Vector3 returnedValueOnCurrentPosition;
+# endif
+
 
         public override void OnEndExtrapolation(State rhs)
         {
@@ -139,14 +152,14 @@ namespace BC_Solution.UnetNetwork
         public override void GetCurrentState(NetworkWriter networkWriter)
         {
             lastPosition = this.m_transform.position;
-            SerializeVector3(positionSynchronizationMode, this.m_transform.position, networkWriter);
+            SerializeVector3(positionSynchronizationMode, this.m_transform.position, networkWriter, compressionMode, minPositionValue, maxPositionValue);
         }
 
 
         public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
         {
             TransformPositionState newState = new TransformPositionState(this.m_transform, relativeTime);
-            UnserializeVector3(positionSynchronizationMode, ref newState.m_position, networkReader);
+            UnserializeVector3(positionSynchronizationMode, ref newState.m_position, networkReader, compressionMode, minPositionValue, maxPositionValue);
             AddState(newState);
         }
 
@@ -154,10 +167,30 @@ namespace BC_Solution.UnetNetwork
         {
             Vector3 val = Vector3.zero;
 
-            UnserializeVector3(positionSynchronizationMode, ref val, networkReader);
+            UnserializeVector3(positionSynchronizationMode, ref val, networkReader, compressionMode, minPositionValue, maxPositionValue);
             this.m_transform.position = val;
 
             ResetStatesBuffer();
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            switch(compressionMode)
+            {
+                case COMPRESS_MODE.USHORT:
+                    returnedValueOnCurrentPosition.x = Math.Decompress(Math.CompressToShort(this.m_transform.position.x, minPositionValue.x, maxPositionValue.x, out precisionAfterCompression.x), minPositionValue.x, maxPositionValue.x);
+                    returnedValueOnCurrentPosition.y = Math.Decompress(Math.CompressToShort(this.m_transform.position.y, minPositionValue.y, maxPositionValue.y, out precisionAfterCompression.y), minPositionValue.y, maxPositionValue.y);
+                    returnedValueOnCurrentPosition.z = Math.Decompress(Math.CompressToShort(this.m_transform.position.z, minPositionValue.z, maxPositionValue.z, out precisionAfterCompression.z), minPositionValue.z, maxPositionValue.z);
+                    break;
+
+                case COMPRESS_MODE.NONE:
+                    returnedValueOnCurrentPosition.x = this.m_transform.position.x;
+                    returnedValueOnCurrentPosition.y = this.m_transform.position.y;
+                    returnedValueOnCurrentPosition.z = this.m_transform.position.z;
+                    break;
+            }
+        }
+#endif
     }
 }

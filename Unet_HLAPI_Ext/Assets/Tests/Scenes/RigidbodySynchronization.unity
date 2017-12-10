@@ -763,7 +763,6 @@ MonoBehaviour:
     type: 2}
   instantiatePlayerObjectOnClientConnect: 1
   registeredNetworkedGameObjectsArray: []
-  debug: 1
 --- !u!4 &1807647483
 Transform:
   m_ObjectHideFlags: 0

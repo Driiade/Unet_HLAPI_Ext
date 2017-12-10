@@ -41,7 +41,7 @@ namespace BC_Solution.UnetNetwork
             }
 
             [SerializeField]
-            new Transform transform;
+            Transform m_transform;
 
 
             [Space(10)]
@@ -52,7 +52,21 @@ namespace BC_Solution.UnetNetwork
             [Tooltip("Angle in degree for minimum update")]
             float rotationThreshold = 0.1f;
 
-            private Quaternion lastRotation = Quaternion.identity;
+            [Header("Compression")]
+            public COMPRESS_MODE compressionRotationMode = COMPRESS_MODE.NONE;
+            public Vector3 minRotationValue;
+            public Vector3 maxRotationValue;
+
+#if UNITY_EDITOR
+        [Space(10)]
+        [SerializeField]
+        Vector3 precisionAfterCompression;
+        [SerializeField]
+        Vector3 returnedValueOnCurrentRotation;
+# endif
+
+
+        private Quaternion lastRotation = Quaternion.identity;
 
             private Quaternion extrapolationAngularVelocity;
 
@@ -62,7 +76,7 @@ namespace BC_Solution.UnetNetwork
 
             public override void OnEndExtrapolation(State rhs)
             {
-                this.transform.rotation = Quaternion.Slerp(this.transform.rotation, Quaternion.Euler(((TransformRotationState)statesBuffer[0]).m_rotation), Time.deltaTime / interpolationErrorTime);
+                this.m_transform.rotation = Quaternion.Slerp(this.m_transform.rotation, Quaternion.Euler(((TransformRotationState)statesBuffer[0]).m_rotation), Time.deltaTime / interpolationErrorTime);
             }
 
             public override void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation)
@@ -77,9 +91,9 @@ namespace BC_Solution.UnetNetwork
 
             public override void OnErrorCorrection()
             {
-                this.transform.rotation = Quaternion.Inverse(rotationError) * this.transform.rotation;
+                this.m_transform.rotation = Quaternion.Inverse(rotationError) * this.m_transform.rotation;
                 rotationError = Quaternion.Slerp(rotationError, Quaternion.identity, Time.deltaTime / interpolationErrorTime);
-                this.transform.rotation = rotationError * this.transform.rotation;
+                this.m_transform.rotation = rotationError * this.m_transform.rotation;
             }
 
             public override void OnExtrapolation()
@@ -88,25 +102,25 @@ namespace BC_Solution.UnetNetwork
                 float angle;
                 extrapolationAngularVelocity.ToAngleAxis(out angle, out axis);
                 angle *= Time.deltaTime;
-                this.transform.rotation = Quaternion.AngleAxis(angle, axis) * this.transform.rotation;
+                this.m_transform.rotation = Quaternion.AngleAxis(angle, axis) * this.m_transform.rotation;
             }
 
             public override void OnInterpolation(State rhs, State lhs, int lhsIndex, float t)
             {
                 //ROTATION     
-                Vector3 val = this.transform.rotation.eulerAngles;
+                Vector3 val = this.m_transform.rotation.eulerAngles;
                 GetVector3(rotationSynchronizationMode, ref val, Quaternion.Slerp(Quaternion.Euler(((TransformRotationState)lhs).m_rotation), Quaternion.Euler(((TransformRotationState)rhs).m_rotation), t).eulerAngles);
 
 
                 if (interpolationErrorTime > 0) /// We need to compensate error on extrapolation
                 {
                     if (extrapolatingState != null) //We were extrapolating, we need to calcul the error
-                        rotationError = this.transform.rotation * Quaternion.Inverse(Quaternion.Euler(val));
+                        rotationError = this.m_transform.rotation * Quaternion.Inverse(Quaternion.Euler(val));
                 }
                 else
                     rotationError = Quaternion.identity;
 
-                this.transform.rotation = rotationError * Quaternion.Euler(val);
+                this.m_transform.rotation = rotationError * Quaternion.Euler(val);
             }
 
 
@@ -114,13 +128,13 @@ namespace BC_Solution.UnetNetwork
             {
                 base.ResetStatesBuffer();
 
-                lastRotation = this.transform.rotation;
+                lastRotation = this.m_transform.rotation;
             }
 
             public override bool NeedToUpdate()
             {
                 if ((!base.NeedToUpdate()) ||
-                     Quaternion.Angle(this.transform.rotation, lastRotation) < rotationThreshold)
+                     Quaternion.Angle(this.m_transform.rotation, lastRotation) < rotationThreshold)
                     return false;
 
                 return true;
@@ -129,28 +143,48 @@ namespace BC_Solution.UnetNetwork
 
             public override void GetCurrentState(NetworkWriter networkWriter)
             {
-                lastRotation = this.transform.rotation;
+                lastRotation = this.m_transform.rotation;
 
-                SerializeVector3(rotationSynchronizationMode, this.transform.rotation.eulerAngles, networkWriter);
+            SerializeVector3(rotationSynchronizationMode, this.m_transform.rotation.eulerAngles, networkWriter, compressionRotationMode, minRotationValue, maxRotationValue);
             }
 
 
             public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
             {
-                TransformRotationState newState = new TransformRotationState(this.transform, relativeTime);
-                UnserializeVector3(rotationSynchronizationMode, ref newState.m_rotation, networkReader);
+                TransformRotationState newState = new TransformRotationState(this.m_transform, relativeTime);
+                UnserializeVector3(rotationSynchronizationMode, ref newState.m_rotation, networkReader, compressionRotationMode, minRotationValue, maxRotationValue);
 
-                AddState(newState);
+            AddState(newState);
             }
 
             public override void ReceiveSync(NetworkReader networkReader)
             {
                 Vector3 val = Vector3.zero;
 
-                UnserializeVector3(rotationSynchronizationMode, ref val, networkReader);
-                this.transform.rotation = Quaternion.Euler(val);
+                UnserializeVector3(rotationSynchronizationMode, ref val, networkReader, compressionRotationMode, minRotationValue, maxRotationValue);
+            this.m_transform.rotation = Quaternion.Euler(val);
 
                 ResetStatesBuffer();
             }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            switch (compressionRotationMode)
+            {
+                case COMPRESS_MODE.USHORT:
+                    returnedValueOnCurrentRotation.x = Math.Decompress(Math.CompressToShort(this.m_transform.rotation.eulerAngles.x, minRotationValue.x, maxRotationValue.x, out precisionAfterCompression.x), minRotationValue.x, maxRotationValue.x);
+                    returnedValueOnCurrentRotation.y = Math.Decompress(Math.CompressToShort(this.m_transform.rotation.eulerAngles.y, minRotationValue.y, maxRotationValue.y, out precisionAfterCompression.y), minRotationValue.y, maxRotationValue.y);
+                    returnedValueOnCurrentRotation.z = Math.Decompress(Math.CompressToShort(this.m_transform.rotation.eulerAngles.z, minRotationValue.z, maxRotationValue.z, out precisionAfterCompression.z), minRotationValue.z, maxRotationValue.z);
+                    break;
+
+                case COMPRESS_MODE.NONE:
+                    returnedValueOnCurrentRotation.x = this.m_transform.rotation.eulerAngles.x;
+                    returnedValueOnCurrentRotation.y = this.m_transform.rotation.eulerAngles.y;
+                    returnedValueOnCurrentRotation.z = this.m_transform.rotation.eulerAngles.z;
+                    break;
+            }
+        }
+#endif
     }
 }

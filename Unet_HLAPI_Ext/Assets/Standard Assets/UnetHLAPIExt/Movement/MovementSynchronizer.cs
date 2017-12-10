@@ -33,6 +33,7 @@ namespace BC_Solution.UnetNetwork
         public enum SYNCHRONISATION_MODE { NONE, X, Y, Z, XY, XZ, YZ, XYZ, CALCUL };
         public enum SNAP_MODE { NONE, RESET, CALCUL};
         public enum INTERPOLATION_MODE { LINEAR, CATMULL_ROM};
+        public enum COMPRESS_MODE {NONE, USHORT}
 
         [System.Serializable]
         public class Config
@@ -294,35 +295,105 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public void SerializeVector3(SYNCHRONISATION_MODE mode, Vector3 value, NetworkWriter networkWriter)
+        public void SerializeVector3(SYNCHRONISATION_MODE mode, Vector3 value, NetworkWriter networkWriter, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
         {
+            float precision;
+
             switch (mode)
             {
                 case SYNCHRONISATION_MODE.X:
-                    networkWriter.Write(value.x); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            networkWriter.Write(value.x);
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            networkWriter.Write(Math.CompressToShort(value.x, minValue.x, maxValue.x, out precision));
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.Y:
-                    networkWriter.Write(value.z); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            networkWriter.Write(value.y);
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            networkWriter.Write(Math.CompressToShort(value.y, minValue.y, maxValue.y, out precision));
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.Z:
-                    networkWriter.Write(value.z); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            networkWriter.Write(value.z);
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            networkWriter.Write(Math.CompressToShort(value.z, minValue.z, maxValue.z, out precision));
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.XY:
-                    networkWriter.Write(value.x);
-                    networkWriter.Write(value.y); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            networkWriter.Write(value.x);
+                            networkWriter.Write(value.y);
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            networkWriter.Write(Math.CompressToShort(value.x, minValue.x, maxValue.x, out precision));
+                            networkWriter.Write(Math.CompressToShort(value.y, minValue.y, maxValue.y, out precision));
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.XZ:
-                    networkWriter.Write(value.x);
-                    networkWriter.Write(value.z); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            networkWriter.Write(value.x);
+                            networkWriter.Write(value.z);
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            networkWriter.Write(Math.CompressToShort(value.x, minValue.x, maxValue.x, out precision));
+                            networkWriter.Write(Math.CompressToShort(value.z, minValue.z, maxValue.z, out precision));
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.YZ:
-                    networkWriter.Write(value.y);
-                    networkWriter.Write(value.z); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            networkWriter.Write(value.y);
+                            networkWriter.Write(value.z);
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            networkWriter.Write(Math.CompressToShort(value.y, minValue.y, maxValue.y, out precision));
+                            networkWriter.Write(Math.CompressToShort(value.z, minValue.z, maxValue.z, out precision));
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.XYZ:
-                    networkWriter.Write(value.x);
-                    networkWriter.Write(value.y);
-                    networkWriter.Write(value.z); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            networkWriter.Write(value.x);
+                            networkWriter.Write(value.y);
+                            networkWriter.Write(value.z);
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            networkWriter.Write(Math.CompressToShort(value.x, minValue.x, maxValue.x, out precision));
+                            networkWriter.Write(Math.CompressToShort(value.y, minValue.y, maxValue.y, out precision));
+                            networkWriter.Write(Math.CompressToShort(value.z, minValue.z, maxValue.z, out precision));
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.NONE: break;
                 case SYNCHRONISATION_MODE.CALCUL: break;
@@ -331,35 +402,102 @@ namespace BC_Solution.UnetNetwork
 
 
 
-        public void UnserializeVector3(SYNCHRONISATION_MODE mode, ref Vector3 value, NetworkReader networkReader)
+        public void UnserializeVector3(SYNCHRONISATION_MODE mode, ref Vector3 value, NetworkReader networkReader, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
         {
             switch (mode)
             {
                 case SYNCHRONISATION_MODE.X:
-                    value.x = networkReader.ReadSingle(); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            value.x = networkReader.ReadSingle();
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            value.x = Math.Decompress(networkReader.ReadUInt16(), minValue.x, maxValue.x);
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.Y:
-                    value.y = networkReader.ReadSingle(); break;
-
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            value.y = networkReader.ReadSingle();
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            value.y = Math.Decompress(networkReader.ReadUInt16(), minValue.y, maxValue.y);
+                            break;
+                    }
+                    break;
                 case SYNCHRONISATION_MODE.Z:
-                    value.z = networkReader.ReadSingle(); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            value.z = networkReader.ReadSingle();
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            value.z = Math.Decompress(networkReader.ReadUInt16(), minValue.z, maxValue.z);
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.XY:
-                    value.x = networkReader.ReadSingle();
-                    value.y = networkReader.ReadSingle(); break; 
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            value.x = networkReader.ReadSingle();
+                            value.y = networkReader.ReadSingle();
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            value.x = Math.Decompress(networkReader.ReadUInt16(), minValue.x, maxValue.x);
+                            value.y = Math.Decompress(networkReader.ReadUInt16(), minValue.y, maxValue.y);
+                            break;
+                    }
+                    break; 
 
                 case SYNCHRONISATION_MODE.XZ:
-                    value.x = networkReader.ReadSingle();
-                    value.z = networkReader.ReadSingle(); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            value.x = networkReader.ReadSingle();
+                            value.z = networkReader.ReadSingle();
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            value.x = Math.Decompress(networkReader.ReadUInt16(), minValue.x, maxValue.x);
+                            value.z = Math.Decompress(networkReader.ReadUInt16(), minValue.z, maxValue.z);
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.YZ:
-                    value.y = networkReader.ReadSingle();
-                    value.z = networkReader.ReadSingle(); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            value.y = networkReader.ReadSingle();
+                            value.z = networkReader.ReadSingle();
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            value.y = Math.Decompress(networkReader.ReadUInt16(), minValue.y, maxValue.y);
+                            value.z = Math.Decompress(networkReader.ReadUInt16(), minValue.z, maxValue.z);
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.XYZ:
-                    value.x = networkReader.ReadSingle();
-                    value.y = networkReader.ReadSingle();
-                    value.z = networkReader.ReadSingle(); break;
+                    switch (compressionMode)
+                    {
+                        case COMPRESS_MODE.NONE:
+                            value.x = networkReader.ReadSingle();
+                            value.y = networkReader.ReadSingle();
+                            value.z = networkReader.ReadSingle();
+                            break;
+                        case COMPRESS_MODE.USHORT:
+                            value.x = Math.Decompress(networkReader.ReadUInt16(), minValue.x, maxValue.x);
+                            value.y = Math.Decompress(networkReader.ReadUInt16(), minValue.y, maxValue.y);
+                            value.z = Math.Decompress(networkReader.ReadUInt16(), minValue.z, maxValue.z);
+                            break;
+                    }
+                    break;
 
                 case SYNCHRONISATION_MODE.NONE: break;
                 case SYNCHRONISATION_MODE.CALCUL: break;
