@@ -319,7 +319,7 @@ MonoBehaviour:
   networkMovementSynchronization: {fileID: 0}
   rigidbody: {fileID: 54041052144329094}
   rotationSynchronizationMode: 7
-  angularVelocitySynchronizationMode: 7
+  angularVelocitySynchronizationMode: 8
   rotationThreshold: 0.1
   compressionRotationMode: 1
   minRotationValue: {x: 0, y: 0, z: 0}

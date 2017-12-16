@@ -345,7 +345,6 @@ namespace BC_Solution.UnetNetwork
         public NetworkClient StartClient()
         {
             Debug.Log("Start client");
-            //timestampDelta = -1;
             return StartClient(serverAdress, serverPort);
         }
 
@@ -356,7 +355,6 @@ namespace BC_Solution.UnetNetwork
         /// <returns></returns>
         public NetworkClient StartClient(MatchInfo matchInfo)
         {
-            //timestampDelta = -1;
             Debug.Log("Start client");
 
             if (client != null)
@@ -384,8 +382,6 @@ namespace BC_Solution.UnetNetwork
             Debug.Log(serverAdress);
             Debug.Log(serverPort);
             Debug.Log("Start client");
-
-            //timestampDelta = -1;
 
             if (client != null)
                 StopClient();
@@ -490,7 +486,6 @@ namespace BC_Solution.UnetNetwork
             client.RegisterHandler(NetworkMessages.ClientConnectFromServerMessage, BaseOnClientConnectFromServer);
             client.RegisterHandler(NetworkMessages.ClientReadyFromServerMessage, BaseOnClientReadyFromServer);
 
-           // client.RegisterHandler(NetworkMessages.TimeStampSynchronisationMessage, BaseOnTimestampSynchronisation);
             client.RegisterHandler(NetworkMessages.ServerReadyMessage, BaseOnServerReady);
 
             foreach (ConfigurationInfo i in clientConfigurations)

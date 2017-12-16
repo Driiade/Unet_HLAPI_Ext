@@ -139,10 +139,22 @@ namespace BC_Solution.UnetNetwork
 
         public override void GetCurrentState(NetworkWriter networkWriter)
         {
-            lastRotation = this.rigidbody.rotation;
-
             SerializeVector3(rotationSynchronizationMode, this.rigidbody.rotation.eulerAngles, networkWriter, compressionRotationMode, minRotationValue, maxRotationValue);
             SerializeVector3(angularVelocitySynchronizationMode, this.rigidbody.angularVelocity, networkWriter, compressionAngularVelocityMode, minAngularVelocityValue, maxAngularVelocityValue);
+
+            if (angularVelocitySynchronizationMode == SYNCHRONISATION_MODE.CALCUL)
+            {
+                byte direction = 0;
+                direction = (byte)(direction & (this.rigidbody.angularVelocity.x > 0 ? ((byte)1 << 0) : (byte)0));  //optimization to know in wich direction the rigidobody is spinning
+                direction = (byte)(direction & (this.rigidbody.angularVelocity.y > 0 ? ((byte)1 << 1) : (byte)0));
+                direction = (byte)(direction & (this.rigidbody.angularVelocity.z > 0 ? ((byte)1 << 1) : (byte)0));
+
+                Debug.Log(Vector3.Dot(Vector3.up, this.rigidbody.angularVelocity));
+                networkWriter.Write(direction);
+            }
+
+
+            lastRotation = this.rigidbody.rotation;
         }
 
         public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
@@ -155,6 +167,11 @@ namespace BC_Solution.UnetNetwork
 
             int place = AddState(newState);
 
+            byte rotationSign = 0;
+
+            if (angularVelocitySynchronizationMode == SYNCHRONISATION_MODE.CALCUL)
+                rotationSign = networkReader.ReadByte();
+
             //If calcul are needed for velocity
             if (place != -1 && place < currentStatesIndex - 1)
             {
@@ -164,6 +181,10 @@ namespace BC_Solution.UnetNetwork
                     float rotationAngle;
                     Vector3 rotationAxis;
                     diffRotation.ToAngleAxis(out rotationAngle, out rotationAxis);
+
+                    rotationAxis.x = Mathf.Abs(rotationAxis.x) * ((1 << 0) & rotationSign) != 0 ? 1 : -1;
+                    rotationAxis.y = Mathf.Abs(rotationAxis.y) * ((1 << 1) & rotationSign) != 0 ? 1 : -1;
+                    rotationAxis.z = Mathf.Abs(rotationAxis.z) * ((1 << 2) & rotationSign) != 0 ? 1 : -1;
 
                     newState.m_angularVelocity = rotationAxis * rotationAngle * Mathf.Deg2Rad / ((statesBuffer[place].m_relativeTime - statesBuffer[place + 1].m_relativeTime));
                 }
