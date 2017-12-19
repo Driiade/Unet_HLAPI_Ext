@@ -228,7 +228,6 @@ PlayerSettings:
   AndroidTVCompatibility: 1
   AndroidIsGame: 1
   AndroidEnableTango: 0
-  AndroidTangoUsesCamera: 1
   androidEnableBanner: 1
   androidUseLowAccuracyLocation: 0
   m_AndroidBanners:
@@ -604,9 +603,9 @@ PlayerSettings:
     UNet: 1
   facebookSdkVersion: 7.9.4
   apiCompatibilityLevel: 2
-  cloudProjectId: a96da7e4-e6b8-4a53-ada5-ab25c0b9e324
+  cloudProjectId: 20e5e300-2864-46cf-b205-0023598e1e0f
   projectName: Unet HLAPI ++
-  organizationId: driiades
+  organizationId: driiade
   cloudEnabled: 0
   enableNativePlatformBackendsForNewInputSystem: 0
   disableOldInputManagerSupport: 0

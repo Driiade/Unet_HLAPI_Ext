@@ -19,11 +19,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. 
 */
 
-using System.Collections;
-using System.Collections.Generic;
+
 using UnityEngine;
 using UnityEngine.Networking;
-using System;
 
 namespace BC_Solution.UnetNetwork
 {
@@ -44,7 +42,7 @@ namespace BC_Solution.UnetNetwork
         }
 
         [SerializeField]
-        new Rigidbody rigidbody;
+        Rigidbody m_rigidbody;
 
         [Space(10)]
         [SerializeField]
@@ -81,20 +79,20 @@ namespace BC_Solution.UnetNetwork
 
         public override void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation)
         {
-            this.rigidbody.angularVelocity = ((RigidbodyState)extrapolatingState).m_angularVelocity;
+            this.m_rigidbody.angularVelocity = ((RigidbodyState)extrapolatingState).m_angularVelocity;
         }
 
         public override void OnEndExtrapolation(State rhs)
         {
-            this.rigidbody.MoveRotation(Quaternion.Slerp(this.rigidbody.rotation, Quaternion.Euler(((RigidbodyState)statesBuffer[0]).m_rotation), Time.deltaTime / interpolationErrorTime));
-            this.rigidbody.angularVelocity = Vector3.Lerp(this.rigidbody.angularVelocity, ((RigidbodyState)statesBuffer[0]).m_angularVelocity, Time.deltaTime / interpolationErrorTime);
+            this.m_rigidbody.MoveRotation(Quaternion.Slerp(this.m_rigidbody.rotation, Quaternion.Euler(((RigidbodyState)rhs).m_rotation), Time.deltaTime / interpolationErrorTime));
+            this.m_rigidbody.angularVelocity = Vector3.Lerp(this.m_rigidbody.angularVelocity, ((RigidbodyState)rhs).m_angularVelocity, Time.deltaTime / interpolationErrorTime);
         }
 
         public override void OnErrorCorrection()
         {
-            this.rigidbody.MoveRotation(Quaternion.Inverse(rotationError) * this.rigidbody.rotation);
+            this.m_rigidbody.MoveRotation(Quaternion.Inverse(rotationError) * this.m_rigidbody.rotation);
             rotationError = Quaternion.Slerp(rotationError, Quaternion.identity, Time.deltaTime / interpolationErrorTime);
-            this.rigidbody.MoveRotation(rotationError * this.rigidbody.rotation);
+            this.m_rigidbody.MoveRotation(rotationError * this.m_rigidbody.rotation);
         }
 
         public override void OnExtrapolation()
@@ -112,26 +110,26 @@ namespace BC_Solution.UnetNetwork
             if (interpolationErrorTime > 0) /// We need to compensate error on extrapolation
             {
                 if (extrapolatingState != null) //We were extrapolating, we need to calcul the error
-                    rotationError = this.rigidbody.rotation * Quaternion.Inverse(Quaternion.Euler(val));
+                    rotationError = this.m_rigidbody.rotation * Quaternion.Inverse(Quaternion.Euler(val));
             }
             else
                 rotationError = Quaternion.identity;
 
-            this.rigidbody.MoveRotation(rotationError * Quaternion.Euler(val));
+            this.m_rigidbody.MoveRotation(rotationError * Quaternion.Euler(val));
 
             //ANGULAR VELOCITY
-            this.rigidbody.angularVelocity = Vector3.Lerp(((RigidbodyState)lhs).m_angularVelocity, ((RigidbodyState)rhs).m_angularVelocity, t);
+            this.m_rigidbody.angularVelocity = Vector3.Lerp(((RigidbodyState)lhs).m_angularVelocity, ((RigidbodyState)rhs).m_angularVelocity, t);
         }
 
         public override void ResetStatesBuffer()
         {
             base.ResetStatesBuffer();
-            lastRotation = this.rigidbody.rotation;
+            lastRotation = this.m_rigidbody.rotation;
         }
 
         public override bool NeedToUpdate()
         {
-            if ((!base.NeedToUpdate()) || Vector3.SqrMagnitude(lastRotation.eulerAngles - this.rigidbody.rotation.eulerAngles) < rotationThreshold * rotationThreshold)
+            if ((!base.NeedToUpdate()) || Vector3.SqrMagnitude(lastRotation.eulerAngles - this.m_rigidbody.rotation.eulerAngles) < rotationThreshold * rotationThreshold)
                 return false;
 
             return true;
@@ -139,27 +137,26 @@ namespace BC_Solution.UnetNetwork
 
         public override void GetCurrentState(NetworkWriter networkWriter)
         {
-            SerializeVector3(rotationSynchronizationMode, this.rigidbody.rotation.eulerAngles, networkWriter, compressionRotationMode, minRotationValue, maxRotationValue);
-            SerializeVector3(angularVelocitySynchronizationMode, this.rigidbody.angularVelocity, networkWriter, compressionAngularVelocityMode, minAngularVelocityValue, maxAngularVelocityValue);
+            SerializeVector3(rotationSynchronizationMode, this.m_rigidbody.rotation.eulerAngles, networkWriter, compressionRotationMode, minRotationValue, maxRotationValue);
+            SerializeVector3(angularVelocitySynchronizationMode, this.m_rigidbody.angularVelocity, networkWriter, compressionAngularVelocityMode, minAngularVelocityValue, maxAngularVelocityValue);
 
             if (angularVelocitySynchronizationMode == SYNCHRONISATION_MODE.CALCUL)
             {
                 byte direction = 0;
-                direction = (byte)(direction & (this.rigidbody.angularVelocity.x > 0 ? ((byte)1 << 0) : (byte)0));  //optimization to know in wich direction the rigidobody is spinning
-                direction = (byte)(direction & (this.rigidbody.angularVelocity.y > 0 ? ((byte)1 << 1) : (byte)0));
-                direction = (byte)(direction & (this.rigidbody.angularVelocity.z > 0 ? ((byte)1 << 1) : (byte)0));
+                direction = (byte)(direction & (this.m_rigidbody.angularVelocity.x > 0 ? ((byte)1 << 0) : (byte)0));  //optimization to know in wich direction the rigidobody is spinning
+                direction = (byte)(direction & (this.m_rigidbody.angularVelocity.y > 0 ? ((byte)1 << 1) : (byte)0));
+                direction = (byte)(direction & (this.m_rigidbody.angularVelocity.z > 0 ? ((byte)1 << 1) : (byte)0));
 
-                Debug.Log(Vector3.Dot(Vector3.up, this.rigidbody.angularVelocity));
                 networkWriter.Write(direction);
             }
 
 
-            lastRotation = this.rigidbody.rotation;
+            lastRotation = this.m_rigidbody.rotation;
         }
 
         public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
         {
-            RigidbodyState newState = new RigidbodyState(this.rigidbody, relativeTime);
+            RigidbodyState newState = new RigidbodyState(this.m_rigidbody, relativeTime);
 
             UnserializeVector3(rotationSynchronizationMode, ref newState.m_rotation, networkReader, compressionRotationMode, minRotationValue, maxRotationValue);
             UnserializeVector3(angularVelocitySynchronizationMode, ref newState.m_angularVelocity, networkReader, compressionAngularVelocityMode, minAngularVelocityValue, maxAngularVelocityValue);
@@ -186,7 +183,7 @@ namespace BC_Solution.UnetNetwork
                     rotationAxis.y = Mathf.Abs(rotationAxis.y) * ((1 << 1) & rotationSign) != 0 ? 1 : -1;
                     rotationAxis.z = Mathf.Abs(rotationAxis.z) * ((1 << 2) & rotationSign) != 0 ? 1 : -1;
 
-                    newState.m_angularVelocity = rotationAxis * rotationAngle * Mathf.Deg2Rad / ((statesBuffer[place].m_relativeTime - statesBuffer[place + 1].m_relativeTime));
+                    newState.m_angularVelocity = rotationAxis * rotationAngle * Mathf.Deg2Rad / (statesBuffer[place].m_relativeTime - statesBuffer[place + 1].m_relativeTime);
                 }
             }
         }
@@ -196,11 +193,14 @@ namespace BC_Solution.UnetNetwork
             Vector3 val = Vector3.zero;
 
             UnserializeVector3(rotationSynchronizationMode, ref val, networkReader, compressionRotationMode, minRotationValue, maxRotationValue);
-            this.rigidbody.rotation = Quaternion.Euler(val);
+            this.m_rigidbody.rotation = Quaternion.Euler(val);
 
             val = Vector3.zero;
             UnserializeVector3(angularVelocitySynchronizationMode, ref val, networkReader, compressionAngularVelocityMode, minAngularVelocityValue, maxAngularVelocityValue);
-            this.rigidbody.angularVelocity = val;
+            this.m_rigidbody.angularVelocity = val;
+
+            if (angularVelocitySynchronizationMode == SYNCHRONISATION_MODE.CALCUL)
+                networkReader.ReadByte();
 
             ResetStatesBuffer();
         }
@@ -211,15 +211,15 @@ namespace BC_Solution.UnetNetwork
             switch (compressionRotationMode)
             {
                 case COMPRESS_MODE.USHORT:
-                    returnedValueOnCurrentRotation.x = Math.Decompress(Math.CompressToShort(this.rigidbody.rotation.eulerAngles.x, minRotationValue.x, maxRotationValue.x, out precisionAfterCompression.x), minRotationValue.x, maxRotationValue.x);
-                    returnedValueOnCurrentRotation.y = Math.Decompress(Math.CompressToShort(this.rigidbody.rotation.eulerAngles.y, minRotationValue.y, maxRotationValue.y, out precisionAfterCompression.y), minRotationValue.y, maxRotationValue.y);
-                    returnedValueOnCurrentRotation.z = Math.Decompress(Math.CompressToShort(this.rigidbody.rotation.eulerAngles.z, minRotationValue.z, maxRotationValue.z, out precisionAfterCompression.z), minRotationValue.z, maxRotationValue.z);
+                    returnedValueOnCurrentRotation.x = Math.Decompress(Math.CompressToShort(this.m_rigidbody.rotation.eulerAngles.x, minRotationValue.x, maxRotationValue.x, out precisionAfterCompression.x), minRotationValue.x, maxRotationValue.x);
+                    returnedValueOnCurrentRotation.y = Math.Decompress(Math.CompressToShort(this.m_rigidbody.rotation.eulerAngles.y, minRotationValue.y, maxRotationValue.y, out precisionAfterCompression.y), minRotationValue.y, maxRotationValue.y);
+                    returnedValueOnCurrentRotation.z = Math.Decompress(Math.CompressToShort(this.m_rigidbody.rotation.eulerAngles.z, minRotationValue.z, maxRotationValue.z, out precisionAfterCompression.z), minRotationValue.z, maxRotationValue.z);
                     break;
 
                 case COMPRESS_MODE.NONE:
-                    returnedValueOnCurrentRotation.x = this.rigidbody.rotation.eulerAngles.x;
-                    returnedValueOnCurrentRotation.y = this.rigidbody.rotation.eulerAngles.y;
-                    returnedValueOnCurrentRotation.z = this.rigidbody.rotation.eulerAngles.z;
+                    returnedValueOnCurrentRotation.x = this.m_rigidbody.rotation.eulerAngles.x;
+                    returnedValueOnCurrentRotation.y = this.m_rigidbody.rotation.eulerAngles.y;
+                    returnedValueOnCurrentRotation.z = this.m_rigidbody.rotation.eulerAngles.z;
                     break;
             }
         }

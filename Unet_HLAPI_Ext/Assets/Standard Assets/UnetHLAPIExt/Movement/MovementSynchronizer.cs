@@ -295,6 +295,11 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
+        public void SerializeVector2(SYNCHRONISATION_MODE mode, Vector3 value, NetworkWriter networkWriter, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
+        {
+            SerializeVector3(mode, value, networkWriter, compressionMode, minValue, maxValue);
+        }
+
         public void SerializeVector3(SYNCHRONISATION_MODE mode, Vector3 value, NetworkWriter networkWriter, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
         {
             float precision;
@@ -400,6 +405,13 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
+        public void UnserializeVector2(SYNCHRONISATION_MODE mode, ref Vector2 value, NetworkReader networkReader, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
+        {
+            Vector3 value3 = value;
+            UnserializeVector3(mode, ref value3, networkReader, compressionMode, minValue,  maxValue);
+            value.x = value3.x;
+            value.y = value3.y;
+        }
 
 
         public void UnserializeVector3(SYNCHRONISATION_MODE mode, ref Vector3 value, NetworkReader networkReader, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
@@ -502,6 +514,15 @@ namespace BC_Solution.UnetNetwork
                 case SYNCHRONISATION_MODE.NONE: break;
                 case SYNCHRONISATION_MODE.CALCUL: break;
             }
+        }
+
+
+        public void GetVector2(SYNCHRONISATION_MODE mode, ref Vector2 value, Vector3 target)
+        {
+            Vector3 value3 = value;
+            GetVector3(mode, ref value3, target);
+            value.x = value3.x;
+            value.y = value3.y;
         }
 
         public void GetVector3(SYNCHRONISATION_MODE mode, ref Vector3 value, Vector3 target)
