@@ -96,9 +96,9 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         static bool isWaitingResponse = false;
         public static bool IsWaitingResponse
-            {
-            get{return isWaitingResponse;}
-           }
+        {
+            get { return isWaitingResponse; }
+        }
 
 
         private NetworkMatch matchMaker;
@@ -107,7 +107,7 @@ namespace BC_Solution.UnetNetwork
         /// <summary>
         /// List online match with a coroutine
         /// </summary>
-       public bool ListOnlineMatch
+        public bool ListOnlineMatch
         {
             get { return listOnlineMatch; }
         }
@@ -124,20 +124,20 @@ namespace BC_Solution.UnetNetwork
         bool listLANMatch = false;
         public bool ListMatch
         {
-            get { return listOnlineMatch|| listLANMatch; }
+            get { return listOnlineMatch || listLANMatch; }
         }
 
 
         static bool isOnLanMatch = false;
         static public bool IsOnLanMatch
         {
-            get{ return isOnLanMatch; }
+            get { return isOnLanMatch; }
         }
 
         static bool isOnOnlineMatch = false;
         static public bool IsOnOnlineMatch
         {
-            get{ return isOnOnlineMatch; }
+            get { return isOnOnlineMatch; }
         }
 
 
@@ -170,7 +170,7 @@ namespace BC_Solution.UnetNetwork
             public int serverPort = -1;
             public float timer = -1;
 
-            public LanMatchInfo(string _serverName, string _serverAdress,int _serverPort, float timeToRemoveALanMatchFromList)
+            public LanMatchInfo(string _serverName, string _serverAdress, int _serverPort, float timeToRemoveALanMatchFromList)
             {
                 name = _serverName;
                 serverAdress = _serverAdress;
@@ -205,6 +205,7 @@ namespace BC_Solution.UnetNetwork
             NetworkingSystem.OnClientConnect += StopRelaunchingMatchmaking;
 
             NetworkingSystem.OnClientDisconnect += ResetBehaviour;
+            NetworkingSystem.OnStopClient += ResetBehaviour;
             NetworkingSystem.OnStopServer += ResetBehaviour;
         }
 
@@ -216,6 +217,7 @@ namespace BC_Solution.UnetNetwork
 
             NetworkingSystem.OnClientDisconnect -= ResetBehaviour;
             NetworkingSystem.OnStopServer -= ResetBehaviour;
+            NetworkingSystem.OnStopClient -= ResetBehaviour;
         }
 
 
@@ -223,7 +225,7 @@ namespace BC_Solution.UnetNetwork
         /// Connect to the match
         /// </summary>
         /// <param name="matchInfo"></param>
-        public void ConnectToOnlineMatch(MatchInfoSnapshot matchInfo, string password ="", NetworkMatch.DataResponseDelegate<MatchInfo> callback = null)
+        public void ConnectToOnlineMatch(MatchInfoSnapshot matchInfo, string password = "", NetworkMatch.DataResponseDelegate<MatchInfo> callback = null)
         {
             if (NetworkServer.active)
                 NetworkingSystem.Instance.StopServer();
@@ -243,7 +245,7 @@ namespace BC_Solution.UnetNetwork
             matchMaker.JoinMatch(matchInfo.networkId, password, "", "", 0, version, callback);
         }
 
-        public void ConnectToLANMatch(string serverAdress,int serverPort)
+        public void ConnectToLANMatch(string serverAdress, int serverPort)
         {
             if (NetworkServer.active)
                 NetworkingSystem.Instance.StopServer();
@@ -267,7 +269,7 @@ namespace BC_Solution.UnetNetwork
         /// <param name="visible"></param>
         public void CreatOnlineMatch(string name, string password, bool visible = true)
         {
-            if(NetworkServer.active)
+            if (NetworkServer.active)
                 NetworkingSystem.Instance.StopServer();
             if (NetworkClient.active)
                 NetworkingSystem.Instance.StopClient();
@@ -294,7 +296,7 @@ namespace BC_Solution.UnetNetwork
             NetworkingSystem.Instance.StartHost();
 
             m_broadcastData = "NetworkManager:" + NetworkingSystem.Instance.serverAdress + ":" + NetworkingSystem.Instance.serverPort + ": MatchInfo :" + name;
-                
+
             m_msgOutBuffer = StringToBytes(m_broadcastData);
 
             m_LANTopology = new HostTopology(NetworkingSystem.Instance.Configuration(), (int)NetworkingSystem.Instance.maxPlayer);
@@ -379,7 +381,7 @@ namespace BC_Solution.UnetNetwork
 
         IEnumerator ListLANMatchCoroutine()
         {
-            if(!NetworkTransport.IsStarted)
+            if (!NetworkTransport.IsStarted)
             {
                 NetworkTransport.Init();
             }
@@ -413,7 +415,7 @@ namespace BC_Solution.UnetNetwork
                     {
                         NetworkTransport.GetBroadcastConnectionMessage(m_LANHostId, m_msgInBuffer, k_MaxBroadcastMsgSize, out receivedSize, out error);
 
-                        string senderAddr ="";
+                        string senderAddr = "";
                         int senderPort = 0;
                         NetworkTransport.GetBroadcastConnectionInfo(m_LANHostId, out senderAddr, out senderPort, out error);
 
@@ -421,7 +423,7 @@ namespace BC_Solution.UnetNetwork
                         recv.serverAddress = senderAddr;
                         recv.broadcastData = new byte[receivedSize];
                         Buffer.BlockCopy(m_msgInBuffer, 0, recv.broadcastData, 0, receivedSize);
-                 
+
                         string serverBroadcastInfo = BytesToString(m_msgInBuffer);
 
                         BaseOnReceivedBroadcast(senderAddr, serverBroadcastInfo);
@@ -442,10 +444,10 @@ namespace BC_Solution.UnetNetwork
                         }
                     }
                 }
-                while (networkEvent != NetworkEventType.Nothing); 
+                while (networkEvent != NetworkEventType.Nothing);
 
 
-                for(int i = m_LANMatchsAvailables.Count -1; i >=0; i--)     
+                for (int i = m_LANMatchsAvailables.Count - 1; i >= 0; i--)
                 {
                     if (m_LANMatchsAvailables[i].timer < Time.time)
                     {
@@ -463,7 +465,7 @@ namespace BC_Solution.UnetNetwork
             {
                 NetworkTransport.RemoveHost(m_LANHostId);
                 m_LANHostId = -1;
-            } 
+            }
         }
 
         private void ListMatchResponse(bool success, string extendedInfo, List<MatchInfoSnapshot> responses)
@@ -471,7 +473,7 @@ namespace BC_Solution.UnetNetwork
             if (!success)
                 return;
 
-            m_onlineMatchAvailables = responses;         
+            m_onlineMatchAvailables = responses;
         }
 
         /// <summary>
@@ -490,7 +492,7 @@ namespace BC_Solution.UnetNetwork
             currentMatch = null;
             isWaitingResponse = true;
             isOnAutomatch = true;
-            matchMaker.ListMatches(0, 10, "",false,0,version, AutomaticResponse);
+            matchMaker.ListMatches(0, 10, "", false, 0, version, AutomaticResponse);
         }
 
         IEnumerator RelaunchAutomatchmaking()
@@ -520,6 +522,7 @@ namespace BC_Solution.UnetNetwork
 
         void AutomaticResponse(bool success, string extendedInfo, List<MatchInfoSnapshot> responses)
         {
+            isWaitingResponse = false;
 
             //A Unet problem occured
             if (!success)
@@ -543,7 +546,8 @@ namespace BC_Solution.UnetNetwork
             if (currentMatch == null)
             {
                 isOnAutomatch = true;
-                CreatOnlineMatch("AutoMatch_" + System.DateTime.Now + "_" + version,"",true);
+                Debug.Log("Createé");
+                CreatOnlineMatch("AutoMatch_" + System.DateTime.Now + "_" + version, "", true);
                 return;
             }
             else
@@ -568,6 +572,8 @@ namespace BC_Solution.UnetNetwork
                 if (OnMatchCreated != null)
                     OnMatchCreated(success, extendedInfo, matchInfo);
             }
+            else
+                Debug.Log(extendedInfo);
 
         }
 
@@ -620,7 +626,7 @@ namespace BC_Solution.UnetNetwork
                 byte err;
                 NetworkTransport.StartBroadcastDiscovery(NetworkServer.serverHostId, m_broadcastPort, m_broadcastKey, m_broadcastVersion, m_broadcastSubVersion, m_msgOutBuffer, m_msgOutBuffer.Length, m_broadcastInterval, out err);
             }
-            else if  (b && NetworkTransport.IsBroadcastDiscoveryRunning())
+            else if (b && NetworkTransport.IsBroadcastDiscoveryRunning())
             {
                 NetworkTransport.StopBroadcastDiscovery();
 

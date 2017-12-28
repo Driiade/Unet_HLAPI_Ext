@@ -45,7 +45,7 @@ namespace BC_Solution.UnetNetwork
                 this.timeStamp = 0;
             }
 
-            public TimerMessage(float value, string name, bool isRunning,int timeStamp)
+            public TimerMessage(float value, string name, bool isRunning, int timeStamp)
             {
                 this.value = value;
                 this.name = name;
@@ -94,6 +94,7 @@ namespace BC_Solution.UnetNetwork
 
             NetworkingSystem.OnServerConnect += SynchroniseTimer;
             NetworkingSystem.OnClientDisconnect += LocalAvortTimersRunning;
+            NetworkingSystem.OnStopClient += LocalAvortTimersRunning;
 
             NetworkingSystem.RegisterClientHandler(new NetworkingSystem.ConfigurationInfo(NetworkMessages.TimerUpdateMessage, BaseOnTimerUpdate));
             NetworkingSystem.RegisterClientHandler(new NetworkingSystem.ConfigurationInfo(NetworkMessages.TimerSynchronisationMessage, BaseOnTimerSynchronise));
@@ -105,11 +106,11 @@ namespace BC_Solution.UnetNetwork
 
         void Update()
         {
-            if(NetworkServer.active)
+            if (NetworkServer.active)
             {
                 foreach (NetworkedTimerInfo i in networkedTimerInfos)
                 {
-                    if(i.isRunning)
+                    if (i.isRunning)
                     {
                         i.value -= Time.deltaTime;
 
@@ -128,6 +129,13 @@ namespace BC_Solution.UnetNetwork
         {
             NetworkingSystem.OnServerConnect -= SynchroniseTimer;
             NetworkingSystem.OnClientDisconnect -= LocalAvortTimersRunning;
+            NetworkingSystem.OnStopClient -= LocalAvortTimersRunning;
+
+            NetworkingSystem.UnRegisterClientHandler(new NetworkingSystem.ConfigurationInfo(NetworkMessages.TimerUpdateMessage, BaseOnTimerUpdate));
+            NetworkingSystem.UnRegisterClientHandler(new NetworkingSystem.ConfigurationInfo(NetworkMessages.TimerSynchronisationMessage, BaseOnTimerSynchronise));
+            NetworkingSystem.UnRegisterClientHandler(new NetworkingSystem.ConfigurationInfo(NetworkMessages.TimerStartMessage, BaseOnTimerStart));
+            NetworkingSystem.UnRegisterClientHandler(new NetworkingSystem.ConfigurationInfo(NetworkMessages.TimerStopMessage, BaseOnTimerStop));
+            NetworkingSystem.UnRegisterClientHandler(new NetworkingSystem.ConfigurationInfo(NetworkMessages.TimerAvortMessage, BaseOnTimerAvort));
         }
 
 
@@ -136,7 +144,7 @@ namespace BC_Solution.UnetNetwork
             if (NetworkServer.active)
             {
                 foreach (NetworkedTimerInfo i in networkedTimerInfos)
-                    NetworkServer.SendToClient(netMsg.conn.connectionId, NetworkMessages.TimerSynchronisationMessage, new TimerMessage(i.value, i.timerName, i.isRunning,NetworkTransport.GetNetworkTimestamp()));
+                    NetworkServer.SendToClient(netMsg.conn.connectionId, NetworkMessages.TimerSynchronisationMessage, new TimerMessage(i.value, i.timerName, i.isRunning, NetworkTransport.GetNetworkTimestamp()));
             }
         }
 
@@ -145,9 +153,9 @@ namespace BC_Solution.UnetNetwork
         {
             foreach (NetworkedTimerInfo i in networkedTimerInfos)
             {
-                if(i.timerName.Equals(timerName))
+                if (i.timerName.Equals(timerName))
                 {
-                    if(value > 0)
+                    if (value > 0)
                         NetworkServer.SendToAll(NetworkMessages.TimerUpdateMessage, new TimerMessage(value, timerName, i.isRunning, NetworkTransport.GetNetworkTimestamp()));
                     else
                     {
@@ -292,9 +300,9 @@ namespace BC_Solution.UnetNetwork
         {
             TimerMessage timerMessage = netMsg.ReadMessage<TimerMessage>();
 
-            foreach(NetworkedTimerInfo i in networkedTimerInfos)
+            foreach (NetworkedTimerInfo i in networkedTimerInfos)
             {
-                if(i.timerName.Equals(timerMessage.name))
+                if (i.timerName.Equals(timerMessage.name))
                 {
                     byte error;
 
@@ -332,7 +340,7 @@ namespace BC_Solution.UnetNetwork
                     byte error;
 
                     if (netMsg.conn.hostId != -1)
-                        i.value = timerMessage.value + NetworkTransport.GetRemoteDelayTimeMS(netMsg.conn.hostId, netMsg.conn.connectionId, timerMessage.timeStamp, out error)/1000f;
+                        i.value = timerMessage.value + NetworkTransport.GetRemoteDelayTimeMS(netMsg.conn.hostId, netMsg.conn.connectionId, timerMessage.timeStamp, out error) / 1000f;
                     else
                         i.value = timerMessage.value;
 
@@ -415,7 +423,7 @@ namespace BC_Solution.UnetNetwork
                         OnTimerAvort(i);
                     }
                 }
-             }
+            }
         }
         #endregion
 
