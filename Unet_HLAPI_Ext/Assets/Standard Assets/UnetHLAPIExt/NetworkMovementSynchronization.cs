@@ -48,7 +48,7 @@ namespace BC_Solution.UnetNetwork
         public MovementSynchronizer[] movementSynchronizers;
 
         [Space(10)]
-        public float currentRTT;
+        public float lagAverage = 0.15f;
 
         private void Awake()
         {
@@ -190,8 +190,6 @@ namespace BC_Solution.UnetNetwork
 
             if (updateMask != 0)
             {
-                writer.Write(NetworkingSystem.Instance.Client.GetRTT());
-
                 if (movementSynchronizers.Length <= 4)
                     writer.Write((byte)updateMask);
                 else if (movementSynchronizers.Length <= 8)
@@ -279,7 +277,6 @@ namespace BC_Solution.UnetNetwork
         {
             NetworkReader reader = new NetworkReader(info);
 
-            currentRTT = reader.ReadSingle();
             float relativeTime = 0;
 
             if (!NetworkServer.active)
@@ -294,13 +291,14 @@ namespace BC_Solution.UnetNetwork
                 //Debug.Log((NetworkTransport.GetNetworkTimestamp() - timestamp) / 1000f);
             }
 
+            lagAverage = 0.99f * lagAverage + 0.01f * (Time.realtimeSinceStartup - relativeTime);
 
             if (MatchmakingSystem.IsOnOnlineMatch)
-                onlineConfig.adaptativeSynchronizationBackTime = Mathf.Max(lanConfig.minSynchronisationBacktime, Mathf.Min(onlineConfig.maxSynchronizationBacktime, (NetworkingSystem.Instance.Client.GetRTT()/1000f * 0.5f + currentRTT / 1000f * 0.5f) * (onlineConfig.adaptationAmount)));
+                onlineConfig.adaptativeSynchronizationBackTime = Mathf.Max(lanConfig.minSynchronisationBacktime, Mathf.Min(onlineConfig.maxSynchronizationBacktime, lagAverage * (onlineConfig.adaptationAmount)));
             else if (MatchmakingSystem.IsOnLanMatch)
-                lanConfig.adaptativeSynchronizationBackTime = Mathf.Max(lanConfig.minSynchronisationBacktime, Mathf.Min(lanConfig.maxSynchronizationBacktime, (NetworkingSystem.Instance.Client.GetRTT()/1000f * 0.5f + currentRTT/1000f * 0.5f) * (lanConfig.adaptationAmount)));
+                lanConfig.adaptativeSynchronizationBackTime = Mathf.Max(lanConfig.minSynchronisationBacktime, Mathf.Min(lanConfig.maxSynchronizationBacktime, lagAverage * (lanConfig.adaptationAmount)));
             else
-                defaultConfig.adaptativeSynchronizationBackTime = Mathf.Max(defaultConfig.minSynchronisationBacktime, Mathf.Min(defaultConfig.maxSynchronizationBacktime, (NetworkingSystem.Instance.Client.GetRTT()/1000f * 0.5f + currentRTT/1000f * 0.5f) * (defaultConfig.adaptationAmount)));
+                defaultConfig.adaptativeSynchronizationBackTime = Mathf.Max(defaultConfig.minSynchronisationBacktime, Mathf.Min(defaultConfig.maxSynchronizationBacktime, lagAverage * (defaultConfig.adaptationAmount)));
 
             int updateMask = 0;
 

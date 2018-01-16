@@ -592,6 +592,7 @@ MonoBehaviour:
   interpolationErrorTime: 0.1
   networkMovementSynchronization: {fileID: 0}
   m_transform: {fileID: 4205423996803326}
+  localSync: 0
   rotationSynchronizationMode: 7
   rotationThreshold: 0.1
   compressionRotationMode: 1
@@ -713,7 +714,7 @@ MonoBehaviour:
   - {fileID: 114932352318098096}
   - {fileID: 114992149828315310}
   - {fileID: 114555180304162554}
-  currentRTT: 0
+  lagAverage: 0.15
 --- !u!114 &114992149828315310
 MonoBehaviour:
   m_ObjectHideFlags: 1
