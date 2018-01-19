@@ -150,9 +150,9 @@ namespace BC_Solution.UnetNetwork
         [HideInInspector]
         public List<MatchInfoSnapshot> m_onlineMatchAvailables = new List<MatchInfoSnapshot>();
 
-        NetworkID currentMatchNetworkId = NetworkID.Invalid;
+        ulong currentMatchNetworkId = (ulong)NetworkID.Invalid;
 
-        List<NetworkID> bannedMatchsList = new List<NetworkID>(); //Banned match because no host
+        List<ulong> bannedMatchsList = new List<ulong>(); //Banned match because no host
 
         Coroutine relaunchMatchmakingCoroutine;
 
@@ -536,7 +536,7 @@ namespace BC_Solution.UnetNetwork
 
             foreach (MatchInfoSnapshot i in m_onlineMatchAvailables)
             {
-                if (bannedMatchsList.Contains(i.networkId))
+                if (bannedMatchsList.Contains((ulong)i.networkId))
                     continue;
 
                 if ((currentMatch == null) || ((i.currentSize > currentMatch.currentSize)))
@@ -564,7 +564,7 @@ namespace BC_Solution.UnetNetwork
             if (success)
             {
                 Debug.Log("Match created");
-                currentMatchNetworkId = matchInfo.networkId;
+                currentMatchNetworkId = (ulong)matchInfo.networkId;
                 NetworkingSystem.Instance.StartHost(matchInfo);
 
                 isOnOnlineMatch = true;
@@ -585,7 +585,7 @@ namespace BC_Solution.UnetNetwork
             if (success)
             {
                 Debug.Log("Match joined");
-                currentMatchNetworkId = matchInfo.networkId;
+                currentMatchNetworkId = (ulong)matchInfo.networkId;
                 NetworkingSystem.Instance.StartClient(matchInfo);
 
                 isOnOnlineMatch = true;
@@ -616,7 +616,7 @@ namespace BC_Solution.UnetNetwork
         public void LockOnlineMatch(bool b)
         {
             Debug.Log("Match locked");
-            matchMaker.SetMatchAttributes(currentMatchNetworkId, !b, version, OnLockMatch);
+            matchMaker.SetMatchAttributes((NetworkID)currentMatchNetworkId, !b, version, OnLockMatch);
         }
 
         public void LockLANMatch(bool b)
@@ -650,10 +650,10 @@ namespace BC_Solution.UnetNetwork
         /// <param name="netMsg"></param>
         void LockMatchOnStopServer(NetworkMessage netMsg)
         {
-            if (currentMatchNetworkId != NetworkID.Invalid && isOnOnlineMatch)
+            if (currentMatchNetworkId != (ulong)NetworkID.Invalid && isOnOnlineMatch)
             {
                 LockOnlineMatch(true);
-                currentMatchNetworkId = NetworkID.Invalid;
+                currentMatchNetworkId = (ulong)NetworkID.Invalid;
             }
 
             if (isOnLanMatch)

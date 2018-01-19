@@ -21,17 +21,18 @@ SOFTWARE.
 
 using UnityEngine;
 using UnityEngine.Networking;
+using BC_Solution;
 namespace BC_Solution.UnetNetwork
 {
     public class Rigidbody2DPositionSynchronizer : MovementSynchronizer
     {
 
-        class RigidbodyPositionState : State
+        class Rigidbody2DPositionState : State
         {
             public Vector2 m_position;
             public Vector2 m_velocity;
 
-            public RigidbodyPositionState(Rigidbody2D r, float relativeTime)
+            public Rigidbody2DPositionState(Rigidbody2D r, float relativeTime)
             {
                 this.m_relativeTime = relativeTime;
                 m_position = r.position;
@@ -84,16 +85,16 @@ namespace BC_Solution.UnetNetwork
         public override void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation)
         {
             Vector2 acceleration = Vector3.zero;
-            acceleration = (((RigidbodyPositionState)extrapolatingState).m_velocity - ((RigidbodyPositionState)statesBuffer[1]).m_velocity) / ((extrapolatingState.m_relativeTime - statesBuffer[1].m_relativeTime));
+            acceleration = (((Rigidbody2DPositionState)extrapolatingState).m_velocity - ((Rigidbody2DPositionState)statesBuffer[1]).m_velocity) / ((extrapolatingState.m_relativeTime - statesBuffer[1].m_relativeTime));
             acceleration += this.m_rigidbody2D.gravityScale * (Physics2D.gravity) * timeSinceInterpolation;
 
-            this.m_rigidbody2D.velocity = ((RigidbodyPositionState)extrapolatingState).m_velocity + acceleration * timeSinceInterpolation;
+            this.m_rigidbody2D.velocity = ((Rigidbody2DPositionState)extrapolatingState).m_velocity + acceleration * timeSinceInterpolation;
             this.m_rigidbody2D.freezeRotation = false;
         }
 
         public override void OnEndExtrapolation(State rhs)
         {
-            this.m_rigidbody2D.position = (Vector3.Lerp(this.m_rigidbody2D.position, ((RigidbodyPositionState)statesBuffer[0]).m_position, Time.deltaTime / interpolationErrorTime));
+            this.m_rigidbody2D.position = (Vector3.Lerp(this.m_rigidbody2D.position, ((Rigidbody2DPositionState)statesBuffer[0]).m_position, Time.deltaTime / interpolationErrorTime));
             this.m_rigidbody2D.velocity = Vector3.zero;
 
             this.m_rigidbody2D.freezeRotation = true;
@@ -117,24 +118,24 @@ namespace BC_Solution.UnetNetwork
 
             //POSITION
             Vector2 val = this.m_rigidbody2D.position;
-            if (Vector3.SqrMagnitude(((RigidbodyPositionState)rhs).m_position - ((RigidbodyPositionState)lhs).m_position) > (snapThreshold * snapThreshold))
+            if (Vector3.SqrMagnitude(((Rigidbody2DPositionState)rhs).m_position - ((Rigidbody2DPositionState)lhs).m_position) > (snapThreshold * snapThreshold))
             {
-                GetVector2(positionSynchronizationMode, ref val, ((RigidbodyPositionState)rhs).m_position);
+                GetVector2(positionSynchronizationMode, ref val, ((Rigidbody2DPositionState)rhs).m_position);
             }
             else
             {
-                INTERPOLATION_MODE interpolationMode = GetCurrentInterpolationMode(positionInterpolationMode, lhsIndex, ((RigidbodyPositionState)rhs).m_position, ((RigidbodyPositionState)lhs).m_position);
+                INTERPOLATION_MODE interpolationMode = GetCurrentInterpolationMode(positionInterpolationMode, lhsIndex, ((Rigidbody2DPositionState)rhs).m_position, ((Rigidbody2DPositionState)lhs).m_position);
 
                 switch (interpolationMode)
                 {
                     case INTERPOLATION_MODE.LINEAR:
-                        GetVector2(positionSynchronizationMode, ref val, Vector3.Lerp(((RigidbodyPositionState)lhs).m_position, ((RigidbodyPositionState)rhs).m_position, t)); break;
+                        GetVector2(positionSynchronizationMode, ref val, Vector3.Lerp(((Rigidbody2DPositionState)lhs).m_position, ((Rigidbody2DPositionState)rhs).m_position, t)); break;
                     case INTERPOLATION_MODE.CATMULL_ROM:
-                        GetVector2(positionSynchronizationMode, ref val, Math.CatmullRomInterpolation(((RigidbodyPositionState)statesBuffer[lhsIndex + 1]).m_position, ((RigidbodyPositionState)lhs).m_position, ((RigidbodyPositionState)rhs).m_position, ((RigidbodyPositionState)statesBuffer[lhsIndex - 2]).m_position,
+                        GetVector2(positionSynchronizationMode, ref val, Math.CatmullRomInterpolation(((Rigidbody2DPositionState)statesBuffer[lhsIndex + 1]).m_position, ((Rigidbody2DPositionState)lhs).m_position, ((Rigidbody2DPositionState)rhs).m_position, ((Rigidbody2DPositionState)statesBuffer[lhsIndex - 2]).m_position,
                                                                          statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, statesBuffer[lhsIndex - 2].m_relativeTime, (1f - t) * lhs.m_relativeTime + t * rhs.m_relativeTime));
 #if DEVELOPMENT
-                            ExtendedMath.DrawCatmullRomInterpolation(statesBuffer[lhsIndex + 1].position, lhs.position, rhs.position, statesBuffer[lhsIndex - 2].position,
-                                                                             statesBuffer[lhsIndex + 1].timestamp, lhs.timestamp, rhs.timestamp, statesBuffer[lhsIndex - 2].timestamp);
+                            Math.DrawCatmullRomInterpolation(((RigidbodyPositionState)statesBuffer[lhsIndex + 1]).m_position, ((RigidbodyPositionState)lhs).m_position, ((RigidbodyPositionState)rhs).m_position, ((RigidbodyPositionState)statesBuffer[lhsIndex - 2]).m_position,
+                                                                             statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, statesBuffer[lhsIndex - 2].m_relativeTime);
 #endif
                         break;
                 }
@@ -151,7 +152,7 @@ namespace BC_Solution.UnetNetwork
             this.m_rigidbody2D.position = (val - positionError);
 
             //VELOCITY
-            this.m_rigidbody2D.velocity = Vector3.Lerp(((RigidbodyPositionState)lhs).m_velocity, ((RigidbodyPositionState)rhs).m_velocity, t);
+            this.m_rigidbody2D.velocity = Vector3.Lerp(((Rigidbody2DPositionState)lhs).m_velocity, ((Rigidbody2DPositionState)rhs).m_velocity, t);
         }
 
 
@@ -181,7 +182,7 @@ namespace BC_Solution.UnetNetwork
 
         public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
         {
-            RigidbodyPositionState newState = new RigidbodyPositionState(this.m_rigidbody2D, relativeTime);
+            Rigidbody2DPositionState newState = new Rigidbody2DPositionState(this.m_rigidbody2D, relativeTime);
 
             UnserializeVector2(positionSynchronizationMode, ref newState.m_position, networkReader, compressionPositionMode, minPositionValue, maxPositionValue);
             UnserializeVector2(velocitySynchronizationMode, ref newState.m_velocity, networkReader, compressionVelocityMode, minVelocityValue, maxVelocityValue);
@@ -192,7 +193,7 @@ namespace BC_Solution.UnetNetwork
             if (place != -1 && place < currentStatesIndex - 1)
             {
                 if (velocitySynchronizationMode == SYNCHRONISATION_MODE.CALCUL)
-                    newState.m_velocity = (((RigidbodyPositionState)statesBuffer[place]).m_position - ((RigidbodyPositionState)statesBuffer[place + 1]).m_position) / ((statesBuffer[place].m_relativeTime - statesBuffer[place + 1].m_relativeTime));
+                    newState.m_velocity = (((Rigidbody2DPositionState)statesBuffer[place]).m_position - ((Rigidbody2DPositionState)statesBuffer[place + 1]).m_position) / ((statesBuffer[place].m_relativeTime - statesBuffer[place + 1].m_relativeTime));
             }
         }
 
