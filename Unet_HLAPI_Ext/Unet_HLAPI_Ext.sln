@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2017
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unet_HLAPI_Ext.Plugins", "Unet_HLAPI_Ext.Plugins.csproj", "{E7330048-8DCC-A215-7326-64E2A351EC04}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unet_HLAPI_Ext", "Unet_HLAPI_Ext.csproj", "{0EC2C0F9-9A2D-8F9B-7E24-12F5E9C1B749}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E7330048-8DCC-A215-7326-64E2A351EC04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7330048-8DCC-A215-7326-64E2A351EC04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7330048-8DCC-A215-7326-64E2A351EC04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7330048-8DCC-A215-7326-64E2A351EC04}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EC2C0F9-9A2D-8F9B-7E24-12F5E9C1B749}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EC2C0F9-9A2D-8F9B-7E24-12F5E9C1B749}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EC2C0F9-9A2D-8F9B-7E24-12F5E9C1B749}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EC2C0F9-9A2D-8F9B-7E24-12F5E9C1B749}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
