@@ -1,2 +1,3 @@
 Steam : https://developer.valvesoftware.com/wiki/Latency_Compensating_Methods_in_Client/Server_In-game_Protocol_Design_and_Optimization 
 GameDonia : http://www.gamedonia.com/blog/lag-compensation-techniques-for-multiplayer-games-in-realtime
+HLAPI Pro : https://bitbucket.org/vis2k/hlapi-pro/src/57fc4f1515da?at=master
