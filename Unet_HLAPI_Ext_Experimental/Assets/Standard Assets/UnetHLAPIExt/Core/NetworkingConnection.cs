@@ -517,7 +517,7 @@ namespace BC_Solution.UnetNetwork
                 m_messageInfo.conn = this;
                 m_messageInfo.reader = reader;
                 m_messageInfo.channelId = channelId;
-
+                Debug.Log("Handler");
                 msgDelegate(m_messageInfo);
 
                 return true;
@@ -526,7 +526,7 @@ namespace BC_Solution.UnetNetwork
             {
                 if (LogFilter.logWarn) { Debug.LogWarning("NetworkConnection InvokeHandler no handler for " + msgType); }
 
-                if (m_linkedServer != null) //By dessign, if you have no handler but you are server, just send back information to all client.
+                if (m_linkedServer != null) //By design, if you have no handler but you are server, just send back information to all client.
                 {
                     NetworkingWriter writer = new NetworkingWriter();
                     writer.StartMessage();

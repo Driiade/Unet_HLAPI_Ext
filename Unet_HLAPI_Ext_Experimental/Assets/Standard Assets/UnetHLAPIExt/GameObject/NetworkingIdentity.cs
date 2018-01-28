@@ -45,8 +45,6 @@ namespace BC_Solution.UnetNetwork
         public bool destroyOnStop = true;
 
         // runtime data
-        bool m_isClient;
-        bool m_isServer;
         bool m_hasAuthority;
 
         internal ushort m_netId; //Gain place with ushort
@@ -72,16 +70,9 @@ namespace BC_Solution.UnetNetwork
 
 
         // properties
-        public bool isClient { get { return m_isClient; } }
+        public bool isClient { get { return connectionAuthorityOwner != null; } }
+        public bool isServer{ get { return m_connectionToServer != null; } }
 
-        public bool isServer
-        {
-            get
-            {
-                // if server has stopped, should not still return true here, which mean that m_IsServer does not be true xD
-                return m_isServer;
-            }
-        }
 
         public bool hasAuthority { get { return m_hasAuthority; } }
 
@@ -124,6 +115,12 @@ namespace BC_Solution.UnetNetwork
                 m_connectionToServer = value;
             }
 
+        }
+
+        internal void HandleMethodCall(NetworkingReader reader)
+        {
+            byte networkBehaviourIndex = reader.ReadByte();
+            m_networkingBehaviours[networkBehaviourIndex].HandleMethodCall(reader);
         }
 
         // public NetworkingConnection connectionToClient { get { return m_connectionToClient; } } USELESS ?
@@ -252,11 +249,11 @@ namespace BC_Solution.UnetNetwork
           }*/
 
         // only used in SetLocalObject
-        internal void UpdateClientServer(bool isClientFlag, bool isServerFlag)
+       /* internal void UpdateClientServer(bool isClientFlag, bool isServerFlag)
         {
             m_isClient |= isClientFlag;
             m_isServer |= isServerFlag;
-        }
+        }*/
 
         // used when the player object for a connection changes
         internal void SetNotLocalPlayer()
@@ -291,6 +288,11 @@ namespace BC_Solution.UnetNetwork
             }
 
             m_networkingBehaviours = GetComponentsInChildren<NetworkingBehaviour>();
+
+            for (int i = 0; i < m_networkingBehaviours.Length; i++)
+            {
+                m_networkingBehaviours[i].m_netId = (byte)i;
+            }
 
             //SetupIDs();
         }
@@ -358,11 +360,10 @@ namespace BC_Solution.UnetNetwork
         {
             m_networkingServer = networkingServer;
 
-            if (m_isServer)
+            if (isServer)
             {
                 return;
             }
-            m_isServer = true;
 
             if (m_localPlayerAuthority)
             {
@@ -399,7 +400,7 @@ namespace BC_Solution.UnetNetwork
 
             if (LogFilter.logDev) { Debug.Log("OnStartServer " + gameObject + " GUID:" + netId); }
             //NetworkServer.instance.SetLocalObjectOnServer(netId, gameObject);
-            UpdateClientServer(false, true);
+           // UpdateClientServer(false, true);
 
             for (int i = 0; i < m_networkingBehaviours.Length; i++)
             {
@@ -429,10 +430,10 @@ namespace BC_Solution.UnetNetwork
 
         internal void OnStartClient()
         {
-            if (!m_isClient)
+           /* if (!m_isClient)
             {
                 m_isClient = true;
-            }
+            }*/
             //CacheBehaviours(); NO NEED
 
             if (LogFilter.logDev) { Debug.Log("OnStartClient " + gameObject + " GUID:" + netId + " localPlayerAuthority:" + localPlayerAuthority); }
@@ -960,7 +961,7 @@ namespace BC_Solution.UnetNetwork
                 NetworkingBehaviour comp = m_networkingBehaviours[i];
                 comp.OnNetworkDestroy();
             }
-            m_isServer = false;
+            //m_isServer = false;
         }
 
         internal void ClearObservers()
@@ -1225,8 +1226,8 @@ namespace BC_Solution.UnetNetwork
             //   return;
 
             // m_Reset = false;
-            m_isServer = false;
-            m_isClient = false;
+          //  m_isServer = false;
+           // m_isClient = false;
             m_hasAuthority = false;
 
             m_netId = 0;// NetworkInstanceId.Zero;

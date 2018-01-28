@@ -261,6 +261,7 @@ namespace BC_Solution.UnetNetwork
             StartServer(matchInfo);
             //StartLocalClient();
             StartConnection(matchInfo);
+            connections[0].m_linkedServer = servers[0];
 
             return connections[0];
         }
@@ -274,6 +275,7 @@ namespace BC_Solution.UnetNetwork
             StartServer();
             //StartLocalClient();
             StartConnection();
+            connections[0].m_linkedServer = servers[0];
 
             return connections[0];
         }
@@ -482,7 +484,7 @@ namespace BC_Solution.UnetNetwork
 
         IEnumerator RemoveHostCoroutine(int hostId)
         {
-            yield return null;
+            yield return new WaitForEndOfFrame();
             NetworkTransport.RemoveHost(hostId);
         }
 

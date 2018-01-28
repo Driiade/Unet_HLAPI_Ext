@@ -22,6 +22,7 @@ SOFTWARE.
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Reflection;
 using UnityEngine;
 
 
@@ -41,23 +42,127 @@ namespace BC_Solution.UnetNetwork
         public bool isClient { get { return m_networkingIdentity.isClient; } }
         public bool isLocalPlayer { get { return m_networkingIdentity.isLocalPlayer; } }
         public bool hasAuthority { get { return m_networkingIdentity.hasAuthority; } }
-        public ushort netId { get { return m_networkingIdentity.netId; } }
-        //public NetworkingConnection connectionToServer { get { return m_networkingIdentity.connectionToServer; } }
-        //public NetworkingConnection connectionToClient { get { return m_networkingIdentity.connectionToClient; } }
+
+        public NetworkingConnection connectionToServer { get { return m_networkingIdentity.connectionToServer; } }
+        public NetworkingConnection connectionAuthorityOwner { get { return m_networkingIdentity.connectionAuthorityOwner; } }
         public short playerControllerId { get { return m_networkingIdentity.playerControllerId; } }
         protected uint syncVarDirtyBits { get { return m_syncVarDirtyBits; } }
         protected bool syncVarHookGuard { get { return m_SyncVarGuard; } set { m_SyncVarGuard = value; } }
 
+        [SerializeField]
+        internal byte m_netId;
 
-        const float k_DefaultSendInterval = 0.1f;
+       // const float k_DefaultSendInterval = 0.1f;
 
         private NetworkingIdentity m_networkingIdentity;
         public NetworkingIdentity networkingIdentity { get { return m_networkingIdentity; } }
 
+        private MethodInfo[] networkedMethods;
+        private NetworkingWriter writer = new NetworkingWriter();
+
         protected virtual void Awake()
         {
             m_networkingIdentity = this.GetComponentInParent<NetworkingIdentity>();
+            networkedMethods = GetNetworkedMethods();
         }
+
+        public void SendToServer(string methodName, int channelId,params object[] parameters)
+        {
+            writer.SeekZero();
+            writer.StartMessage();
+            writer.Write(NetworkingMessageType.Command);
+            SerializeCall(writer, methodName, parameters);
+            writer.FinishMessage();
+
+            connectionAuthorityOwner.Send(writer, channelId);
+        }
+
+        void SerializeCall(NetworkingWriter writer, string methodName, object[] parameters)
+        {
+            writer.Write(this.networkingIdentity.netId);
+            writer.Write(this.m_netId);
+            writer.Write(GetNetworkMethodIndex(methodName, networkedMethods));
+
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                object param = parameters[i];
+
+                if (param is int)
+                {
+                    writer.Write((int)param);
+                }
+                else if (param is string)
+                {
+                    writer.Write((string)param);
+                }
+                else if (param is ushort)
+                {
+                    writer.Write((ushort)param);
+                }
+            }
+        }
+
+        internal void HandleMethodCall(NetworkingReader reader)
+        {
+            byte methodIndex = reader.ReadByte();
+
+            MethodInfo method = networkedMethods[methodIndex];
+            ParameterInfo[] parameterInfos = method.GetParameters();
+            object[] parameters = new object[parameterInfos.Length];
+
+            for (int i = 0; i < parameterInfos.Length; i++)
+            {
+                ParameterInfo info = parameterInfos[i];
+                if (info.ParameterType == typeof(int))
+                {
+                    parameters[i] = reader.ReadInt32();
+                }
+                  else if(info.ParameterType == typeof(string))
+                {
+                    parameters[i] = reader.ReadString();
+                }
+                else if (info.ParameterType == typeof(ushort))
+                {
+                    parameters[i] = reader.ReadUInt16();
+                }
+            }
+
+            method.Invoke(this, parameters);
+        }
+
+
+        MethodInfo[] GetNetworkedMethods()
+        {
+            MethodInfo[] allMethods = this.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            List<MethodInfo> networkedMethods = new List<MethodInfo>();
+            for (int i = 0; i < allMethods.Length; i++)
+            {
+                object[] attributes = allMethods[i].GetCustomAttributes(typeof(Networked),true);
+                for (int j = 0; j < attributes.Length; j++)
+                {
+                    if(attributes[j] is Networked)
+                    {
+                        networkedMethods.Add(allMethods[i]);
+                    }
+                }
+            }
+
+            return networkedMethods.ToArray();
+        }
+
+        byte GetNetworkMethodIndex(string methodName, MethodInfo[] methodInfo)
+        {
+            for (int i = 0; i < methodInfo.Length; i++)
+            {
+                if(methodInfo[i].Name == methodName)
+                {
+                    return (byte)(i);
+                }
+            }
+
+            throw new System.Exception("Method not found : " + methodName + " on " + this.gameObject + "//" + this);
+        }
+
 
         // ----------------------------- Commands --------------------------------
 
@@ -576,13 +681,13 @@ namespace BC_Solution.UnetNetwork
 
         internal int GetDirtyChannel()
         {
-            if (Time.time - m_LastSendTime > GetNetworkSendInterval())
+         /*   if (Time.time - m_LastSendTime > GetNetworkSendInterval())
             {
                 if (m_syncVarDirtyBits != 0)
                 {
                     return GetNetworkChannel();
                 }
-            }
+            }*/
             return -1;
         }
 
@@ -651,9 +756,9 @@ namespace BC_Solution.UnetNetwork
             return NetworkingMessageType.Channels.DefaultReliableSequenced;
         }
 
-        public virtual float GetNetworkSendInterval()
+      /*  public virtual float GetNetworkSendInterval()
         {
             return k_DefaultSendInterval;
-        } 
+        } */
     }
 }
