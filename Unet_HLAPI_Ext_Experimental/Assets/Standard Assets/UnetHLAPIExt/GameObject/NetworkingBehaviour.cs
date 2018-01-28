@@ -43,8 +43,8 @@ namespace BC_Solution.UnetNetwork
         public bool isLocalPlayer { get { return m_networkingIdentity.isLocalPlayer; } }
         public bool hasAuthority { get { return m_networkingIdentity.hasAuthority; } }
 
-        public NetworkingConnection connectionToServer { get { return m_networkingIdentity.connectionToServer; } }
-        public NetworkingConnection connectionAuthorityOwner { get { return m_networkingIdentity.connectionAuthorityOwner; } }
+        public NetworkingConnection serverConnection { get { return m_networkingIdentity.connectionToServer; } }
+        public NetworkingConnection localConnection { get { return m_networkingIdentity.connectionAuthorityOwner; } }
         public short playerControllerId { get { return m_networkingIdentity.playerControllerId; } }
         protected uint syncVarDirtyBits { get { return m_syncVarDirtyBits; } }
         protected bool syncVarHookGuard { get { return m_SyncVarGuard; } set { m_SyncVarGuard = value; } }
@@ -74,7 +74,29 @@ namespace BC_Solution.UnetNetwork
             SerializeCall(writer, methodName, parameters);
             writer.FinishMessage();
 
-            connectionAuthorityOwner.Send(writer, channelId);
+            localConnection.Send(writer, channelId);
+        }
+
+        public void SendToConnections(string methodName, int channelId, params object[] parameters)
+        {
+            writer.SeekZero();
+            writer.StartMessage();
+            writer.Write(NetworkingMessageType.Rpc);
+            SerializeCall(writer, methodName, parameters);
+            writer.FinishMessage();
+
+            serverConnection.m_linkedServer.SendToAll(writer, channelId);
+        }
+
+        public void AutoSendToConnections(string methodName, int channelId, params object[] parameters)
+        {
+            writer.SeekZero();
+            writer.StartMessage();
+            writer.Write(NetworkingMessageType.AutoRpc);
+            SerializeCall(writer, methodName, parameters);
+            writer.FinishMessage();
+
+            localConnection.Send(writer, channelId);
         }
 
         void SerializeCall(NetworkingWriter writer, string methodName, object[] parameters)

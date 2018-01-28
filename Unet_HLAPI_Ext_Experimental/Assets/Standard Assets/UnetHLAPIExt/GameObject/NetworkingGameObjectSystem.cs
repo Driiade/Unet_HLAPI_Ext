@@ -74,6 +74,8 @@ namespace BC_Solution.UnetNetwork
             NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.ObjectDestroy, OnConnectionDestroy);
             NetworkingSystem.RegisterServerHandler(NetworkingMessageType.ObjectDestroy, OnServerDestroy);
             NetworkingSystem.RegisterServerHandler(NetworkingMessageType.Command, OnServerCommand);
+            NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.Rpc, OnConnectionRpc);
+            NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.AutoRpc, OnConnectionRpc);
         }
 
         private void OnDestroy()
@@ -90,6 +92,8 @@ namespace BC_Solution.UnetNetwork
             NetworkingSystem.UnRegisterConnectionHandler(NetworkingMessageType.ObjectDestroy, OnConnectionDestroy);
             NetworkingSystem.UnRegisterServerHandler(NetworkingMessageType.ObjectDestroy, OnServerDestroy);
             NetworkingSystem.UnRegisterServerHandler(NetworkingMessageType.Command, OnServerCommand);
+            NetworkingSystem.UnRegisterConnectionHandler(NetworkingMessageType.Rpc, OnConnectionRpc);
+            NetworkingSystem.UnRegisterConnectionHandler(NetworkingMessageType.AutoRpc, OnConnectionRpc);
         }
 
         void RemoveNetworkingIdentity(NetworkingIdentity networkingIdentity)
@@ -191,6 +195,15 @@ namespace BC_Solution.UnetNetwork
             NetworkingIdentity netIdentity = FindLocalNetworkIdentity(netMsg.conn.m_linkedServer, networkingIdentityID, m_serverNetworkedObjects);
             
             if(netIdentity)
+                netIdentity.HandleMethodCall(netMsg.reader);
+        }
+
+        void OnConnectionRpc(NetworkingMessage netMsg)
+        {
+            ushort networkingIdentityID = netMsg.reader.ReadUInt16();
+            NetworkingIdentity netIdentity = FindLocalNetworkIdentity(netMsg.conn, networkingIdentityID, m_connectionNetworkedObjects);
+
+            if (netIdentity)
                 netIdentity.HandleMethodCall(netMsg.reader);
         }
 

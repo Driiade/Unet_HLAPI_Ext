@@ -517,7 +517,6 @@ namespace BC_Solution.UnetNetwork
                 m_messageInfo.conn = this;
                 m_messageInfo.reader = reader;
                 m_messageInfo.channelId = channelId;
-                Debug.Log("Handler");
                 msgDelegate(m_messageInfo);
 
                 return true;
