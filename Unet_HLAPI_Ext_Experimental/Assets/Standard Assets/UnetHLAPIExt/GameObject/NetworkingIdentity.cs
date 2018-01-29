@@ -33,7 +33,7 @@ namespace BC_Solution.UnetNetwork
     [AddComponentMenu("Networking/NetworkingIdentity")]
     public class NetworkingIdentity : MonoBehaviour
     {
-        public static Action<NetworkingIdentity> OnNetworkingIdentityDestroy;
+     //   public static Action<NetworkingIdentity> OnNetworkingIdentityDestroy;
 
         // configuration
         [SerializeField] internal ushort m_sceneId;
@@ -53,10 +53,10 @@ namespace BC_Solution.UnetNetwork
         /// <summary>
         /// The server this networkIdentity belong to
         /// </summary>
-        NetworkingServer m_networkingServer;
+       // NetworkingServer m_networkingServer;
 
-        NetworkingConnection m_connectionToServer;
-        NetworkingConnection m_connectionToClient;
+       // NetworkingConnection m_connectionToServer;
+        //NetworkingConnection m_connectionToClient;
 
         short m_PlayerId = -1;
 
@@ -66,12 +66,11 @@ namespace BC_Solution.UnetNetwork
         // there is a list AND a hashSet of connections, for fast verification of dupes, but the main operation is iteration over the list.
         HashSet<int> m_observerConnections;
         List<NetworkingConnection> m_observers;
-        NetworkingConnection m_connectionAuthorityOwner;
-
+        internal NetworkingConnection m_connection;
 
         // properties
-        public bool isClient { get { return connectionAuthorityOwner != null; } }
-        public bool isServer{ get { return m_connectionToServer != null; } }
+        public bool isClient { get { return m_connection.m_linkedServer == null; } }
+        public bool isServer{ get { return m_connection.m_linkedServer != null; } }
 
 
         public bool hasAuthority { get { return m_hasAuthority; } }
@@ -79,6 +78,7 @@ namespace BC_Solution.UnetNetwork
         public ushort netId { get { return m_netId; } }
         public ushort sceneId { get { return m_sceneId; } }
         public ushort assetID { get { return m_assetId; } }
+        public NetworkingConnection connection { get { return m_connection; } }
 
         public bool serverOnly { get { return m_ServerOnly; } set { m_ServerOnly = value; } }
         public bool localPlayerAuthority { get { return m_localPlayerAuthority; } set { m_localPlayerAuthority = value; } }
@@ -86,36 +86,7 @@ namespace BC_Solution.UnetNetwork
         public bool isLocalPlayer { get { return m_isLocalPlayer; } }
         public short playerControllerId { get { return m_PlayerId; } }
 
-        /// <summary>
-        /// Connection who has authority on it, only available on this connection.
-        /// </summary>
-        public NetworkingConnection connectionAuthorityOwner
-        {
-            get { return m_connectionAuthorityOwner; }
-            set
-            {
-                if (destroyOnDisconnect && value == null)      //We have disconnected
-                    Destroy(this.gameObject);
 
-                m_connectionAuthorityOwner = value;
-            }
-        }
-
-        /// <summary>
-        /// Connection for the server and available only on the server
-        /// </summary>
-        public NetworkingConnection connectionToServer
-        {
-            get { return m_connectionToServer; }
-            set
-            {
-                if (destroyOnDisconnect && value == null)      //the connection is off
-                    Destroy(this.gameObject);
-
-                m_connectionToServer = value;
-            }
-
-        }
 
         internal void HandleMethodCall(NetworkingReader reader)
         {
@@ -159,11 +130,6 @@ namespace BC_Solution.UnetNetwork
         }*/
 
 
-        private void Awake()
-        {
-
-        }
-
 
 
         /* internal void SetDynamicAssetId(NetworkHash128 newAssetId)
@@ -181,7 +147,7 @@ namespace BC_Solution.UnetNetwork
 
 
         // used when adding players
-        internal void SetClientOwner(NetworkingConnection conn)
+        /*internal void SetClientOwner(NetworkingConnection conn)
         {
             if (m_connectionAuthorityOwner != null)
             {
@@ -189,12 +155,12 @@ namespace BC_Solution.UnetNetwork
             }
             m_connectionAuthorityOwner = conn;
             m_connectionAuthorityOwner.AddOwnedObject(this);
-        }
+        }*/
 
         // used during dispose after disconnect
         internal void ClearClientOwner()
         {
-            m_connectionAuthorityOwner = null;
+         //   m_connectionAuthorityOwner = null;
         }
 
         internal void ForceAuthority(bool authority)
@@ -358,7 +324,7 @@ namespace BC_Solution.UnetNetwork
 
         internal void OnStartServer(NetworkingServer networkingServer)
         {
-            m_networkingServer = networkingServer;
+            //m_networkingServer = networkingServer;
 
             if (isServer)
             {
@@ -801,7 +767,7 @@ namespace BC_Solution.UnetNetwork
             if (dirtyChannelBits == 0)
                 return;
 
-            for (int channelId = 0; channelId < m_networkingServer.numChannels; channelId++)
+            for (int channelId = 0; channelId < m_connection.m_linkedServer.numChannels; channelId++)
             {
                 if ((dirtyChannelBits & (uint)(1 << channelId)) != 0)
                 {
@@ -836,7 +802,7 @@ namespace BC_Solution.UnetNetwork
 
                             wroteData = true;
                         }
-                        if (s_updateWriter.Position - oldPos > m_networkingServer.packetSize)
+                        if (s_updateWriter.Position - oldPos > m_connection.m_linkedServer.packetSize)
                         {
                             if (LogFilter.logWarn) { Debug.LogWarning("Large state update of " + (s_updateWriter.Position - oldPos) + " bytes for netId:" + netId + " from script:" + comp); }
                         }
@@ -941,7 +907,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        internal void SetConnectionToServer(NetworkingConnection conn)
+       /* internal void SetConnectionToServer(NetworkingConnection conn)
         {
             m_connectionToServer = conn;
         }
@@ -950,7 +916,7 @@ namespace BC_Solution.UnetNetwork
         {
             m_PlayerId = newPlayerControllerId;
             m_connectionToClient = conn;
-        }
+        }*/
 
         internal void OnNetworkDestroy()
         {
@@ -1130,11 +1096,11 @@ namespace BC_Solution.UnetNetwork
                  return false;
              } */
 
-            if (m_connectionAuthorityOwner == null)
+          /*  if (m_connectionAuthorityOwner == null)
             {
                 if (LogFilter.logError) { Debug.LogError("RemoveClientAuthority for " + gameObject + " has no clientAuthority owner."); }
                 return false;
-            }
+            } */
 
             /*  if (m_clientAuthorityOwner != conn)
               {
@@ -1142,8 +1108,8 @@ namespace BC_Solution.UnetNetwork
                   return false;
               }*/
 
-            m_connectionAuthorityOwner.RemoveOwnedObject(this);
-            m_connectionAuthorityOwner = null;
+            //m_connectionAuthorityOwner.RemoveOwnedObject(this);
+            //m_connectionAuthorityOwner = null;
 
             // server now has authority (this is only called on server)
             ForceAuthority(true);
@@ -1152,7 +1118,7 @@ namespace BC_Solution.UnetNetwork
             var msg = new NetIdMessage();
             msg.m_netId = netId;
 
-            m_connectionAuthorityOwner.Send(NetworkingMessageType.UnassignClientAuthority, msg);
+            //m_connectionAuthorityOwner.Send(NetworkingMessageType.UnassignClientAuthority, msg);
 
             /*  if (clientAuthorityCallback != null)
               {
@@ -1187,14 +1153,14 @@ namespace BC_Solution.UnetNetwork
                 return false;
             }
 
-            if (m_connectionAuthorityOwner != null && conn != m_connectionAuthorityOwner)
+            /*if (m_connectionAuthorityOwner != null && conn != m_connectionAuthorityOwner)
             {
                 RemoveClientAuthority();
-            }
+            }*/
 
 
-            m_connectionAuthorityOwner = conn;
-            m_connectionAuthorityOwner.AddOwnedObject(this);
+            //m_connectionAuthorityOwner = conn;
+            //m_connectionAuthorityOwner.AddOwnedObject(this);
 
             // server no longer has authority (this is called on server). Note that local client could re-acquire authority below
             ForceAuthority(false);
@@ -1232,13 +1198,14 @@ namespace BC_Solution.UnetNetwork
 
             m_netId = 0;// NetworkInstanceId.Zero;
             m_isLocalPlayer = false;
-            m_connectionToServer = null;
-            m_connectionToClient = null;
+            //m_connectionToServer = null;
+            //m_connectionToClient = null;
             m_PlayerId = -1;
             m_networkingBehaviours = null;
 
             ClearObservers();
-            m_connectionAuthorityOwner = null;
+            //m_connectionAuthorityOwner = null;
+            m_connection = null;
         }
 
 #if UNITY_EDITOR

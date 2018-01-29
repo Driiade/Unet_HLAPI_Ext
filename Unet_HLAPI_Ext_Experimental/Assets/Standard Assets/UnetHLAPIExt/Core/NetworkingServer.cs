@@ -520,11 +520,11 @@ namespace BC_Solution.UnetNetwork {
                 }
             }
 
+            OnDisconnected(conn);
+
             conn.Disconnect();
             m_connections[connectionId] = null;
             if (LogFilter.logDebug) { Debug.Log("Server lost client:" + connectionId); }
-
-            OnDisconnected(conn);
         }
 
         void HandleData(int connectionId, int channelId, int receivedSize, byte error)

@@ -25,6 +25,6 @@ public class NetworkingBehaviourTest : NetworkingBehaviour {
     [Networked]
     void Test(string message, ushort id)
     {
-        Debug.Log(message + id);
+        //Debug.Log(message + id);
     }
 }
