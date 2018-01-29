@@ -169,7 +169,7 @@ namespace BC_Solution.UnetNetwork
             return true;
         }
 
-        public override void GetCurrentState(NetworkWriter networkWriter)
+        public override void GetCurrentState(NetworkingWriter networkWriter)
         {
             lastPosition = this.m_rigidbody.position;
 
@@ -177,7 +177,7 @@ namespace BC_Solution.UnetNetwork
             SerializeVector3(velocitySynchronizationMode, this.m_rigidbody.velocity, networkWriter, compressionVelocityMode, minVelocityValue, maxVelocityValue);
         }
 
-        public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
+        public override void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader)
         {
             RigidbodyPositionState newState = new RigidbodyPositionState(this.m_rigidbody, relativeTime);
 
@@ -195,7 +195,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public override void ReceiveSync(NetworkReader networkReader)
+        public override void ReceiveSync(NetworkingReader networkReader)
         {
             Vector3 val = Vector3.zero;
             UnserializeVector3(positionSynchronizationMode, ref val, networkReader, compressionPositionMode, minPositionValue, maxPositionValue);

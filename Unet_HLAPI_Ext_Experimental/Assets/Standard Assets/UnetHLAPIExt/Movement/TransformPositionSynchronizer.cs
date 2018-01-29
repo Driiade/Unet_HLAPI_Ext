@@ -149,21 +149,21 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        public override void GetCurrentState(NetworkWriter networkWriter)
+        public override void GetCurrentState(NetworkingWriter networkWriter)
         {
             lastPosition = this.m_transform.position;
             SerializeVector3(positionSynchronizationMode, this.m_transform.position, networkWriter, compressionMode, minPositionValue, maxPositionValue);
         }
 
 
-        public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
+        public override void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader)
         {
             TransformPositionState newState = new TransformPositionState(this.m_transform, relativeTime);
             UnserializeVector3(positionSynchronizationMode, ref newState.m_position, networkReader, compressionMode, minPositionValue, maxPositionValue);
             AddState(newState);
         }
 
-        public override void ReceiveSync(NetworkReader networkReader)
+        public override void ReceiveSync(NetworkingReader networkReader)
         {
             Vector3 val = Vector3.zero;
 

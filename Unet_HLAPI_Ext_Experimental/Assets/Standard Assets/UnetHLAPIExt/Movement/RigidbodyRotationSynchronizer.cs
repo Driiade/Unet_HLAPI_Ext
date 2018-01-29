@@ -135,7 +135,7 @@ namespace BC_Solution.UnetNetwork
             return true;
         }
 
-        public override void GetCurrentState(NetworkWriter networkWriter)
+        public override void GetCurrentState(NetworkingWriter networkWriter)
         {
             SerializeVector3(rotationSynchronizationMode, this.m_rigidbody.rotation.eulerAngles, networkWriter, compressionRotationMode, minRotationValue, maxRotationValue);
             SerializeVector3(angularVelocitySynchronizationMode, this.m_rigidbody.angularVelocity, networkWriter, compressionAngularVelocityMode, minAngularVelocityValue, maxAngularVelocityValue);
@@ -154,7 +154,7 @@ namespace BC_Solution.UnetNetwork
             lastRotation = this.m_rigidbody.rotation;
         }
 
-        public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
+        public override void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader)
         {
             RigidbodyState newState = new RigidbodyState(this.m_rigidbody, relativeTime);
 
@@ -188,7 +188,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public override void ReceiveSync(NetworkReader networkReader)
+        public override void ReceiveSync(NetworkingReader networkReader)
         {
             Vector3 val = Vector3.zero;
 

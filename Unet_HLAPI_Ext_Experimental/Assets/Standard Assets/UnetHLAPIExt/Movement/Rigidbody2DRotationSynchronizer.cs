@@ -146,7 +146,7 @@ namespace BC_Solution.UnetNetwork
             return true;
         }
 
-        public override void GetCurrentState(NetworkWriter networkWriter)
+        public override void GetCurrentState(NetworkingWriter networkWriter)
         {
             lastRotation = this.m_rigidbody2D.rotation;
 
@@ -187,7 +187,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
+        public override void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader)
         {
             RigidbodyState newState = new RigidbodyState(this.m_rigidbody2D, relativeTime);
 
@@ -239,7 +239,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public override void ReceiveSync(NetworkReader networkReader)
+        public override void ReceiveSync(NetworkingReader networkReader)
         {
             if (synchronizeRotation)
             {

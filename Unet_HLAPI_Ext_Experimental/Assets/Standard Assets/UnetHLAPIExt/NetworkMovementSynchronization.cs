@@ -48,6 +48,8 @@ namespace BC_Solution.UnetNetwork
         [Space(10)]
         public float lagAverage = 0.15f;
 
+        NetworkingWriter writer = new NetworkingWriter();
+
         override protected void Awake()
         {
             base.Awake();
@@ -117,7 +119,7 @@ namespace BC_Solution.UnetNetwork
             if (!hasAuthority)
                 return;
 
-            NetworkWriter writer = new NetworkWriter();
+            writer.SeekZero();
             int updateMask = 0;
             for (int i = 0; i < movementSynchronizers.Length; i++)
             {
@@ -150,7 +152,7 @@ namespace BC_Solution.UnetNetwork
             if (!hasAuthority)
                 return;
 
-            NetworkWriter writer = new NetworkWriter();
+            writer.SeekZero();
 
             int updateMask = 0;
 
@@ -228,7 +230,7 @@ namespace BC_Solution.UnetNetwork
         [Networked]
         void GetMovementSyncInformations(byte[] info)
         {
-            NetworkReader reader = new NetworkReader(info);
+            NetworkingReader reader = new NetworkingReader(info);
             int updateMask = 0;
 
             if (movementSynchronizers.Length != 0)
@@ -259,7 +261,7 @@ namespace BC_Solution.UnetNetwork
             if (hasAuthority)
                 return;
 
-            NetworkReader reader = new NetworkReader(info);
+            NetworkingReader reader = new NetworkingReader(info);
 
             float relativeTime = 0;
             byte error;

@@ -104,9 +104,9 @@ namespace BC_Solution.UnetNetwork
 
         protected State extrapolatingState;
 
-        public abstract void GetCurrentState(NetworkWriter networkWriter);
-        public abstract void ReceiveCurrentState(float relativeTime, NetworkReader networkReader);
-        public abstract void ReceiveSync(NetworkReader networkReader);
+        public abstract void GetCurrentState(NetworkingWriter networkWriter);
+        public abstract void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader);
+        public abstract void ReceiveSync(NetworkingReader networkReader);
         public abstract void OnInterpolation(State rhs, State lhs, int lhsIndex, float t);
         public abstract void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation);
 
@@ -295,12 +295,12 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public void SerializeVector2(SYNCHRONISATION_MODE mode, Vector3 value, NetworkWriter networkWriter, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
+        public void SerializeVector2(SYNCHRONISATION_MODE mode, Vector3 value, NetworkingWriter networkWriter, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
         {
             SerializeVector3(mode, value, networkWriter, compressionMode, minValue, maxValue);
         }
 
-        public void SerializeVector3(SYNCHRONISATION_MODE mode, Vector3 value, NetworkWriter networkWriter, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
+        public void SerializeVector3(SYNCHRONISATION_MODE mode, Vector3 value, NetworkingWriter networkWriter, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
         {
             float precision;
 
@@ -405,7 +405,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public void UnserializeVector2(SYNCHRONISATION_MODE mode, ref Vector2 value, NetworkReader networkReader, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
+        public void UnserializeVector2(SYNCHRONISATION_MODE mode, ref Vector2 value, NetworkingReader networkReader, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
         {
             Vector3 value3 = value;
             UnserializeVector3(mode, ref value3, networkReader, compressionMode, minValue,  maxValue);
@@ -414,7 +414,7 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        public void UnserializeVector3(SYNCHRONISATION_MODE mode, ref Vector3 value, NetworkReader networkReader, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
+        public void UnserializeVector3(SYNCHRONISATION_MODE mode, ref Vector3 value, NetworkingReader networkReader, COMPRESS_MODE compressionMode, Vector3 minValue, Vector3 maxValue)
         {
             switch (mode)
             {

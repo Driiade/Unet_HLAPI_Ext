@@ -134,11 +134,7 @@ namespace BC_Solution.UnetNetwork
                 }
                 else if (param is byte[])
                 {
-                    writer.Write(((byte[])param).Length);
-                    for (int j = 0; j < ((byte[])param).Length; j++)
-                    {
-                        writer.Write((byte)((byte[])param)[j]);
-                    }
+                    writer.WriteBytesAndSize(((byte[])param), ((byte[])param).Length);
                 }
             }
         }
@@ -168,11 +164,7 @@ namespace BC_Solution.UnetNetwork
                 }
                 else if (info.ParameterType == typeof(byte[]))
                 {
-                    parameters[i] = new byte[reader.ReadInt32()];
-                    for (int j = 0; j < ((byte[])parameters[i]).Length; j++)
-                    {
-                        ((byte[])parameters[i])[j] = reader.ReadByte();
-                    }
+                    parameters[i] = reader.ReadBytesAndSize();
                 }
             }
 

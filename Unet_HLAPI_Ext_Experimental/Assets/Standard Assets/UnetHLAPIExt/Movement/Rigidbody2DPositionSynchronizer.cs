@@ -172,7 +172,7 @@ namespace BC_Solution.UnetNetwork
             return true;
         }
 
-        public override void GetCurrentState(NetworkWriter networkWriter)
+        public override void GetCurrentState(NetworkingWriter networkWriter)
         {
             lastPosition = this.m_rigidbody2D.position;
 
@@ -180,7 +180,7 @@ namespace BC_Solution.UnetNetwork
             SerializeVector2(velocitySynchronizationMode, this.m_rigidbody2D.velocity, networkWriter, compressionVelocityMode, minVelocityValue, maxVelocityValue);
         }
 
-        public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
+        public override void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader)
         {
             Rigidbody2DPositionState newState = new Rigidbody2DPositionState(this.m_rigidbody2D, relativeTime);
 
@@ -197,7 +197,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public override void ReceiveSync(NetworkReader networkReader)
+        public override void ReceiveSync(NetworkingReader networkReader)
         {
             Vector2 val = Vector2.zero;
             UnserializeVector2(positionSynchronizationMode, ref val, networkReader, compressionPositionMode, minPositionValue, maxPositionValue);

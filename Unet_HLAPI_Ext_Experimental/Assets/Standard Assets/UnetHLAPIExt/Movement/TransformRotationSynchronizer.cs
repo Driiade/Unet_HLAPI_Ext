@@ -190,7 +190,7 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        public override void GetCurrentState(NetworkWriter networkWriter)
+        public override void GetCurrentState(NetworkingWriter networkWriter)
         {
             if (localSync)
             {
@@ -203,7 +203,7 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        public override void ReceiveCurrentState(float relativeTime, NetworkReader networkReader)
+        public override void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader)
         {
             TransformRotationState newState = new TransformRotationState(this.m_transform, relativeTime, localSync);
             UnserializeVector3(rotationSynchronizationMode, ref newState.m_rotation, networkReader, compressionRotationMode, minRotationValue, maxRotationValue);
@@ -211,7 +211,7 @@ namespace BC_Solution.UnetNetwork
             AddState(newState);
         }
 
-        public override void ReceiveSync(NetworkReader networkReader)
+        public override void ReceiveSync(NetworkingReader networkReader)
         {
             Vector3 val = Vector3.zero;
 
