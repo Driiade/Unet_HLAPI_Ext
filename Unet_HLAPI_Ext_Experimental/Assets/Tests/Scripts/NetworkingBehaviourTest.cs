@@ -10,21 +10,21 @@ public class NetworkingBehaviourTest : NetworkingBehaviour {
 	// Update is called once per frame
 	void Update () {
 
-        if (isClient)
+      /*  if (isClient)
         {
             SendToServer("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Command] hello world : ", cpt);
             AutoSendToConnections("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Auto Rpc] hello world : ", cpt);
         }
 
         if (isServer)
-            SendToConnections("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Rpc] hello world : ", cpt);
+           SendToAllConnections("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Rpc] hello world : ", cpt);
 
-        cpt++;
+        cpt++;*/
     }
 
     [Networked]
     void Test(string message, ushort id)
     {
-        //Debug.Log(message + id);
+       // Debug.Log(message + id);
     }
 }

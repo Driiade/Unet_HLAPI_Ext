@@ -39,9 +39,8 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 4626436379127922}
-  - component: {fileID: 114267268748763020}
-  - component: {fileID: 114989741402422030}
   - component: {fileID: 114292577741408674}
+  - component: {fileID: 114989741402422030}
   m_Layer: 0
   m_Name: MultiplePositionSynchronizer
   m_TagString: Untagged
@@ -378,38 +377,6 @@ BoxCollider:
   serializedVersion: 2
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &114267268748763020
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 1231402685847870}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 372142912, guid: 870353891bb340e2b2a9c8707e7419ba, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_SceneId:
-    m_Value: 0
-  m_AssetId:
-    i0: 211
-    i1: 19
-    i2: 190
-    i3: 230
-    i4: 128
-    i5: 149
-    i6: 49
-    i7: 68
-    i8: 90
-    i9: 1
-    i10: 134
-    i11: 164
-    i12: 248
-    i13: 112
-    i14: 88
-    i15: 104
-  m_ServerOnly: 0
-  m_LocalPlayerAuthority: 1
 --- !u!114 &114292577741408674
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -424,8 +391,12 @@ MonoBehaviour:
   m_sceneId: 0
   m_assetId: 0
   m_ServerOnly: 0
-  m_localPlayerAuthority: 0
+  m_localPlayerAuthority: 1
   m_isSceneObject: 0
+  destroyOnDisconnect: 1
+  destroyOnStop: 1
+  m_networkingBehaviours:
+  - {fileID: 114989741402422030}
 --- !u!114 &114307297617218354
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -437,7 +408,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d3c1f7af43c4c94f9c7c6b02f26c354, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkIdentity: {fileID: 114267268748763020}
+  networkingIdentity: {fileID: 114292577741408674}
   onlineConfig:
     updateRate: 20
   lanConfig:
@@ -477,7 +448,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d4fba8b03e0ae024f8173907c62e17ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkIdentity: {fileID: 114267268748763020}
+  networkingIdentity: {fileID: 114292577741408674}
   onlineConfig:
     updateRate: 20
   lanConfig:
@@ -517,7 +488,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8ee0284980b0c2944b3392693fc8a08c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkIdentity: {fileID: 114267268748763020}
+  networkingIdentity: {fileID: 114292577741408674}
   onlineConfig:
     updateRate: 20
   lanConfig:
@@ -555,7 +526,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6873a0ec8dc734647afb92d9adba2753, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkIdentity: {fileID: 114267268748763020}
+  networkingIdentity: {fileID: 114292577741408674}
   onlineConfig:
     updateRate: 20
   lanConfig:
@@ -593,7 +564,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 43feba89647b4ec448dac98b71c7f63d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkIdentity: {fileID: 114267268748763020}
+  networkingIdentity: {fileID: 114292577741408674}
   onlineConfig:
     updateRate: 20
   lanConfig:
@@ -628,7 +599,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d3c1f7af43c4c94f9c7c6b02f26c354, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkIdentity: {fileID: 114267268748763020}
+  networkingIdentity: {fileID: 114292577741408674}
   onlineConfig:
     updateRate: 20
   lanConfig:
@@ -668,7 +639,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef5877d129b7d3d4ca76a9c2b5e7b52a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkIdentity: {fileID: 114267268748763020}
+  networkingIdentity: {fileID: 114292577741408674}
   onlineConfig:
     updateRate: 20
   lanConfig:
@@ -704,7 +675,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7804679cde2dc44297c5400a6fd2487, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkIdentity: {fileID: 114267268748763020}
+  m_netId: 0
   onlineConfig:
     adaptativeSynchronizationBackTime: 0.15
     maxSynchronizationBacktime: 0.3
@@ -743,7 +714,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8ee0284980b0c2944b3392693fc8a08c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkIdentity: {fileID: 114267268748763020}
+  networkingIdentity: {fileID: 114292577741408674}
   onlineConfig:
     updateRate: 20
   lanConfig:

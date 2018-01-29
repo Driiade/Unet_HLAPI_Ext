@@ -68,38 +68,34 @@ namespace BC_Solution.UnetNetwork
         {
             byte error;
 
-            bool result = true;
             if (!conn.TransportSend(m_Buffer, (ushort)m_Position, channelId, out error))
-            {
-                if (m_IsReliable && error == (int)NetworkError.NoResources)
-                {
-                    // handled below
-                }
-                else
-                {
-                    if (LogFilter.logError) { Debug.LogError("Failed to send internal buffer channel:" + channelId + " bytesToSend:" + m_Position); }
-                    result = false;
-                }
-            }
-            if (error != 0)
             {
                 if (m_IsReliable && error == (int)NetworkError.NoResources)
                 {
                     // this packet will be buffered by the containing ChannelBuffer, so this is not an error
 
 #if UNITY_EDITOR
-               /*     UnityEditor.NetworkDetailStats.IncrementStat(
-                        UnityEditor.NetworkDetailStats.NetworkDirection.Outgoing,
-                        MsgType.HLAPIResend, "msg", 1);*/
+                    /*     UnityEditor.NetworkDetailStats.IncrementStat(
+                             UnityEditor.NetworkDetailStats.NetworkDirection.Outgoing,
+                             MsgType.HLAPIResend, "msg", 1);*/
 #endif
+
                     return false;
                 }
-
-                if (LogFilter.logError) { Debug.LogError("Send Error: " + (NetworkError)error + " channel:" + channelId + " bytesToSend:" + m_Position); }
-                result = false;
+                else
+                {
+                    //Happen when disconnecting (if you find a solution : benoit.constantin@hotmail.com)
+                    if (error != (int)NetworkError.WrongConnection)
+                    {
+                        if (LogFilter.logError) { Debug.LogError("Failed to send internal buffer channel:" + channelId + " bytesToSend:" + m_Position); }
+                        if (LogFilter.logError) { Debug.LogError("Send Error: " + (NetworkError)error + " channel:" + channelId + " bytesToSend:" + m_Position); }
+                    }
+                    return false;
+                }
             }
+
             m_Position = 0;
-            return result;
+            return true;
         }
     }
 }

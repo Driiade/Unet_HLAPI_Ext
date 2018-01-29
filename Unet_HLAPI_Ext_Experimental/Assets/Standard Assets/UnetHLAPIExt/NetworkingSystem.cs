@@ -261,7 +261,7 @@ namespace BC_Solution.UnetNetwork
             StartServer(matchInfo);
             //StartLocalClient();
             StartConnection(matchInfo);
-            connections[0].m_linkedServer = servers[0];
+            connections[0].m_server = servers[0];
 
             return connections[0];
         }
@@ -275,7 +275,7 @@ namespace BC_Solution.UnetNetwork
             StartServer();
             //StartLocalClient();
             StartConnection();
-            connections[0].m_linkedServer = servers[0];
+            connections[0].m_server = servers[0];
 
             return connections[0];
         }
@@ -415,7 +415,7 @@ namespace BC_Solution.UnetNetwork
             foreach (NetworkingConfiguration i in clientConfigurations)
                 connection.RegisterHandler(i.message, i.func);
 
-            connection.SetMaxDelay(maxDelayForSendingData);
+           // connection.SetMaxDelay(maxDelayForSendingData);
             connection.Configure(Configuration(), (int)maxPlayer);
 
             //if(playerPrefab)
@@ -431,7 +431,7 @@ namespace BC_Solution.UnetNetwork
             foreach (NetworkingConfiguration i in serverConfigurations)
                 server.RegisterHandler(i.message, i.func);
 
-           server.SetMaxDelay(maxDelayForSendingData);
+          // server.SetMaxDelay(maxDelayForSendingData);
            server.Configure(Configuration(), (int)maxPlayer);
         }
 

@@ -49,7 +49,7 @@ namespace BC_Solution.UnetNetwork
 
         [SerializeField]
         [Tooltip("If this is != null, no one can set the velocity except who has authority on the object")]
-        protected NetworkIdentity networkIdentity;
+        protected NetworkingIdentity networkingIdentity;
 
         public Config onlineConfig;
         public Config lanConfig;
@@ -122,7 +122,7 @@ namespace BC_Solution.UnetNetwork
 
         protected void Update()
         {
-           if (currentStatesIndex < 0 || networkIdentity.hasAuthority)
+           if (currentStatesIndex < 0 || networkingIdentity.hasAuthority)
                 return;
 
             State lhs;

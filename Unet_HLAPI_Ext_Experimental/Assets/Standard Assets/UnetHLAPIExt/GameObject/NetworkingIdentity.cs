@@ -45,7 +45,7 @@ namespace BC_Solution.UnetNetwork
         public bool destroyOnStop = true;
 
         // runtime data
-        bool m_hasAuthority;
+        internal bool m_hasAuthority;
 
         internal ushort m_netId; //Gain place with ushort
         bool m_isLocalPlayer;
@@ -69,8 +69,8 @@ namespace BC_Solution.UnetNetwork
         internal NetworkingConnection m_connection;
 
         // properties
-        public bool isClient { get { return m_connection.m_linkedServer == null; } }
-        public bool isServer{ get { return m_connection.m_linkedServer != null; } }
+        public bool isClient { get { return m_connection.m_server == null; } }
+        public bool isServer{ get { return m_connection.m_server != null; } }
 
 
         public bool hasAuthority { get { return m_hasAuthority; } }
@@ -751,7 +751,7 @@ namespace BC_Solution.UnetNetwork
 
         // invoked by unity runtime immediately after the regular "Update()" function.
         //Ok how i do this ? tss
-        void Update()
+       /* void Update()
         {
             // check if any behaviours are ready to send
             uint dirtyChannelBits = 0;
@@ -767,7 +767,7 @@ namespace BC_Solution.UnetNetwork
             if (dirtyChannelBits == 0)
                 return;
 
-            for (int channelId = 0; channelId < m_connection.m_linkedServer.numChannels; channelId++)
+            for (int channelId = 0; channelId < m_connection.m_server.numChannels; channelId++)
             {
                 if ((dirtyChannelBits & (uint)(1 << channelId)) != 0)
                 {
@@ -797,12 +797,12 @@ namespace BC_Solution.UnetNetwork
 #if UNITY_EDITOR
                             /*  UnityEditor.NetworkDetailStats.IncrementStat(
                                   UnityEditor.NetworkDetailStats.NetworkDirection.Outgoing,
-                                  MsgType.UpdateVars, comp.GetType().Name, 1);*/
+                                  MsgType.UpdateVars, comp.GetType().Name, 1);
 #endif
 
                             wroteData = true;
                         }
-                        if (s_updateWriter.Position - oldPos > m_connection.m_linkedServer.packetSize)
+                        if (s_updateWriter.Position - oldPos > m_connection.m_server.packetSize)
                         {
                             if (LogFilter.logWarn) { Debug.LogWarning("Large state update of " + (s_updateWriter.Position - oldPos) + " bytes for netId:" + netId + " from script:" + comp); }
                         }
@@ -845,7 +845,7 @@ namespace BC_Solution.UnetNetwork
                     }
                 }
             }
-        }
+        }*/
 
         internal void OnUpdateVars(NetworkingReader reader, bool initialState)
         {

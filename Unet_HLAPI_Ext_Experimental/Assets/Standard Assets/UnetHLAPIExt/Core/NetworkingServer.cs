@@ -94,9 +94,9 @@ namespace BC_Solution.UnetNetwork {
         public byte[] messageBuffer { get { return m_MsgBuffer; } }
         public NetworkingReader messageReader { get { return m_messageReader; } }
 
-        public float m_maxDelay;
+        //public float m_maxDelay;
 
-        public void SetMaxDelay(float maxDelay)
+      /*  public void SetMaxDelay(float maxDelay)
         {
             foreach(NetworkingConnection conn in connections)
             {
@@ -104,7 +104,7 @@ namespace BC_Solution.UnetNetwork {
             }
 
             m_maxDelay = maxDelay;
-        }
+        }*/
 
         /*  public Type networkConnectionClass
           {
@@ -261,7 +261,7 @@ namespace BC_Solution.UnetNetwork {
 
             if (LogFilter.logDebug) { Debug.Log("Server Host Slot Id: " + m_hostId); }
 
-            //Update(); why ?
+            Update();
 
             byte error;
             NetworkTransport.ConnectAsNetworkHost(
@@ -345,11 +345,12 @@ namespace BC_Solution.UnetNetwork {
         // this can be used independantly of Update() - such as when using external connections and not listening.
         public void UpdateConnections()
         {
-            for (int i = 0; i < connections.Count; i++)
-            {
-                NetworkingConnection conn = connections[i];
+            foreach(NetworkingConnection conn in m_connections)
+            { 
                 if (conn != null)
+                {
                     conn.FlushChannels();
+                }
             }
         }
 
@@ -423,42 +424,6 @@ namespace BC_Solution.UnetNetwork {
             UpdateConnections();
         }
 
-        public NetworkingConnection FindConnection(int connectionId)
-        {
-            if (connectionId < 0 || connectionId >= connections.Count)
-                return null;
-
-            return m_connections[connectionId];
-        }
-
-        public bool SetConnectionAtIndex(NetworkingConnection conn)
-        {
-            while (connections.Count <= conn.m_connectionId)
-            {
-                m_connections.Add(null);
-            }
-
-            if (connections[conn.m_connectionId] != null)
-            {
-                // already a connection at this index
-                return false;
-            }
-
-            conn.m_linkedServer = this;
-            m_connections[conn.m_connectionId] = conn;
-            //conn.SetHandlers(m_MessageHandlers); 
-            return true;
-        }
-
-        public bool RemoveConnectionAtIndex(int connectionId)
-        {
-            if (connectionId < 0 || connectionId >= connections.Count)
-                return false;
-
-            m_connections[connectionId] = null;
-            return true;
-        }
-
         void HandleConnect(int connectionId, byte error)
         {
             if (LogFilter.logDebug) { Debug.Log("NetworkServerSimple accepted client:" + connectionId); }
@@ -480,10 +445,11 @@ namespace BC_Solution.UnetNetwork {
 
             conn.m_messageHandlers = new Dictionary<ushort, Action<NetworkingMessage>>(this.m_messageHandlers);
 
-            conn.SetMaxDelay(m_maxDelay);
+            //conn.SetMaxDelay(m_maxDelay);
             conn.Configure(this.m_hostTopology.DefaultConfig, this.m_hostTopology.MaxDefaultConnections);
             conn.Initialize(address, m_hostId, connectionId);
             conn.m_lastError = (NetworkError)error2;
+            conn.m_currentState = NetworkingConnection.ConnectState.Connected;
 
             // add connection at correct index
             while (connections.Count <= connectionId)
@@ -491,7 +457,7 @@ namespace BC_Solution.UnetNetwork {
                 m_connections.Add(null);
             }
 
-            conn.m_linkedServer = this;
+            conn.m_server = this;
             m_connections[connectionId] = conn;
 
             OnConnected(conn);
@@ -501,11 +467,12 @@ namespace BC_Solution.UnetNetwork {
         {
             if (LogFilter.logDebug) { Debug.Log("NetworkingServer disconnect client:" + connectionId); }
 
-            var conn = FindConnection(connectionId);
+            var conn = m_connections[connectionId];
             if (conn == null)
             {
                 return;
             }
+
             conn.m_lastError = (NetworkError)error;
 
             if (error != 0)
@@ -522,14 +489,14 @@ namespace BC_Solution.UnetNetwork {
 
             OnDisconnected(conn);
 
-            conn.Disconnect();
             m_connections[connectionId] = null;
+            conn.Disconnect();
             if (LogFilter.logDebug) { Debug.Log("Server lost client:" + connectionId); }
         }
 
         void HandleData(int connectionId, int channelId, int receivedSize, byte error)
         {
-            var conn = FindConnection(connectionId);
+            var conn = m_connections[connectionId];
             if (conn == null)
             {
                 if (LogFilter.logError) { Debug.LogError("HandleData Unknown connectionId:" + connectionId); }
@@ -553,22 +520,20 @@ namespace BC_Solution.UnetNetwork {
 
         public bool SendTo(int connectionId, byte[] bytes, int numBytes, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
         {
-            var outConn = FindConnection(connectionId);
-            if (outConn == null)
-            {
-                return false;
-            }
+           var outConn = m_connections[connectionId];
            return  outConn.Send(bytes, numBytes, channelId);
         }
 
         public bool SendTo(int connectionId, NetworkingWriter writer, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
         {
-            var outConn = FindConnection(connectionId);
-            if (outConn == null)
-            {
-                return false;
-            }
+            var outConn = m_connections[connectionId];
             return outConn.Send(writer, channelId);
+        }
+
+        public bool SendTo(int connectionId, ushort msgType, NetworkingMessage msg, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
+        {
+            var outConn = m_connections[connectionId];
+            return outConn.Send(msgType, msg, channelId);
         }
 
         public bool SendToAll(NetworkingWriter writer, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
@@ -618,11 +583,7 @@ namespace BC_Solution.UnetNetwork {
 
         public void Disconnect(int connectionId)
         {
-            var outConn = FindConnection(connectionId);
-            if (outConn == null)
-            {
-                return;
-            }
+            var outConn = m_connections[connectionId];
             outConn.Disconnect();
             m_connections[connectionId] = null;
         }
@@ -637,6 +598,8 @@ namespace BC_Solution.UnetNetwork {
                     conn.Disconnect();
                 }
             }
+
+            m_connections.Clear();
         }
 
         // --------------------------- virtuals ---------------------------------------
@@ -721,7 +684,7 @@ namespace BC_Solution.UnetNetwork {
             //AddObserverToInactive(netMsg.conn);
             //NetworkServer.SetClientReady(netMsg.conn);
 
-            netMsg.conn.isReady = true;
+            netMsg.m_connection.isReady = true;
 
             if (OnConnectionReady != null)
                 OnConnectionReady(this, netMsg);

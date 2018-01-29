@@ -143,7 +143,7 @@ namespace BC_Solution.UnetNetwork
         /// <summary>
         /// Only available on server
         /// </summary>
-        public NetworkingServer m_linkedServer;
+        public NetworkingServer m_server;
 
         public NetworkingConnection()
         {
@@ -316,6 +316,130 @@ namespace BC_Solution.UnetNetwork
         }
 
 
+        internal virtual void Update()
+        {
+            switch (m_currentState)
+            {
+                case NetworkingConnection.ConnectState.None:
+                case NetworkingConnection.ConnectState.Resolving:
+                case NetworkingConnection.ConnectState.Disconnected:
+                    return;
+
+                case NetworkingConnection.ConnectState.Failed:
+                    GenerateConnectError((int)NetworkError.DNSFailure);
+                    m_currentState = NetworkingConnection.ConnectState.Disconnected;
+                    return;
+
+                case NetworkingConnection.ConnectState.Resolved:
+                    m_currentState = NetworkingConnection.ConnectState.Connecting;
+                    byte error;
+                    m_connectionId = NetworkTransport.Connect(m_hostId, m_serverAddress, m_serverPort, 0, out error);
+                    this.Initialize(this.m_serverAddress, this.m_hostId, this.m_connectionId);
+                    return;
+
+                case NetworkingConnection.ConnectState.Connecting:
+                case NetworkingConnection.ConnectState.Connected:
+                    {
+                        break;
+                    }
+            }
+
+
+            if ((int)Time.time != m_statResetTime)
+            {
+                ResetStats();
+                m_statResetTime = (int)Time.time;
+            }
+
+            int numEvents = 0;
+            NetworkEventType networkEvent;
+            do
+            {
+                int connectionId;
+                int channelId;
+                int receivedSize;
+                byte error;
+
+                networkEvent = NetworkTransport.ReceiveFromHost(this.m_hostId, out connectionId, out channelId, m_msgBuffer, (ushort)m_msgBuffer.Length, out receivedSize, out error);
+                m_lastError = (NetworkError)error;
+
+                if (networkEvent != NetworkEventType.Nothing)
+                {
+                    if (LogFilter.logDev) { Debug.Log("Client event: host=" + this.m_connectionId + " event=" + networkEvent + " error=" + error); }
+                }
+
+                switch (networkEvent)
+                {
+                    case NetworkEventType.ConnectEvent:
+
+                        if (LogFilter.logDebug) { Debug.Log("Client connected"); }
+
+                        if (error != 0)
+                        {
+                            GenerateConnectError(error);
+                            return;
+                        }
+
+                        m_currentState = ConnectState.Connected;
+                        InvokeHandler(NetworkingMessageType.Connect, null, 0);
+                        break;
+
+                    case NetworkEventType.DataEvent:
+                        if (error != 0)
+                        {
+                            GenerateDataError(error);
+                            return;
+                        }
+
+#if UNITY_EDITOR
+                        /* UnityEditor.NetworkDetailStats.IncrementStat(
+                         UnityEditor.NetworkDetailStats.NetworkDirection.Incoming,
+                         MsgType.LLAPIMsg, "msg", 1);*/
+#endif
+
+                        TransportReceive(m_msgBuffer, receivedSize, channelId);
+                        break;
+
+                    case NetworkEventType.DisconnectEvent:
+                        if (LogFilter.logDebug) { Debug.Log("Client disconnected"); }
+
+                        m_currentState = ConnectState.Disconnected;
+
+                        if (error != 0)
+                        {
+                            if ((NetworkError)error != NetworkError.Timeout)
+                            {
+                                GenerateDisconnectError(error);
+                            }
+                        }
+                        //ClientScene.HandleClientDisconnect(m_Connection);
+                        InvokeHandler(NetworkingMessageType.Disconnect, null, 0);
+                        return; //we are disconnected
+
+                    case NetworkEventType.Nothing:
+                        break;
+
+                    default:
+                        if (LogFilter.logError) { Debug.LogError("Unknown network message type received: " + networkEvent); }
+                        break;
+                }
+
+                if (++numEvents >= k_MaxEventsPerFrame)
+                {
+                    if (LogFilter.logDebug) { Debug.Log("MaxEventsPerFrame hit (" + k_MaxEventsPerFrame + ")"); }
+                    break;
+                }
+                if (this.m_connectionId == -1)
+                {
+                    break;
+                }
+            }
+            while (networkEvent != NetworkEventType.Nothing);
+
+            if (this.m_currentState == ConnectState.Connected)
+                FlushChannels();
+        }
+
         public void Connect(MatchInfo matchInfo)
         {
             m_serverAddress = matchInfo.address;
@@ -485,6 +609,7 @@ namespace BC_Solution.UnetNetwork
 
         public void Disconnect()
         {
+            m_currentState = ConnectState.Disconnected;
             isReady = false;
            // ClientScene.HandleClientDisconnect(this); NOPE
             byte error;
@@ -514,7 +639,7 @@ namespace BC_Solution.UnetNetwork
 
             if (msgDelegate != null)
             {
-                m_messageInfo.conn = this;
+                m_messageInfo.m_connection = this;
                 m_messageInfo.reader = reader;
                 m_messageInfo.channelId = channelId;
                 msgDelegate(m_messageInfo);
@@ -523,9 +648,9 @@ namespace BC_Solution.UnetNetwork
             }
             else
             {
-                if (LogFilter.logWarn) { Debug.LogWarning("NetworkConnection InvokeHandler no handler for " + msgType); }
+                //if (LogFilter.logWarn) { Debug.LogWarning("NetworkConnection InvokeHandler no handler for " + msgType); }
 
-                if (m_linkedServer != null) //By design, if you have no handler but you are server, just send back information to all client.
+                if (m_server != null) //By design, if you have no handler but you are server, just send back information to all client.
                 {
                     NetworkingWriter writer = new NetworkingWriter();
                     writer.StartMessage();
@@ -533,7 +658,7 @@ namespace BC_Solution.UnetNetwork
                     writer.Write(reader.m_buf.AsArraySegment().Array);
                     writer.FinishMessage();
 
-                    m_linkedServer.SendToAll(writer, channelId);
+                    m_server.SendToAll(writer, channelId);
                     return true;
                 }
                 else
@@ -665,7 +790,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public void SetMaxDelay(float seconds)
+        /*public void SetMaxDelay(float seconds)
         {
             if (m_channels == null)
             {
@@ -675,7 +800,7 @@ namespace BC_Solution.UnetNetwork
             {
                 m_channels[channelId].maxDelay = seconds;
             }
-        }
+        }*/
 
         /// <summary>
         /// Send with the default reliable sequence channel (0)
@@ -951,131 +1076,7 @@ namespace BC_Solution.UnetNetwork
 
         internal static void OnFragment(NetworkingMessage netMsg)
         {
-            netMsg.conn.HandleFragment(netMsg.reader, netMsg.channelId);
-        }
-
-        internal virtual void Update()
-        {
-                switch (m_currentState)
-                {
-                    case NetworkingConnection.ConnectState.None:
-                    case NetworkingConnection.ConnectState.Resolving:
-                    case NetworkingConnection.ConnectState.Disconnected:
-                        return;
-
-                    case NetworkingConnection.ConnectState.Failed:
-                        GenerateConnectError((int)NetworkError.DNSFailure);
-                        m_currentState = NetworkingConnection.ConnectState.Disconnected;
-                        return;
-
-                    case NetworkingConnection.ConnectState.Resolved:
-                        m_currentState = NetworkingConnection.ConnectState.Connecting;
-                        byte error;
-                        m_connectionId = NetworkTransport.Connect(m_hostId, m_serverAddress, m_serverPort, 0, out error);
-                        this.Initialize(this.m_serverAddress, this.m_hostId, this.m_connectionId);
-                    return;
-
-                    case NetworkingConnection.ConnectState.Connecting:
-                    case NetworkingConnection.ConnectState.Connected:
-                        {
-                            break;
-                        }
-                }
-
-
-                    if ((int)Time.time != m_statResetTime)
-                    {
-                        ResetStats();
-                        m_statResetTime = (int)Time.time;
-                    }
-
-                int numEvents = 0;
-                NetworkEventType networkEvent;
-                do
-                {
-                    int connectionId;
-                    int channelId;
-                    int receivedSize;
-                    byte error;
-
-                    networkEvent = NetworkTransport.ReceiveFromHost(this.m_hostId, out connectionId, out channelId, m_msgBuffer, (ushort)m_msgBuffer.Length, out receivedSize, out error);
-                    m_lastError = (NetworkError)error;
-
-                    if (networkEvent != NetworkEventType.Nothing)
-                    {
-                        if (LogFilter.logDev) { Debug.Log("Client event: host=" + this.m_connectionId + " event=" + networkEvent + " error=" + error); }
-                    }
-
-                    switch (networkEvent)
-                    {
-                        case NetworkEventType.ConnectEvent:
-
-                            if (LogFilter.logDebug) { Debug.Log("Client connected"); }
-
-                            if (error != 0)
-                            {
-                                GenerateConnectError(error);
-                                return;
-                            }
-
-                            m_currentState = NetworkingConnection.ConnectState.Connected;
-                            InvokeHandler(NetworkingMessageType.Connect, null, 0);
-                            break;
-
-                        case NetworkEventType.DataEvent:
-                            if (error != 0)
-                            {
-                                GenerateDataError(error);
-                                return;
-                            }
-
-#if UNITY_EDITOR
-                            /* UnityEditor.NetworkDetailStats.IncrementStat(
-                             UnityEditor.NetworkDetailStats.NetworkDirection.Incoming,
-                             MsgType.LLAPIMsg, "msg", 1);*/
-#endif
-
-                            TransportReceive(m_msgBuffer, receivedSize, channelId);
-                            break;
-
-                        case NetworkEventType.DisconnectEvent:
-                            if (LogFilter.logDebug) { Debug.Log("Client disconnected"); }
-
-                            m_currentState = NetworkingConnection.ConnectState.Disconnected;
-
-                            if (error != 0)
-                            {
-                                if ((NetworkError)error != NetworkError.Timeout)
-                                {
-                                    GenerateDisconnectError(error);
-                                }
-                            }
-                            //ClientScene.HandleClientDisconnect(m_Connection);
-                            InvokeHandler(NetworkingMessageType.Disconnect, null, 0);
-                            return; //Disconnected
-
-                        case NetworkEventType.Nothing:
-                            break;
-
-                        default:
-                            if (LogFilter.logError) { Debug.LogError("Unknown network message type received: " + networkEvent); }
-                            break;
-                    }
-
-                    if (++numEvents >= k_MaxEventsPerFrame)
-                    {
-                        if (LogFilter.logDebug) { Debug.Log("MaxEventsPerFrame hit (" + k_MaxEventsPerFrame + ")"); }
-                        break;
-                    }
-                    if (this.m_connectionId == -1)
-                    {
-                        break;
-                    }
-                }
-                while (networkEvent != NetworkEventType.Nothing);
-
-                if (this.m_currentState == NetworkingConnection.ConnectState.Connected)
-                    FlushChannels();
+            netMsg.m_connection.HandleFragment(netMsg.reader, netMsg.channelId);
         }
 
 
@@ -1100,7 +1101,7 @@ namespace BC_Solution.UnetNetwork
                 ErrorMessage netMsg = new ErrorMessage();
                 netMsg.m_type = NetworkingMessageType.Error;
                 netMsg.reader = reader;
-                netMsg.conn = this;
+                netMsg.m_connection = this;
                 netMsg.channelId = 0;
                 handler(netMsg);
             }

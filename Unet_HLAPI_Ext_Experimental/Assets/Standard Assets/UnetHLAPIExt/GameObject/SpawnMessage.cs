@@ -29,13 +29,15 @@ namespace BC_Solution.UnetNetwork
     {
         public ushort m_gameObjectAssetId;
         public ushort m_gameObjectNetId;
+        public bool m_hasAuthority;
 
         public SpawnMessage() { }
 
-        public SpawnMessage(ushort assetId, ushort netId)
+        public SpawnMessage(ushort assetId, ushort netId, bool hasAuthority)
         {
             m_gameObjectAssetId = assetId;
             m_gameObjectNetId = netId;
+            m_hasAuthority = hasAuthority;
         }
 
         public override void Serialize(NetworkingWriter writer)
@@ -43,6 +45,7 @@ namespace BC_Solution.UnetNetwork
             base.Serialize(writer);
             writer.Write(m_gameObjectAssetId);
             writer.Write(m_gameObjectNetId);
+            writer.Write(m_hasAuthority);
         }
 
         public override void Deserialize(NetworkingReader reader)
@@ -50,6 +53,7 @@ namespace BC_Solution.UnetNetwork
             base.Deserialize(reader);
             m_gameObjectAssetId = reader.ReadUInt16();
             m_gameObjectNetId = reader.ReadUInt16();
+            m_hasAuthority = reader.ReadBoolean();
         }
     }
 }

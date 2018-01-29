@@ -36,7 +36,7 @@ namespace BC_Solution.UnetNetwork
         public ushort m_type;
 
         [NonSerialized]
-        public NetworkingConnection conn;
+        public NetworkingConnection m_connection;
         [NonSerialized]
         public NetworkingReader reader;
         [NonSerialized]

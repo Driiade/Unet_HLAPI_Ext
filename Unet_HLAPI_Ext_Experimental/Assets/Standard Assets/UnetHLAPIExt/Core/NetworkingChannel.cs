@@ -51,7 +51,7 @@ namespace BC_Solution.UnetNetwork
         static internal int pendingPacketCount; // this is across all connections. only used for profiler metrics.
 
         // config
-        public float maxDelay = 0.01f;
+      //  public float maxDelay = 0.01f; ? already in networkTransport ?
 
         // stats
         float m_LastBufferedMessageCountTimer = Time.realtimeSinceStartup;
@@ -187,11 +187,14 @@ namespace BC_Solution.UnetNetwork
 
         public void CheckInternalBuffer(NetworkingConnection conn)
         {
-            if (Time.realtimeSinceStartup - m_LastFlushTime > maxDelay && !m_currentPacket.IsEmpty())
+            // if (Time.realtimeSinceStartup - m_LastFlushTime > maxDelay && !m_currentPacket.IsEmpty())
+            //{
+            if (!m_currentPacket.IsEmpty())
             {
                 SendInternalBuffer(conn);
                 m_LastFlushTime = Time.realtimeSinceStartup;
             }
+            //}
 
             if (Time.realtimeSinceStartup - m_LastBufferedMessageCountTimer > 1.0f)
             {
@@ -350,11 +353,11 @@ namespace BC_Solution.UnetNetwork
             }
 
             m_currentPacket.Write(bytes, bytesToSend);
-            if (maxDelay == 0.0f)
-            {
-                return SendInternalBuffer(conn);
-            }
-            return true;
+           // if (maxDelay == 0.0f)
+            //{
+            // return SendInternalBuffer(conn);
+            //}
+            return false;
         }
 
         void QueuePacket()

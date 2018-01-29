@@ -25,10 +25,8 @@ using UnityEngine.Networking;
 namespace BC_Solution.UnetNetwork
 {
     [NetworkSettings(sendInterval = 0)]
-    public class NetworkMovementSynchronization : NetworkBehaviour
+    public class NetworkMovementSynchronization : NetworkingBehaviour
     {
-        public NetworkIdentity networkIdentity;
-
         [System.Serializable]
         public class Config
         {
@@ -50,19 +48,20 @@ namespace BC_Solution.UnetNetwork
         [Space(10)]
         public float lagAverage = 0.15f;
 
-        private void Awake()
+        override protected void Awake()
         {
+            base.Awake();
             for (int i = 0; i < movementSynchronizers.Length; i++)
             {
                 movementSynchronizers[i].networkMovementSynchronization = this;
             }
 
-         //   NetworkingSystem.OnClientReadyFromServer += SyncPosition;
+            NetworkingSystem.RegisterServerHandler(NetworkingMessageType.Connect, SyncPosition);
         }
 
         void OnDestroy()
         {
-          //  NetworkingSystem.OnClientReadyFromServer -= SyncPosition;
+            NetworkingSystem.UnRegisterServerHandler(NetworkingMessageType.Connect, SyncPosition);
         }
 
         public float AdaptativeSynchronizationBackTime()
@@ -109,7 +108,11 @@ namespace BC_Solution.UnetNetwork
             SyncPosition(null);
         }
 
-        void SyncPosition(NetworkMessage netMsg)
+        /// <summary>
+        /// Only server
+        /// </summary>
+        /// <param name="netMsg"></param>
+        void SyncPosition(NetworkingMessage netMsg)
         {
             if (!hasAuthority)
                 return;
@@ -135,23 +138,7 @@ namespace BC_Solution.UnetNetwork
                     movementSynchronizers[i].GetCurrentState(writer);
                 }
 
-                if (isServer)
-                {
-                    foreach (NetworkConnection n in NetworkServer.connections)
-                    {
-                        if (n == null)
-                            continue;
-
-                       /* if (NetworkingSystem.Instance.Client.connection.connectionId != n.connectionId)
-                        {
-                            TargetSendMovementsSyncInformations(n, writer.ToArray());
-                        }*/
-                    }
-                }
-                else
-                {
-                    CmdSendMovementsSyncInformations(writer.ToArray());
-                }
+                SendToConnection(netMsg.m_connection, "GetMovementSyncInformations", NetworkingMessageType.Channels.DefaultReliable, writer.ToArray());
             }
         }
 
@@ -224,29 +211,22 @@ namespace BC_Solution.UnetNetwork
         void SendMovementsInformations(byte[] info)
         {
             if (isServer)
-                foreach (NetworkConnection n in NetworkServer.connections)
+                foreach (NetworkingConnection n in this.connection.m_server.connections)
                 {
                     if (n == null)
                         continue;
 
-                   /* if (NetworkingSystem.Instance.Client.connection.connectionId != n.connectionId)
+                    if (this.connection.m_connectionId != n.m_connectionId)
                     {
-                        TargetSendMovementsInformations(n, NetworkTransport.GetNetworkTimestamp(), info);
-                    }*/
+                        SendToConnection(n, "RpcGetMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
+                    }
                 }
             else
-                CmdSendMovementsInformations(NetworkTransport.GetNetworkTimestamp(), info);
+                SendToServer("CmdGetMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable,  NetworkTransport.GetNetworkTimestamp(), info);
         }
 
-
-        [TargetRpc(channel = 2)]
-        void TargetSendMovementsInformations(NetworkConnection target,int timeStamp, byte[] info)
-        {
-            GetMovementsInformation(timeStamp, info);
-        }
-
-        [TargetRpc(channel = 0)]
-        void TargetSendMovementsSyncInformations(NetworkConnection target, byte[] info)
+        [Networked]
+        void GetMovementSyncInformations(byte[] info)
         {
             NetworkReader reader = new NetworkReader(info);
             int updateMask = 0;
@@ -273,23 +253,30 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        void GetMovementsInformation(int timestamp, byte[] info)
+        [Networked]
+        void RpcGetMovementInformations(int timestamp, byte[] info)
         {
+            if (hasAuthority)
+                return;
+
             NetworkReader reader = new NetworkReader(info);
 
             float relativeTime = 0;
+            byte error;
+            relativeTime = Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timestamp, out error) / 1000f;
 
-            if (!NetworkServer.active)
+           /* if (!isServer)
             {
                 byte error;
-               // relativeTime = Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(NetworkingSystem.Instance.Client.connection.hostId, NetworkingSystem.Instance.Client.connection.connectionId, timestamp, out error) / 1000f;
-               // Debug.Log(NetworkTransport.GetRemoteDelayTimeMS(NetworkingSystem.Instance.Client.connection.hostId, NetworkingSystem.Instance.Client.connection.connectionId, timestamp, out error) / 1000f);
+                relativeTime = Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timestamp, out error) / 1000f;
+                // Debug.Log(NetworkTransport.GetRemoteDelayTimeMS(NetworkingSystem.Instance.Client.connection.hostId, NetworkingSystem.Instance.Client.connection.connectionId, timestamp, out error) / 1000f);
+                Debug.Log(relativeTime);
             }
             else
             {
                 relativeTime = Time.realtimeSinceStartup - (NetworkTransport.GetNetworkTimestamp() - timestamp) / 1000f;
                 //Debug.Log((NetworkTransport.GetNetworkTimestamp() - timestamp) / 1000f);
-            }
+            }*/
 
             lagAverage = 0.99f * lagAverage + 0.01f * (Time.realtimeSinceStartup - relativeTime);
 
@@ -324,47 +311,13 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-
-        [Command(channel = 2)]
-        void CmdSendMovementsInformations(int timeStamp, byte[] info)
+        [Networked]
+        void CmdGetMovementInformations(int timeStamp, byte[] info)
         {
             byte error;
-            timeStamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.networkIdentity.clientAuthorityOwner.hostId, this.networkIdentity.clientAuthorityOwner.connectionId, timeStamp, out error);
+            timeStamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.networkingIdentity.connection.m_hostId, this.networkingIdentity.connection.m_connectionId, timeStamp, out error);
 
-            foreach (NetworkConnection n in NetworkServer.connections)
-            {
-                if (n == null)
-                    continue;
-
-               /* if (NetworkingSystem.Instance.Client.connection != n)
-                {
-                    if (n != this.connectionToClient)
-                    {
-                        TargetSendMovementsInformations(n, timeStamp, info);
-                    }
-                }
-                else
-                    GetMovementsInformation(timeStamp,info);*/
-            }
+            SendToAllConnections("RpcGetMovementInformations",NetworkingMessageType.Channels.DefaultUnreliable, timeStamp, info);
         }
-
-        [Command(channel = 0)]
-        void CmdSendMovementsSyncInformations(byte[] info)
-        {
-            foreach (NetworkConnection n in NetworkServer.connections)
-            {
-                if (n == null)
-                    continue;
-
-               /* if (NetworkingSystem.Instance.Client.connection != n)
-                {
-                    if (n != this.connectionToClient)
-                    {
-                        TargetSendMovementsSyncInformations(n, info);
-                    }
-                }*/
-            }
-        }
-
     }
 }
