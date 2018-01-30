@@ -55,15 +55,15 @@ namespace BC_Solution.UnetNetwork
             base.Awake();
             for (int i = 0; i < movementSynchronizers.Length; i++)
             {
-                movementSynchronizers[i].networkMovementSynchronization = this;
+                movementSynchronizers[i].Init(this);
             }
 
-            NetworkingSystem.RegisterServerHandler(NetworkingMessageType.Connect, SyncPosition);
+            //  NetworkingSystem.RegisterServerHandler(NetworkingMessageType.Connect, ServerSyncPosition);
         }
 
         void OnDestroy()
         {
-            NetworkingSystem.UnRegisterServerHandler(NetworkingMessageType.Connect, SyncPosition);
+            NetworkingSystem.UnRegisterServerHandler(NetworkingMessageType.Connect, ServerSyncPosition);
         }
 
         public float AdaptativeSynchronizationBackTime()
@@ -107,19 +107,16 @@ namespace BC_Solution.UnetNetwork
         public override void OnStartAuthority()     //Send position the first time
         {
             base.OnStartAuthority();
-            SyncPosition(null);
+           // ServerSyncPosition(null);
         }
 
         /// <summary>
         /// Only server
         /// </summary>
         /// <param name="netMsg"></param>
-        void SyncPosition(NetworkingMessage netMsg)
+        void ServerSyncPosition(NetworkingMessage netMsg)
         {
-            if (!hasAuthority)
-                return;
-
-            writer.SeekZero();
+            writer.SeekZero(true);
             int updateMask = 0;
             for (int i = 0; i < movementSynchronizers.Length; i++)
             {
@@ -152,7 +149,7 @@ namespace BC_Solution.UnetNetwork
             if (!hasAuthority)
                 return;
 
-            writer.SeekZero();
+            writer.SeekZero(true);
 
             int updateMask = 0;
 
@@ -163,14 +160,14 @@ namespace BC_Solution.UnetNetwork
                     MovementSynchronizer movementSynchronizer = movementSynchronizers[i];
 
                     if  //Real need of synchronization 
-                    (Time.realtimeSinceStartup > movementSynchronizer.lastInterpolationUpdateTimer && movementSynchronizer.NeedToUpdate())                    
+                    (Time.realtimeSinceStartup > movementSynchronizer.lastInterpolationUpdateTimer && movementSynchronizer.NeedToUpdate())
                     {
                         updateMask = updateMask | (1 << i);
                     }
                     else if //Other clients are extrapolating
-                        (Time.realtimeSinceStartup - movementSynchronizer.lastInterpolationUpdateTimer > 0 
+                        (Time.realtimeSinceStartup - movementSynchronizer.lastInterpolationUpdateTimer > 0
                         && Time.realtimeSinceStartup - movementSynchronizer.lastInterpolationUpdateTimer < extraInterpolationTimeFactor * movementSynchronizer.extrapolationTime
-                        && Time.realtimeSinceStartup > movementSynchronizer.lastExtrapolationUpdateTimer) 
+                        && Time.realtimeSinceStartup > movementSynchronizer.lastExtrapolationUpdateTimer)
                     {
                         updateMask = updateMask | (1 << i);
                     }
@@ -179,12 +176,15 @@ namespace BC_Solution.UnetNetwork
 
             if (updateMask != 0)
             {
-                if (movementSynchronizers.Length <= 4)
-                    writer.Write((byte)updateMask);
-                else if (movementSynchronizers.Length <= 8)
-                    writer.Write((short)updateMask);
-                else
-                    writer.Write(updateMask);
+                if (movementSynchronizers.Length > 1)
+                {
+                    if (movementSynchronizers.Length <= 4)
+                        writer.Write((byte)updateMask);
+                    else if (movementSynchronizers.Length <= 8)
+                        writer.Write((short)updateMask);
+                    else
+                        writer.Write(updateMask);
+                }
 
                 for (int i = 0; i < movementSynchronizers.Length; i++)
                 {
@@ -224,7 +224,7 @@ namespace BC_Solution.UnetNetwork
                     }
                 }
             else
-                SendToServer("CmdGetMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable,  NetworkTransport.GetNetworkTimestamp(), info);
+                SendToServer("CmdGetMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
         }
 
         [Networked]
@@ -233,7 +233,7 @@ namespace BC_Solution.UnetNetwork
             NetworkingReader reader = new NetworkingReader(info);
             int updateMask = 0;
 
-            if (movementSynchronizers.Length != 0)
+            if (movementSynchronizers.Length > 1)
             {
                 if (movementSynchronizers.Length <= 4)
                     updateMask = reader.ReadByte();
@@ -266,19 +266,18 @@ namespace BC_Solution.UnetNetwork
             float relativeTime = 0;
             byte error;
             relativeTime = Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timestamp, out error) / 1000f;
-
-           /* if (!isServer)
-            {
-                byte error;
-                relativeTime = Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timestamp, out error) / 1000f;
-                // Debug.Log(NetworkTransport.GetRemoteDelayTimeMS(NetworkingSystem.Instance.Client.connection.hostId, NetworkingSystem.Instance.Client.connection.connectionId, timestamp, out error) / 1000f);
-                Debug.Log(relativeTime);
-            }
-            else
-            {
-                relativeTime = Time.realtimeSinceStartup - (NetworkTransport.GetNetworkTimestamp() - timestamp) / 1000f;
-                //Debug.Log((NetworkTransport.GetNetworkTimestamp() - timestamp) / 1000f);
-            }*/
+            /* if (!isServer)
+             {
+                 byte error;
+                 relativeTime = Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timestamp, out error) / 1000f;
+                 // Debug.Log(NetworkTransport.GetRemoteDelayTimeMS(NetworkingSystem.Instance.Client.connection.hostId, NetworkingSystem.Instance.Client.connection.connectionId, timestamp, out error) / 1000f);
+                 Debug.Log(relativeTime);
+             }
+             else
+             {
+                 relativeTime = Time.realtimeSinceStartup - (NetworkTransport.GetNetworkTimestamp() - timestamp) / 1000f;
+                 //Debug.Log((NetworkTransport.GetNetworkTimestamp() - timestamp) / 1000f);
+             }*/
 
             lagAverage = 0.99f * lagAverage + 0.01f * (Time.realtimeSinceStartup - relativeTime);
 
@@ -291,7 +290,8 @@ namespace BC_Solution.UnetNetwork
 
             int updateMask = 0;
 
-            if (movementSynchronizers.Length != 0)
+
+            if (movementSynchronizers.Length > 1)
             {
                 if (movementSynchronizers.Length <= 4)
                     updateMask = reader.ReadByte();
@@ -301,11 +301,11 @@ namespace BC_Solution.UnetNetwork
                     updateMask = reader.ReadInt32();
             }
 
-            while (reader.Position < reader.Length - 1)
+            while (reader.Position < reader.Length-1)
             {
                 for (int i = 0; i < movementSynchronizers.Length; i++)
                 {
-                    if ((updateMask & (1 << i)) != 0 || movementSynchronizers.Length == 0)
+                    if ((updateMask & (1 << i)) != 0 || movementSynchronizers.Length == 1)
                     {
                         movementSynchronizers[i].ReceiveCurrentState(relativeTime, reader);
                     }
@@ -317,9 +317,8 @@ namespace BC_Solution.UnetNetwork
         void CmdGetMovementInformations(int timeStamp, byte[] info)
         {
             byte error;
-            timeStamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.networkingIdentity.connection.m_hostId, this.networkingIdentity.connection.m_connectionId, timeStamp, out error);
-
-            SendToAllConnections("RpcGetMovementInformations",NetworkingMessageType.Channels.DefaultUnreliable, timeStamp, info);
+            timeStamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timeStamp, out error);
+            SendToAllConnections("RpcGetMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable, timeStamp, info);
         }
     }
 }

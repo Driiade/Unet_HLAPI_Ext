@@ -68,7 +68,7 @@ namespace BC_Solution.UnetNetwork
 
         public void SendToServer(string methodName, int channelId,params object[] parameters)
         {
-            writer.SeekZero();
+            writer.SeekZero(true);
             writer.StartMessage();
             writer.Write(NetworkingMessageType.Command);
             SerializeCall(writer, methodName, parameters);
@@ -79,7 +79,7 @@ namespace BC_Solution.UnetNetwork
 
         public void SendToAllConnections(string methodName, int channelId, params object[] parameters)
         {
-            writer.SeekZero();
+            writer.SeekZero(true);
             writer.StartMessage();
             writer.Write(NetworkingMessageType.Rpc);
             SerializeCall(writer, methodName, parameters);
@@ -90,7 +90,7 @@ namespace BC_Solution.UnetNetwork
 
         public void SendToConnection(NetworkingConnection conn,string methodName, int channelId, params object[] parameters)
         {
-            writer.SeekZero();
+            writer.SeekZero(true);
             writer.StartMessage();
             writer.Write(NetworkingMessageType.Rpc);
             SerializeCall(writer, methodName, parameters);
@@ -101,7 +101,7 @@ namespace BC_Solution.UnetNetwork
 
         public void AutoSendToConnections(string methodName, int channelId, params object[] parameters)
         {
-            writer.SeekZero();
+            writer.SeekZero(true);
             writer.StartMessage();
             writer.Write(NetworkingMessageType.AutoRpc);
             SerializeCall(writer, methodName, parameters);
@@ -115,7 +115,7 @@ namespace BC_Solution.UnetNetwork
             writer.Write(this.networkingIdentity.netId);
             writer.Write(this.m_netId);
             writer.Write(GetNetworkMethodIndex(methodName, networkedMethods));
-
+            //Debug.Log(methodName + " : " + GetNetworkMethodIndex(methodName, networkedMethods));
             for (int i = 0; i < parameters.Length; i++)
             {
                 object param = parameters[i];

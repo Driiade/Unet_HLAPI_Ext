@@ -422,7 +422,6 @@ MonoBehaviour:
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
-  networkMovementSynchronization: {fileID: 0}
   m_rigidbody2D: {fileID: 50457284989626114}
   positionSynchronizationMode: 4
   positionInterpolationMode: 1
@@ -462,7 +461,6 @@ MonoBehaviour:
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
-  networkMovementSynchronization: {fileID: 0}
   m_rigidbody: {fileID: 54041052144329094}
   positionSynchronizationMode: 7
   positionInterpolationMode: 1
@@ -502,16 +500,15 @@ MonoBehaviour:
   useExtrapolation: 0
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
-  networkMovementSynchronization: {fileID: 0}
   m_rigidbody2D: {fileID: 50885173538471890}
   synchronizeRotation: 1
   synchronizeAngularVelocity: 1
   rotationThreshold: 0.1
-  compressionRotationMode: 0
+  compressionRotationMode: 1
   minRotationValue: -360
   maxRotationValue: 360
-  precisionAfterCompression: 0
-  returnedValueOnCurrentRotation: -0
+  precisionAfterCompression: 0.005493248
+  returnedValueOnCurrentRotation: 0.005493164
   compressionAngularVelocityMode: 0
   minAngularVelocityValue: 0
   maxAngularVelocityValue: 0
@@ -540,7 +537,6 @@ MonoBehaviour:
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
-  networkMovementSynchronization: {fileID: 0}
   m_rigidbody: {fileID: 54041052144329094}
   rotationSynchronizationMode: 7
   angularVelocitySynchronizationMode: 8
@@ -578,7 +574,6 @@ MonoBehaviour:
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
-  networkMovementSynchronization: {fileID: 0}
   m_transform: {fileID: 4205423996803326}
   localSync: 0
   rotationSynchronizationMode: 7
@@ -613,7 +608,6 @@ MonoBehaviour:
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
-  networkMovementSynchronization: {fileID: 0}
   m_rigidbody2D: {fileID: 50885173538471890}
   positionSynchronizationMode: 4
   positionInterpolationMode: 1
@@ -653,7 +647,6 @@ MonoBehaviour:
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
-  networkMovementSynchronization: {fileID: 0}
   m_transform: {fileID: 4205423996803326}
   positionSynchronizationMode: 7
   positionInterpolationMode: 1
@@ -694,12 +687,12 @@ MonoBehaviour:
   nonAdaptativeBacktime: 0.1
   extraInterpolationTimeFactor: 10
   movementSynchronizers:
+  - {fileID: 114932352318098096}
+  - {fileID: 114411088824737412}
+  - {fileID: 114307297617218354}
   - {fileID: 114914137203933470}
   - {fileID: 114827670515834772}
-  - {fileID: 114411088824737412}
   - {fileID: 114587962071652100}
-  - {fileID: 114307297617218354}
-  - {fileID: 114932352318098096}
   - {fileID: 114992149828315310}
   - {fileID: 114555180304162554}
   lagAverage: 0.15
@@ -728,7 +721,6 @@ MonoBehaviour:
   useExtrapolation: 0
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
-  networkMovementSynchronization: {fileID: 0}
   m_rigidbody2D: {fileID: 50457284989626114}
   synchronizeRotation: 1
   synchronizeAngularVelocity: 1

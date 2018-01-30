@@ -357,6 +357,7 @@ namespace BC_Solution.UnetNetwork
                 {
                     NetworkingIdentity netIdentity = suppIdentities[i];
                     netIdentities.Remove(netIdentity.m_netId);
+                    RemoveNetworkingIdentity(netIdentity, m_connectionNetworkedObjects);//Because we can be host
                     server.SendToAll(NetworkingMessageType.ObjectDestroy, new ObjectDestroyMessage(netIdentity.m_netId), NetworkingMessageType.Channels.DefaultReliable);
                     Destroy(netIdentity.gameObject);
                 }
@@ -377,13 +378,15 @@ namespace BC_Solution.UnetNetwork
 
         private void OnConnectionDestroy(NetworkingMessage netMsg)
         {
-            NetworkingIdentity netIdentity = FindLocalNetworkIdentity(netMsg.m_connection, netMsg.As<ObjectDestroyMessage>().m_gameObjectNetId, m_connectionNetworkedObjects);
-            if (netIdentity != null)
-            {
-                netIdentity.OnNetworkDestroy();
-                RemoveNetworkingIdentity(netIdentity, m_connectionNetworkedObjects);
-                Destroy(netIdentity.gameObject);
-            }
+
+                NetworkingIdentity netIdentity = FindLocalNetworkIdentity(netMsg.m_connection, netMsg.As<ObjectDestroyMessage>().m_gameObjectNetId, m_connectionNetworkedObjects);
+                if (netIdentity != null)
+                {
+                    netIdentity.OnNetworkDestroy();
+                    RemoveNetworkingIdentity(netIdentity, m_connectionNetworkedObjects);
+
+                    Destroy(netIdentity.gameObject);
+                }
         }
 
         private void OnServerDestroy(NetworkingMessage netMsg)
@@ -393,6 +396,7 @@ namespace BC_Solution.UnetNetwork
             {
                 netIdentity.OnNetworkDestroy();
                 RemoveNetworkingIdentity(netIdentity, m_serverNetworkedObjects);
+                RemoveNetworkingIdentity(netIdentity, m_connectionNetworkedObjects); //because we can be host
                 Destroy(netIdentity.gameObject);
             }
         }

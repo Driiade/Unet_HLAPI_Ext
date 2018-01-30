@@ -192,6 +192,7 @@ namespace BC_Solution.UnetNetwork
             {
                 if (velocitySynchronizationMode == SYNCHRONISATION_MODE.CALCUL)
                     newState.m_velocity = (((RigidbodyPositionState)statesBuffer[place]).m_position - ((RigidbodyPositionState)statesBuffer[place + 1]).m_position) / ((statesBuffer[place].m_relativeTime - statesBuffer[place + 1].m_relativeTime));
+
             }
         }
 

@@ -65,6 +65,12 @@ namespace BC_Solution
             Vector3 B1 = ((t2 - t) * A1 + (t - t0) * A2) / (t2 - t0);
             Vector3 B2 = ((t3 - t) * A2 + (t - t1) * A3) / (t3 - t1);
 
+            Debug.LogWarning(t0);
+            Debug.LogWarning(t1);
+            Debug.LogWarning(t2);
+            Debug.LogWarning(t3);
+            Debug.LogWarning(t);
+            Debug.LogWarning(((t2 - t) * B1 + (t - t1) * B2) / (t2 - t1));
             return ((t2 - t) * B1 + (t - t1) * B2) / (t2 - t1);
         }
 

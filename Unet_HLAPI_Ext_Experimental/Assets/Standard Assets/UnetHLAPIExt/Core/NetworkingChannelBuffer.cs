@@ -24,14 +24,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 using UnityEngine.Networking;
+using System.IO;
 
 namespace BC_Solution.UnetNetwork
 {
-    public class NetworkingChannel : IDisposable {
+    public class NetworkingChannelBuffer {
 
         //NetworkingConnection m_connection;
 
-        NetworkingChannelPacket m_currentPacket;
+        MemoryStream m_currentPacket = new MemoryStream();
 
         float m_LastFlushTime;
 
@@ -42,12 +43,12 @@ namespace BC_Solution.UnetNetwork
         bool m_IsBroken;
         int m_MaxPendingPacketCount;
 
-        const int k_MaxFreePacketCount = 512; //  this is for all connections. maybe make this configurable
+       // const int k_MaxFreePacketCount = 512; //  this is for all connections. maybe make this configurable
         public const int MaxPendingPacketCount = 16;  // this is per connection. each is around 1400 bytes (MTU)
         public const int MaxBufferedPackets = 512;
 
-        Queue<NetworkingChannelPacket> m_PendingPackets;
-        static List<NetworkingChannelPacket> s_FreePackets;
+        Queue<MemoryStream> m_PendingPackets;
+        //static List<MemoryStream> s_FreePackets;
         static internal int pendingPacketCount; // this is across all connections. only used for profiler metrics.
 
         // config
@@ -72,11 +73,9 @@ namespace BC_Solution.UnetNetwork
         // We need to reserve some space for header information, this will be taken off the total channel buffer size
         const int k_PacketHeaderReserveSize = 100;
 
-        public NetworkingChannel(int bufferSize, byte cid, bool isReliable, bool isSequenced)
+        public NetworkingChannelBuffer(int bufferSize, byte cid, bool isReliable, bool isSequenced)
         {
-            //m_connection = conn;
-            m_MaxPacketSize = bufferSize - k_PacketHeaderReserveSize;
-            m_currentPacket = new NetworkingChannelPacket(m_MaxPacketSize, isReliable);
+            m_MaxPacketSize = bufferSize - k_PacketHeaderReserveSize;      
 
             m_ChannelId = cid;
             m_MaxPendingPacketCount = MaxPendingPacketCount;
@@ -84,51 +83,11 @@ namespace BC_Solution.UnetNetwork
             m_AllowFragmentation = (isReliable && isSequenced);
             if (isReliable)
             {
-                m_PendingPackets = new Queue<NetworkingChannelPacket>();
-                if (s_FreePackets == null)
-                {
-                    s_FreePackets = new List<NetworkingChannelPacket>();
-                }
+                m_PendingPackets = new Queue<MemoryStream>();
             }
         }
 
-        // Track whether Dispose has been called.
-        bool m_Disposed;
 
-        public void Dispose()
-        {
-            Dispose(true);
-            // Take yourself off the Finalization queue
-            // to prevent finalization code for this object
-            // from executing a second time.
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            // Check to see if Dispose has already been called.
-            if (!m_Disposed)
-            {
-                if (disposing)
-                {
-                    if (m_PendingPackets != null)
-                    {
-                        while (m_PendingPackets.Count > 0)
-                        {
-                            pendingPacketCount -= 1;
-
-                            NetworkingChannelPacket packet = m_PendingPackets.Dequeue();
-                            if (s_FreePackets.Count < k_MaxFreePacketCount)
-                            {
-                                s_FreePackets.Add(packet);
-                            }
-                        }
-                        m_PendingPackets.Clear();
-                    }
-                }
-            }
-            m_Disposed = true;
-        }
 
         public bool SetOption(NetworkingMessageType.ChannelOption option, int value)
         {
@@ -144,7 +103,7 @@ namespace BC_Solution.UnetNetwork
                         }
                         if (value < 0 || value >= MaxBufferedPackets)
                         {
-                            if (LogFilter.logError) { Debug.LogError("Invalid MaxPendingBuffers for channel " + m_ChannelId + ". Must be greater than zero and less than " + k_MaxFreePacketCount); }
+                            if (LogFilter.logError) { Debug.LogError("Invalid MaxPendingBuffers for channel " + m_ChannelId + ". Must be greater than zero and less than " + MaxBufferedPackets); }
                             return false;
                         }
                         m_MaxPendingPacketCount = value;
@@ -159,7 +118,7 @@ namespace BC_Solution.UnetNetwork
 
                 case NetworkingMessageType.ChannelOption.MaxPacketSize:
                     {
-                        if (!m_currentPacket.IsEmpty() || m_PendingPackets.Count > 0)
+                        if (m_currentPacket.Position > 0 || m_PendingPackets.Count > 0)
                         {
                             if (LogFilter.logError) { Debug.LogError("Cannot set MaxPacketSize after sending data."); }
                             return false;
@@ -176,8 +135,6 @@ namespace BC_Solution.UnetNetwork
                             if (LogFilter.logError) { Debug.LogError("Cannot set MaxPacketSize to greater than the existing maximum (" + m_MaxPacketSize + ")."); }
                             return false;
                         }
-                        // rebuild the packet with the new size. the packets doesn't store a size variable, just has the size of the internal buffer
-                        m_currentPacket = new NetworkingChannelPacket(value, m_IsReliable);
                         m_MaxPacketSize = value;
                         return true;
                     }
@@ -189,7 +146,7 @@ namespace BC_Solution.UnetNetwork
         {
             // if (Time.realtimeSinceStartup - m_LastFlushTime > maxDelay && !m_currentPacket.IsEmpty())
             //{
-            if (!m_currentPacket.IsEmpty())
+            if (m_currentPacket.Position > 0)
             {
                 SendInternalBuffer(conn);
                 m_LastFlushTime = Time.realtimeSinceStartup;
@@ -206,7 +163,8 @@ namespace BC_Solution.UnetNetwork
 
         public bool SendWriter(NetworkingConnection conn, NetworkingWriter writer)
         {
-            return SendBytes(conn, writer.AsArraySegment().Array, writer.AsArraySegment().Count);
+            byte[] bytes = writer.ToArray();
+            return SendBytes(conn, bytes, bytes.Length);
         }
 
         public bool Send(NetworkingConnection conn, NetworkingMessage netMsg)
@@ -220,7 +178,7 @@ namespace BC_Solution.UnetNetwork
             return SendWriter(conn, s_sendWriter);
         }
 
-        internal NetworkingBuffer fragmentBuffer = new NetworkingBuffer();
+        internal MemoryStream fragmentBuffer = new MemoryStream();
         bool readingFragment = false;
 
         internal bool HandleFragment(NetworkingReader reader)
@@ -230,12 +188,12 @@ namespace BC_Solution.UnetNetwork
             {
                 if (readingFragment == false)
                 {
-                    fragmentBuffer.SeekZero();
+                    fragmentBuffer.Seek(0, SeekOrigin.Begin);
                     readingFragment = true;
                 }
 
                 byte[] data = reader.ReadBytesAndSize();
-                fragmentBuffer.WriteBytes(data, (ushort)data.Length);
+                fragmentBuffer.Write(data,0, data.Length);
                 return false;
             }
             else
@@ -310,18 +268,19 @@ namespace BC_Solution.UnetNetwork
                 }
             }
 
-            if (!m_currentPacket.HasSpace(bytesToSend))
+            // not enough space for bytes to send?
+            if (m_currentPacket.Position + bytesToSend > m_MaxPacketSize)
             {
                 if (m_IsReliable)
                 {
                     if (m_PendingPackets.Count == 0)
                     {
                         // nothing in the pending queue yet, just flush and write
-                        if (!m_currentPacket.SendToTransport(conn, m_ChannelId))
+                        if (!SendToTransport(conn, m_currentPacket,m_IsReliable, m_ChannelId))
                         {
                             QueuePacket();
                         }
-                        m_currentPacket.Write(bytes, bytesToSend);
+                        m_currentPacket.Write(bytes,0, bytesToSend);
                         return true;
                     }
 
@@ -338,68 +297,35 @@ namespace BC_Solution.UnetNetwork
 
                     // calling SendToTransport here would write out-of-order data to the stream. just queue
                     QueuePacket();
-                    m_currentPacket.Write(bytes, bytesToSend);
+                    m_currentPacket.Write(bytes,0, bytesToSend);
                     return true;
                 }
 
-                if (!m_currentPacket.SendToTransport(conn, m_ChannelId))
+                if (!SendToTransport(conn, m_currentPacket, m_IsReliable, m_ChannelId))
                 {
                     if (LogFilter.logError) { Debug.Log("ChannelBuffer SendBytes no space on unreliable channel " + m_ChannelId); }
                     return false;
                 }
 
-                m_currentPacket.Write(bytes, bytesToSend);
+                m_currentPacket.Write(bytes,0, bytesToSend);
                 return true;
             }
 
-            m_currentPacket.Write(bytes, bytesToSend);
-           // if (maxDelay == 0.0f)
+            m_currentPacket.Write(bytes,0, bytesToSend);
+            // if (maxDelay == 0.0f)
             //{
             // return SendInternalBuffer(conn);
             //}
-            return false;
+            return SendInternalBuffer(conn);
         }
 
         void QueuePacket()
         {
             pendingPacketCount += 1;
             m_PendingPackets.Enqueue(m_currentPacket);
-            m_currentPacket = AllocPacket();
+            m_currentPacket = new MemoryStream();
         }
 
-        NetworkingChannelPacket AllocPacket()
-        {
-#if UNITY_EDITOR
-        /*    UnityEditor.NetworkDetailStats.SetStat(
-                UnityEditor.NetworkDetailStats.NetworkDirection.Outgoing,
-                MsgType.HLAPIPending, "msg", pendingPacketCount); */
-#endif
-            if (s_FreePackets.Count == 0)
-            {
-                return new NetworkingChannelPacket(m_MaxPacketSize, m_IsReliable);
-            }
-
-            var packet = s_FreePackets[s_FreePackets.Count - 1];
-            s_FreePackets.RemoveAt(s_FreePackets.Count - 1);
-
-            packet.Reset();
-            return packet;
-        }
-
-        static void FreePacket(NetworkingChannelPacket packet)
-        {
-#if UNITY_EDITOR
-           /* UnityEditor.NetworkDetailStats.SetStat(
-                UnityEditor.NetworkDetailStats.NetworkDirection.Outgoing,
-                MsgType.HLAPIPending, "msg", pendingPacketCount); */
-#endif
-            if (s_FreePackets.Count >= k_MaxFreePacketCount)
-            {
-                // just discard this packet, already tracking too many free packets
-                return;
-            }
-            s_FreePackets.Add(packet);
-        }
 
         public bool SendInternalBuffer(NetworkingConnection conn)
         {
@@ -413,14 +339,13 @@ namespace BC_Solution.UnetNetwork
                 // send until transport can take no more
                 while (m_PendingPackets.Count > 0)
                 {
-                    var packet = m_PendingPackets.Dequeue();
-                    if (!packet.SendToTransport(conn, m_ChannelId))
+                    MemoryStream packet = m_PendingPackets.Dequeue();
+                    if (!SendToTransport(conn, packet, m_IsReliable, m_ChannelId))
                     {
                         m_PendingPackets.Enqueue(packet);
                         break;
                     }
                     pendingPacketCount -= 1;
-                    FreePacket(packet);
 
                     if (m_IsBroken && m_PendingPackets.Count < (m_MaxPendingPacketCount / 2))
                     {
@@ -430,7 +355,40 @@ namespace BC_Solution.UnetNetwork
                 }
                 return true;
             }
-            return m_currentPacket.SendToTransport(conn, m_ChannelId);
+            return SendToTransport(conn, m_currentPacket, m_IsReliable, m_ChannelId);
+        }
+
+        // vis2k: send packet to transport (moved here from old ChannelPacket.cs)
+        static bool SendToTransport(NetworkingConnection conn, MemoryStream packet, bool reliable, int channelId)
+        {
+            //Debug.Log("Paquet size : " + packet.ToArray().Length);
+            //Debug.Log("Paquet position : " + (ushort)packet.Position);
+
+            // vis2k: control flow improved to something more logical and shorter
+            byte error;
+            if (conn.TransportSend(packet.ToArray(), (ushort)packet.Position, channelId, out error))
+            {
+                packet.Position = 0;
+                return true;
+            }
+            else
+            {
+                // NoResources and reliable? Then it will be resent, so don't reset position, just return false.
+                if (error == (int)NetworkError.NoResources && reliable)
+                {
+#if UNITY_EDITOR
+                 /*   UnityEditor.NetworkDetailStats.IncrementStat(
+                        UnityEditor.NetworkDetailStats.NetworkDirection.Outgoing,
+                        MsgType.HLAPIResend, "msg", 1);*/
+#endif
+                    return false;
+                }
+
+                // otherwise something unexpected happened. log the error, reset position and return.
+                if (LogFilter.logError) { Debug.LogError("SendToTransport failed. error:" + (NetworkError)error + " channel:" + channelId + " bytesToSend:" + packet.Position); }
+                packet.Position = 0;
+                return false;
+            }
         }
     }
 }

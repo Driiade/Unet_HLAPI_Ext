@@ -1348,7 +1348,7 @@ MonoBehaviour:
   setReadyOnConnect: 1
   serverAdress: localhost
   serverPort: 7777
-  maxPlayer: 5
+  maxPlayer: 10
   additionnalChannel: 
   connectionTimeOut: 1000
   disconnectionTimeOut: 5000
@@ -1398,7 +1398,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   spawnedGameObjectOnConnect:
   - {fileID: 1231402685847870, guid: d313bee6809531445a0186a4f8705868, type: 2}
-  - {fileID: 1049942701003990, guid: 3aa7d780f68a99d43ac747cc6a80b227, type: 2}
   registeredNetworkedGameObjectsArray:
   - {fileID: 1231402685847870, guid: d313bee6809531445a0186a4f8705868, type: 2}
   - {fileID: 1049942701003990, guid: 3aa7d780f68a99d43ac747cc6a80b227, type: 2}

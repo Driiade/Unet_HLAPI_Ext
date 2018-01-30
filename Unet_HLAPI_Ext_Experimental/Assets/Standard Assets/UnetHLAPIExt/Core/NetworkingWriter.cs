@@ -25,6 +25,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using BC_Solution;
+using System.IO;
 
 namespace BC_Solution.UnetNetwork
 {
@@ -33,49 +34,31 @@ namespace BC_Solution.UnetNetwork
       */
     public class NetworkingWriter
     {
-
+        public ushort Position { get { return (ushort)m_memoryStream.Position; } } // changed to ushort so at least we can support 64k and not 32k bytes
         const int k_MaxStringLength = 1024 * 32;
-        NetworkingBuffer m_Buffer;
-        static Encoding s_Encoding;
-        static byte[] s_StringWriteBuffer;
+        MemoryStream m_memoryStream = new MemoryStream();
+        static Encoding s_Encoding = new UTF8Encoding();
+        static byte[] s_StringWriteBuffer = new byte[k_MaxStringLength];
 
         public NetworkingWriter()
         {
-            m_Buffer = new NetworkingBuffer();
-            if (s_Encoding == null)
-            {
-                s_Encoding = new UTF8Encoding();
-                s_StringWriteBuffer = new byte[k_MaxStringLength];
-            }
+
         }
 
         public NetworkingWriter(byte[] buffer)
         {
-            m_Buffer = new NetworkingBuffer(buffer);
-            if (s_Encoding == null)
-            {
-                s_Encoding = new UTF8Encoding();
-                s_StringWriteBuffer = new byte[k_MaxStringLength];
-            }
+            m_memoryStream.Write(buffer, 0, buffer.Length);
         }
-
-        public short Position { get { return (short)m_Buffer.Position; } }
 
         public byte[] ToArray()
         {
-            var newArray = new byte[m_Buffer.AsArraySegment().Count];
-            Array.Copy(m_Buffer.AsArraySegment().Array, newArray, m_Buffer.AsArraySegment().Count);
-            return newArray;
+            return m_memoryStream.ToArray(); // documentation: "omits unused bytes"
         }
 
-        public byte[] AsArray()
-        {
-            return AsArraySegment().Array;
-        }
 
-        internal ArraySegment<byte> AsArraySegment()
+        public void Write(byte value)
         {
-            return m_Buffer.AsArraySegment();
+            m_memoryStream.WriteByte(value);
         }
 
         /// <summary>
@@ -214,98 +197,89 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-     /*   public void Write(NetworkInstanceId value)    //Just for writing an uint..sure ...
-        {
-            WritePackedUInt32(value.Value);
-        }
+        /*   public void Write(NetworkInstanceId value)    //Just for writing an uint..sure ...
+           {
+               WritePackedUInt32(value.Value);
+           }
 
-        public void Write(NetworkSceneId value)
-        {
-            WritePackedUInt32(value.Value);
-        } */
-
-        public void Write(char value)
-        {
-            m_Buffer.WriteByte((byte)value);
-        }
-
-        public void Write(byte value)
-        {
-            m_Buffer.WriteByte(value);
-        }
+           public void Write(NetworkSceneId value)
+           {
+               WritePackedUInt32(value.Value);
+           } */
 
         public void Write(sbyte value)
         {
-            m_Buffer.WriteByte((byte)value);
+            m_memoryStream.WriteByte((byte)value);
+        }
+
+        public void Write(char value)
+        {
+            Write((byte)value);
         }
 
         public void Write(short value)
         {
-            m_Buffer.WriteByte2((byte)(value & 0xff), (byte)((value >> 8) & 0xff));
+            Write((byte)(value & 0xff));
+            Write((byte)((value >> 8) & 0xff));
         }
 
         public void Write(ushort value)
         {
-            m_Buffer.WriteByte2((byte)(value & 0xff), (byte)((value >> 8) & 0xff));
+            Write((byte)(value & 0xff));
+            Write((byte)((value >> 8) & 0xff));
         }
 
         public void Write(int value)
         {
             // little endian...
-            m_Buffer.WriteByte4(
-                (byte)(value & 0xff),
-                (byte)((value >> 8) & 0xff),
-                (byte)((value >> 16) & 0xff),
-                (byte)((value >> 24) & 0xff));
+            Write((byte)(value & 0xff));
+            Write((byte)((value >> 8) & 0xff));
+            Write((byte)((value >> 16) & 0xff));
+            Write((byte)((value >> 24) & 0xff));
         }
 
         public void Write(uint value)
         {
-            m_Buffer.WriteByte4(
-                (byte)(value & 0xff),
-                (byte)((value >> 8) & 0xff),
-                (byte)((value >> 16) & 0xff),
-                (byte)((value >> 24) & 0xff));
+            Write((byte)(value & 0xff));
+            Write((byte)((value >> 8) & 0xff));
+            Write((byte)((value >> 16) & 0xff));
+            Write((byte)((value >> 24) & 0xff));
         }
 
         public void Write(long value)
         {
-            m_Buffer.WriteByte8(
-                (byte)(value & 0xff),
-                (byte)((value >> 8) & 0xff),
-                (byte)((value >> 16) & 0xff),
-                (byte)((value >> 24) & 0xff),
-                (byte)((value >> 32) & 0xff),
-                (byte)((value >> 40) & 0xff),
-                (byte)((value >> 48) & 0xff),
-                (byte)((value >> 56) & 0xff));
+            Write((byte)(value & 0xff));
+            Write((byte)((value >> 8) & 0xff));
+            Write((byte)((value >> 16) & 0xff));
+            Write((byte)((value >> 24) & 0xff));
+            Write((byte)((value >> 32) & 0xff));
+            Write((byte)((value >> 40) & 0xff));
+            Write((byte)((value >> 48) & 0xff));
+            Write((byte)((value >> 56) & 0xff));
         }
 
         public void Write(ulong value)
         {
-            m_Buffer.WriteByte8(
-                (byte)(value & 0xff),
-                (byte)((value >> 8) & 0xff),
-                (byte)((value >> 16) & 0xff),
-                (byte)((value >> 24) & 0xff),
-                (byte)((value >> 32) & 0xff),
-                (byte)((value >> 40) & 0xff),
-                (byte)((value >> 48) & 0xff),
-                (byte)((value >> 56) & 0xff));
+            Write((byte)(value & 0xff));
+            Write((byte)((value >> 8) & 0xff));
+            Write((byte)((value >> 16) & 0xff));
+            Write((byte)((value >> 24) & 0xff));
+            Write((byte)((value >> 32) & 0xff));
+            Write((byte)((value >> 40) & 0xff));
+            Write((byte)((value >> 48) & 0xff));
+            Write((byte)((value >> 56) & 0xff));
         }
-
-        static UIntFloat s_FloatConverter;
 
         public void Write(float value)
         {
-            s_FloatConverter.floatValue = value;
-            Write(s_FloatConverter.intValue);
+            byte[] bytes = BitConverter.GetBytes(value);
+            Write(bytes, bytes.Length);
         }
 
         public void Write(double value)
         {
-            s_FloatConverter.doubleValue = value;
-            Write(s_FloatConverter.longValue);
+            byte[] bytes = BitConverter.GetBytes(value);
+            Write(bytes, bytes.Length);
         }
 
         public void Write(decimal value)
@@ -321,28 +295,25 @@ namespace BC_Solution.UnetNetwork
         {
             if (value == null)
             {
-                m_Buffer.WriteByte2(0, 0);
+                Write((ushort)0);
                 return;
             }
 
-            int len = s_Encoding.GetByteCount(value);
+            int length = s_Encoding.GetByteCount(value);
 
-            if (len >= k_MaxStringLength)
+            if (length >= k_MaxStringLength)
             {
                 throw new IndexOutOfRangeException("Serialize(string) too long: " + value.Length);
             }
 
-            Write((ushort)(len));
+            Write((ushort)length);
             int numBytes = s_Encoding.GetBytes(value, 0, value.Length, s_StringWriteBuffer, 0);
-            m_Buffer.WriteBytes(s_StringWriteBuffer, (ushort)numBytes);
+            m_memoryStream.Write(s_StringWriteBuffer, 0, numBytes);
         }
 
         public void Write(bool value)
         {
-            if (value)
-                m_Buffer.WriteByte(1);
-            else
-                m_Buffer.WriteByte(0);
+            m_memoryStream.WriteByte((byte)(value ? 1 : 0));
         }
 
         public void Write(byte[] buffer, int count)
@@ -352,7 +323,7 @@ namespace BC_Solution.UnetNetwork
                 if (LogFilter.logError) { Debug.LogError("NetworkWriter Write: buffer is too large (" + count + ") bytes. The maximum buffer size is 64K bytes."); }
                 return;
             }
-            m_Buffer.WriteBytes(buffer, (UInt16)count);
+            m_memoryStream.Write(buffer, 0, count);
         }
 
         public void Write(byte[] buffer, int offset, int count)
@@ -362,7 +333,7 @@ namespace BC_Solution.UnetNetwork
                 if (LogFilter.logError) { Debug.LogError("NetworkWriter Write: buffer is too large (" + count + ") bytes. The maximum buffer size is 64K bytes."); }
                 return;
             }
-            m_Buffer.WriteBytesAtOffset(buffer, (ushort)offset, (ushort)count);
+            m_memoryStream.Write(buffer, offset, count);
         }
 
         public void WriteBytesAndSize(byte[] buffer, int count)
@@ -380,7 +351,7 @@ namespace BC_Solution.UnetNetwork
             }
 
             Write((UInt16)count);
-            m_Buffer.WriteBytes(buffer, (UInt16)count);
+            m_memoryStream.Write(buffer, 0, count);
         }
 
         //NOTE: this will write the entire buffer.. including trailing empty space!
@@ -397,7 +368,7 @@ namespace BC_Solution.UnetNetwork
                 return;
             }
             Write((UInt16)buffer.Length);
-            m_Buffer.WriteBytes(buffer, (UInt16)buffer.Length);
+            m_memoryStream.Write(buffer, 0, buffer.Length);
         }
 
         public void Write(Vector2 value)
@@ -558,27 +529,37 @@ namespace BC_Solution.UnetNetwork
             msg.Serialize(this);
         }
 
-        public void SeekZero()
+        public void SeekZero(bool reset)
         {
-            m_Buffer.SeekZero();
+            if (reset)
+                m_memoryStream.SetLength(0);
+
+            m_memoryStream.Seek(0, SeekOrigin.Begin);
         }
 
         public void StartMessage() //Not message type in it :)
         {
-            SeekZero();
+            SeekZero(true);
 
             // two bytes for size, will be filled out in FinishMessage
-            m_Buffer.WriteByte2(0, 0);
+             Write((ushort)0);
 
             // two bytes for message type
-           // Write(msgType);
+            // Write(msgType);
         }
 
 
         public void FinishMessage()
         {
-            // writes correct size into space at start of buffer
-            m_Buffer.FinishMessage();
+            // jump to zero, replace size (short) in header, jump back
+            long oldPosition = m_memoryStream.Position;
+            //Debug.Log("OldPosition : " + oldPosition);
+            ushort sz = (ushort)(m_memoryStream.Length - 2); // length - header(short,short)
+            //Debug.Log("Write size : " + sz);
+            SeekZero(false);
+            Write(sz);
+            //Debug.Log(m_memoryStream.Length);
+            m_memoryStream.Position = oldPosition;
         }
     }
 }

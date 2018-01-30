@@ -5,26 +5,33 @@ using BC_Solution.UnetNetwork;
 
 public class NetworkingBehaviourTest : NetworkingBehaviour {
 
+    public float sendingRate = 0.5f;
+
     int cpt = 0;
 
+    float timer;
 	// Update is called once per frame
 	void Update () {
 
-      /*  if (isClient)
+        if (Time.time > timer)
         {
-            SendToServer("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Command] hello world : ", cpt);
-            AutoSendToConnections("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Auto Rpc] hello world : ", cpt);
+            timer = Time.time + sendingRate;
+            if (isClient)
+            {
+                SendToServer("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Command] hello world : ", cpt);
+                AutoSendToConnections("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Auto Rpc] hello world : ", cpt);
+            }
+
+            if (isServer)
+                SendToAllConnections("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Rpc] hello world : ", cpt);
+
+            cpt++;
         }
-
-        if (isServer)
-           SendToAllConnections("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Rpc] hello world : ", cpt);
-
-        cpt++;*/
     }
 
     [Networked]
     void Test(string message, ushort id)
     {
-       // Debug.Log(message + id);
+        Debug.Log(message + id);
     }
 }

@@ -100,7 +100,7 @@ namespace BC_Solution.UnetNetwork
             return this.m_currentState == ConnectState.Connected;
         }
 
-        NetworkingChannel[] m_channels;
+        NetworkingChannelBuffer[] m_channels;
         List<PlayerController> m_PlayerControllers = new List<PlayerController>();
 
         // HashSet<NetworkIdentity> m_visibilityList = new HashSet<NetworkIdentity>();
@@ -231,7 +231,7 @@ namespace BC_Solution.UnetNetwork
             if ((hostTopology.DefaultConfig.UsePlatformSpecificProtocols) && (UnityEngine.Application.platform != RuntimePlatform.PS4) && (UnityEngine.Application.platform != RuntimePlatform.PSP2))
                 throw new ArgumentOutOfRangeException("Platform specific protocols are not supported on this platform");
 
-            m_channels = new NetworkingChannel[numChannels];
+            m_channels = new NetworkingChannelBuffer[numChannels];
             for (int i = 0; i < numChannels; i++)
             {
                 var qos = hostTopology.DefaultConfig.Channels[i];
@@ -240,7 +240,7 @@ namespace BC_Solution.UnetNetwork
                 {
                     actualPacketSize = hostTopology.DefaultConfig.FragmentSize * 128;
                 }
-                m_channels[i] = new NetworkingChannel(actualPacketSize, (byte)i, IsReliableQoS(qos.QOS), IsSequencedQoS(qos.QOS));
+                m_channels[i] = new NetworkingChannelBuffer(actualPacketSize, (byte)i, IsReliableQoS(qos.QOS), IsSequencedQoS(qos.QOS));
             }
         }
 
@@ -264,13 +264,6 @@ namespace BC_Solution.UnetNetwork
         protected virtual void Dispose(bool disposing)
         {
             // Check to see if Dispose has already been called.
-            if (!m_Disposed && m_channels != null)
-            {
-                for (int i = 0; i < m_channels.Length; i++)
-                {
-                    m_channels[i].Dispose();
-                }
-            }
             m_channels = null;
 
             /*if (m_clientOwnedObjects != null)
@@ -366,7 +359,7 @@ namespace BC_Solution.UnetNetwork
                 if (networkEvent != NetworkEventType.Nothing)
                 {
                     if (LogFilter.logDev) { Debug.Log("Client event: host=" + this.m_connectionId + " event=" + networkEvent + " error=" + error); }
-                }
+                }           
 
                 switch (networkEvent)
                 {
@@ -649,15 +642,15 @@ namespace BC_Solution.UnetNetwork
             else
             {
                 //if (LogFilter.logWarn) { Debug.LogWarning("NetworkConnection InvokeHandler no handler for " + msgType); }
-
+                //Debug.Log(reader.Length);
                 if (m_server != null) //By design, if you have no handler but you are server, just send back information to all client.
                 {
                     NetworkingWriter writer = new NetworkingWriter();
                     writer.StartMessage();
                     writer.Write(msgType);
-                    writer.Write(reader.m_buf.AsArraySegment().Array);
+                    writer.Write(reader.ToArray());
                     writer.FinishMessage();
-
+                    //Debug.Log(msgType);
                     m_server.SendToAll(writer, channelId);
                     return true;
                 }
@@ -699,7 +692,7 @@ namespace BC_Solution.UnetNetwork
             var channel = m_channels[channelId];
             if (channel.HandleFragment(reader))
             {
-                NetworkingReader msgReader = new NetworkingReader(channel.fragmentBuffer.AsArraySegment().Array);
+                NetworkingReader msgReader = new NetworkingReader(channel.fragmentBuffer.ToArray());
                 msgReader.ReadInt16(); // size
                 ushort msgType = msgReader.ReadUInt16();
                 InvokeHandler(msgType, msgReader, channelId);
@@ -906,6 +899,8 @@ namespace BC_Solution.UnetNetwork
             int receivedSize,
             int channelId)
         {
+            //Debug.Log("Receive size : " + receivedSize);
+
             // read until size is reached.
             // NOTE: stream.Capacity is 1300, NOT the size of the available data
             while (reader.Position < receivedSize)
@@ -914,6 +909,9 @@ namespace BC_Solution.UnetNetwork
                 // this ensures it can never get out of sync if user code reads less or more than the real amount.
                 ushort sz = reader.ReadUInt16();
                 ushort msgType = reader.ReadUInt16(); //BC : Mode by ushort
+
+                //Debug.Log("Size : " + sz);
+                //Debug.Log("Message type : " + msgType);
 
                 // create a reader just for this message
                 byte[] msgBuffer = reader.ReadBytes(sz);
@@ -1056,6 +1054,7 @@ namespace BC_Solution.UnetNetwork
 
         public virtual void TransportReceive(byte[] bytes, int numBytes, int channelId)
         {
+            //Debug.Log("Num byte receive : " + numBytes);
             HandleBytes(bytes, numBytes, channelId);
         }
 

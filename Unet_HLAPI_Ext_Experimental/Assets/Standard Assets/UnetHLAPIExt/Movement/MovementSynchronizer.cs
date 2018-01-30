@@ -79,8 +79,8 @@ namespace BC_Solution.UnetNetwork
         [Space(20)]
         public float interpolationErrorTime = 0.1f;
 
-        [HideInInspector]
-        public NetworkMovementSynchronization networkMovementSynchronization;
+
+        private NetworkMovementSynchronization networkMovementSynchronization;
 
         protected float extrapolationTimer = -1;
 
@@ -119,6 +119,15 @@ namespace BC_Solution.UnetNetwork
         {
             return isActive && enabled;
         }
+
+
+        internal void Init(NetworkMovementSynchronization movSynchronization)
+        {
+            statesBuffer = new State[maxBufferSize];
+            this.networkMovementSynchronization = movSynchronization;
+        }
+
+
 
         protected void Update()
         {
@@ -178,11 +187,6 @@ namespace BC_Solution.UnetNetwork
                 return lanConfig.updateRate;
             else
                 return defaultConfig.updateRate;
-        }
-
-        protected virtual void Awake()
-        {
-            statesBuffer = new State[maxBufferSize];
         }
 
 
@@ -553,7 +557,8 @@ namespace BC_Solution.UnetNetwork
                 case SYNCHRONISATION_MODE.XYZ:
                     value.x = target.x;
                     value.y = target.y;
-                    value.z = target.z; break;
+                    value.z = target.z;
+                    break;
 
                 case SYNCHRONISATION_MODE.NONE: break;
                 case SYNCHRONISATION_MODE.CALCUL: break;

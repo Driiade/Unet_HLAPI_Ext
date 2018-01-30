@@ -487,10 +487,11 @@ namespace BC_Solution.UnetNetwork {
                 }
             }
 
-            OnDisconnected(conn);
 
             m_connections[connectionId] = null;
             conn.Disconnect();
+
+            OnDisconnected(conn);
             if (LogFilter.logDebug) { Debug.Log("Server lost client:" + connectionId); }
         }
 
@@ -548,6 +549,18 @@ namespace BC_Solution.UnetNetwork {
             return result;
         }
 
+        public bool SendToAll(byte[] bytes, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
+        {
+            bool result = true;
+            foreach (NetworkingConnection conn in connections)
+            {
+                if (conn != null)
+                    result &= conn.Send(bytes, bytes.Length, channelId);
+            }
+
+            return result;
+        }
+
 
         public bool SendToAll(ushort msgType, NetworkingMessage msg, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
         {
@@ -567,7 +580,7 @@ namespace BC_Solution.UnetNetwork {
         {
             if (LogFilter.logDev) { Debug.Log("Server.SendToReady id:" + msgType); }
 
-            foreach (NetworkingConnection conn in connections) // vis2k: foreach
+            foreach (NetworkingConnection conn in connections)
             {
                 if (conn != null && conn.isReady)
                 {

@@ -24,62 +24,50 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Text;
 using System;
+using System.IO;
 
 namespace BC_Solution.UnetNetwork
 {
     public class NetworkingReader
     {
-       internal NetworkingBuffer m_buf;
+        MemoryStream m_memoryStream;
 
+        public long Position { get { return m_memoryStream.Position; } } // changed to long for best support
+        public long Length { get { return m_memoryStream.Length; } } // changed to long for best support
         const int k_MaxStringLength = 1024 * 32;
         const int k_InitialStringBufferSize = 1024;
-        static byte[] s_StringReaderBuffer;
-        static Encoding s_Encoding;
+        static byte[] s_StringReaderBuffer = new byte[k_InitialStringBufferSize];
+        static Encoding s_Encoding = new UTF8Encoding();
 
-        public NetworkingReader()
-        {
-            m_buf = new NetworkingBuffer();
-            Initialize();
-        }
 
         public NetworkingReader(NetworkingWriter writer)
         {
-            m_buf = new NetworkingBuffer(writer.AsArray());
-            Initialize();
+            m_memoryStream = new MemoryStream(writer.ToArray());
         }
 
         public NetworkingReader(NetworkingReader reader)
         {
-            m_buf = new NetworkingBuffer(reader.m_buf.AsArraySegment().Array);
-            Initialize();
+            m_memoryStream = new MemoryStream(reader.ToArray());
         }
 
         public NetworkingReader(byte[] buffer)
         {
-            m_buf = new NetworkingBuffer(buffer);
-            Initialize();
+            m_memoryStream = new MemoryStream(buffer);
         }
 
-        static void Initialize()
+        public byte[] ToArray()
         {
-            if (s_Encoding == null)
-            {
-                s_StringReaderBuffer = new byte[k_InitialStringBufferSize];
-                s_Encoding = new UTF8Encoding();
-            }
+            return m_memoryStream.ToArray();
         }
-
-        public uint Position { get { return m_buf.Position; } }
-        public int Length { get { return m_buf.Length; } }
 
         public void SeekZero()
         {
-            m_buf.SeekZero();
+            m_memoryStream.Seek(0, SeekOrigin.Begin);
         }
 
         internal void Replace(byte[] buffer)
         {
-            m_buf.Replace(buffer);
+            m_memoryStream = new MemoryStream(buffer);
         }
 
         // http://sqlite.org/src4/doc/trunk/www/varint.wiki
@@ -185,47 +173,47 @@ namespace BC_Solution.UnetNetwork
 
         public byte ReadByte()
         {
-            return m_buf.ReadByte();
+            return (byte)m_memoryStream.ReadByte();
         }
 
         public sbyte ReadSByte()
         {
-            return (sbyte)m_buf.ReadByte();
+            return (sbyte)ReadByte();
         }
 
         public short ReadInt16()
         {
             ushort value = 0;
-            value |= m_buf.ReadByte();
-            value |= (ushort)(m_buf.ReadByte() << 8);
+            value |= ReadByte();
+            value |= (ushort)(ReadByte() << 8);
             return (short)value;
         }
 
         public ushort ReadUInt16()
         {
             ushort value = 0;
-            value |= m_buf.ReadByte();
-            value |= (ushort)(m_buf.ReadByte() << 8);
+            value |= ReadByte();
+            value |= (ushort)(ReadByte() << 8);
             return value;
         }
 
         public int ReadInt32()
         {
             uint value = 0;
-            value |= m_buf.ReadByte();
-            value |= (uint)(m_buf.ReadByte() << 8);
-            value |= (uint)(m_buf.ReadByte() << 16);
-            value |= (uint)(m_buf.ReadByte() << 24);
+            value |= ReadByte();
+            value |= (uint)(ReadByte() << 8);
+            value |= (uint)(ReadByte() << 16);
+            value |= (uint)(ReadByte() << 24);
             return (int)value;
         }
 
         public uint ReadUInt32()
         {
             uint value = 0;
-            value |= m_buf.ReadByte();
-            value |= (uint)(m_buf.ReadByte() << 8);
-            value |= (uint)(m_buf.ReadByte() << 16);
-            value |= (uint)(m_buf.ReadByte() << 24);
+            value |= ReadByte();
+            value |= (uint)(ReadByte() << 8);
+            value |= (uint)(ReadByte() << 16);
+            value |= (uint)(ReadByte() << 24);
             return value;
         }
 
@@ -233,28 +221,28 @@ namespace BC_Solution.UnetNetwork
         {
             ulong value = 0;
 
-            ulong other = m_buf.ReadByte();
+            ulong other = ReadByte();
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 8;
+            other = ((ulong)ReadByte()) << 8;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 16;
+            other = ((ulong)ReadByte()) << 16;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 24;
+            other = ((ulong)ReadByte()) << 24;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 32;
+            other = ((ulong)ReadByte()) << 32;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 40;
+            other = ((ulong)ReadByte()) << 40;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 48;
+            other = ((ulong)ReadByte()) << 48;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 56;
+            other = ((ulong)ReadByte()) << 56;
             value |= other;
 
             return (long)value;
@@ -263,28 +251,28 @@ namespace BC_Solution.UnetNetwork
         public ulong ReadUInt64()
         {
             ulong value = 0;
-            ulong other = m_buf.ReadByte();
+            ulong other = ReadByte();
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 8;
+            other = ((ulong)ReadByte()) << 8;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 16;
+            other = ((ulong)ReadByte()) << 16;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 24;
+            other = ((ulong)ReadByte()) << 24;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 32;
+            other = ((ulong)ReadByte()) << 32;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 40;
+            other = ((ulong)ReadByte()) << 40;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 48;
+            other = ((ulong)ReadByte()) << 48;
             value |= other;
 
-            other = ((ulong)m_buf.ReadByte()) << 56;
+            other = ((ulong)ReadByte()) << 56;
             value |= other;
             return value;
         }
@@ -303,14 +291,14 @@ namespace BC_Solution.UnetNetwork
 
         public float ReadSingle()
         {
-            uint value = ReadUInt32();
-            return FloatConversion.ToSingle(value);
+            byte[] bytes = ReadBytes(sizeof(float));
+            return BitConverter.ToSingle(bytes, 0);
         }
 
         public double ReadDouble()
         {
-            ulong value = ReadUInt64();
-            return FloatConversion.ToDouble(value);
+            byte[] bytes = ReadBytes(sizeof(double));
+            return BitConverter.ToDouble(bytes, 0);
         }
 
         public string ReadString()
@@ -329,7 +317,11 @@ namespace BC_Solution.UnetNetwork
                 s_StringReaderBuffer = new byte[s_StringReaderBuffer.Length * 2];
             }
 
-            m_buf.ReadBytes(s_StringReaderBuffer, numBytes);
+            int read = m_memoryStream.Read(s_StringReaderBuffer, 0, numBytes);
+            if (read != numBytes)
+            {
+                throw new Exception("ReadString() read result mismatch: " + numBytes + " => " + read);
+            }
 
             char[] chars = s_Encoding.GetChars(s_StringReaderBuffer, 0, numBytes);
             return new string(chars);
@@ -337,13 +329,12 @@ namespace BC_Solution.UnetNetwork
 
         public char ReadChar()
         {
-            return (char)m_buf.ReadByte();
+            return (char)ReadByte();
         }
 
         public bool ReadBoolean()
         {
-            int value = m_buf.ReadByte();
-            return value == 1;
+            return ReadByte() == 1;
         }
 
         public byte[] ReadBytes(int count)
@@ -353,7 +344,11 @@ namespace BC_Solution.UnetNetwork
                 throw new IndexOutOfRangeException("NetworkReader ReadBytes " + count);
             }
             byte[] value = new byte[count];
-            m_buf.ReadBytes(value, (uint)count);
+            int read = m_memoryStream.Read(value, 0, count);
+            if (read != count)
+            {
+                throw new Exception("ReadBytes() read result mismatch: " + count + " => " + read);
+            }
             return value;
         }
 
@@ -494,35 +489,9 @@ namespace BC_Solution.UnetNetwork
             return default(T);
         }
 
-       /* public NetworkIdentity ReadNetworkIdentity()
-        {
-            NetworkInstanceId netId = ReadNetworkId();
-            if (netId.IsEmpty())
-            {
-                return null;
-            }
-            GameObject go;
-            if (NetworkServer.active)
-            {
-                go = NetworkServer.FindLocalObject(netId);
-            }
-            else
-            {
-                go = ClientScene.FindLocalObject(netId);
-            }
-
-            if (go == null)
-            {
-                if (LogFilter.logDebug) { Debug.Log("ReadNetworkIdentity netId:" + netId + "go: null"); }
-                return null;
-            }
-
-            return go.GetComponent<NetworkIdentity>();
-        }*/
-
         public override string ToString()
         {
-            return m_buf.ToString();
+            return m_memoryStream.ToString();
         }
 
         public TMsg ReadMessage<TMsg>() where TMsg : NetworkingMessage, new()
