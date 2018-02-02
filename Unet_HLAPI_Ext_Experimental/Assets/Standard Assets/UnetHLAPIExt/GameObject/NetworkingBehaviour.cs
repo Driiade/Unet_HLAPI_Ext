@@ -136,6 +136,8 @@ namespace BC_Solution.UnetNetwork
                 {
                     writer.WriteBytesAndSize(((byte[])param), ((byte[])param).Length);
                 }
+                else
+                    throw new System.Exception("Serialization is impossible : " + param.GetType());
             }
         }
 
@@ -166,6 +168,8 @@ namespace BC_Solution.UnetNetwork
                 {
                     parameters[i] = reader.ReadBytesAndSize();
                 }
+                else
+                    throw new System.Exception("UnSerialization is impossible : " + info.ParameterType.GetType());
             }
 
             method.Invoke(this, parameters);

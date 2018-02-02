@@ -554,7 +554,7 @@ namespace BC_Solution.UnetNetwork
             // jump to zero, replace size (short) in header, jump back
             long oldPosition = m_memoryStream.Position;
             //Debug.Log("OldPosition : " + oldPosition);
-            ushort sz = (ushort)(m_memoryStream.Length - 2); // length - header(short,short)
+            ushort sz = (ushort)(m_memoryStream.Position - sizeof(ushort)); // length - header(short,short)
             //Debug.Log("Write size : " + sz);
             SeekZero(false);
             Write(sz);
