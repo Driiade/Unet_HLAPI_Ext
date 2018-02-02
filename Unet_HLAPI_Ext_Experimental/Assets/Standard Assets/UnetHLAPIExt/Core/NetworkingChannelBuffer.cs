@@ -390,5 +390,21 @@ namespace BC_Solution.UnetNetwork
                 return false;
             }
         }
+
+
+        public static bool IsSequencedQoS(QosType qos) // vis2k: made public
+        {
+            return (qos == QosType.ReliableSequenced || qos == QosType.UnreliableSequenced);
+        }
+
+        public static bool IsReliableQoS(QosType qos) // vis2k: made public
+        {
+            return (qos == QosType.Reliable || qos == QosType.ReliableFragmented || qos == QosType.ReliableSequenced || qos == QosType.ReliableStateUpdate);
+        }
+
+        public static bool IsUnreliableQoS(QosType qos) // vis2k added this one too
+        {
+            return (qos == QosType.Unreliable || qos == QosType.UnreliableFragmented || qos == QosType.UnreliableSequenced || qos == QosType.StateUpdate);
+        }
     }
 }

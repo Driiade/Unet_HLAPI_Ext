@@ -240,7 +240,7 @@ namespace BC_Solution.UnetNetwork
                 {
                     actualPacketSize = hostTopology.DefaultConfig.FragmentSize * 128;
                 }
-                m_channels[i] = new NetworkingChannelBuffer(actualPacketSize, (byte)i, IsReliableQoS(qos.QOS), IsSequencedQoS(qos.QOS));
+                m_channels[i] = new NetworkingChannelBuffer(actualPacketSize, (byte)i, NetworkingChannelBuffer.IsReliableQoS(qos.QOS), NetworkingChannelBuffer.IsSequencedQoS(qos.QOS));
             }
         }
 
@@ -282,20 +282,6 @@ namespace BC_Solution.UnetNetwork
             m_Disposed = true;
         }
 
-        public static bool IsSequencedQoS(QosType qos) // vis2k: made public
-        {
-            return (qos == QosType.ReliableSequenced || qos == QosType.UnreliableSequenced);
-        }
-
-        public static bool IsReliableQoS(QosType qos) // vis2k: made public
-        {
-            return (qos == QosType.Reliable || qos == QosType.ReliableFragmented || qos == QosType.ReliableSequenced || qos == QosType.ReliableStateUpdate);
-        }
-
-        public static bool IsUnreliableQoS(QosType qos) // vis2k added this one too
-        {
-            return (qos == QosType.Unreliable || qos == QosType.UnreliableFragmented || qos == QosType.UnreliableSequenced || qos == QosType.StateUpdate);
-        }
 
         public bool SetChannelOption(int channelId, NetworkingMessageType.ChannelOption option, int value)
         {
