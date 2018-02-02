@@ -32,8 +32,10 @@ namespace BC_Solution.UnetNetwork
         public float m_minSynchronisationBacktime = 0.1f;
         public float m_adaptationAmount = 1.5f;
 
+        [Tooltip("Update x per second")]
+        public float updateRate = 20f;
+
         public float m_nonAdaptativeBacktime = 0.1f;
-        public float m_extraInterpolationTimeFactor = 10f;
 
         [Tooltip("Synchronised object will have their movement synchronised.")]
         public MovementSynchronizer[] movementSynchronizers;
@@ -41,6 +43,12 @@ namespace BC_Solution.UnetNetwork
         [Space(10)]
         public float lagAverage = 0.15f;
 
+        /// <summary>
+        /// Used when real Update is needed for interpolation
+        /// </summary>
+        public float lastInterpolationUpdateTimer = -1;
+
+        bool m_sendEndingLastInterpolation = false;
         NetworkingWriter writer = new NetworkingWriter();
 
         override protected void Awake()
@@ -66,6 +74,91 @@ namespace BC_Solution.UnetNetwork
             base.OnStartAuthority();
            // ServerSyncPosition(null);
         }
+
+
+        void FixedUpdate()
+        {
+            if (!hasAuthority)
+                return;
+
+            writer.SeekZero(true);
+
+            int updateMask = 0;
+
+            if (movementSynchronizers.Length != 0)
+            {
+                for (int i = 0; i < movementSynchronizers.Length; i++)
+                {
+                    MovementSynchronizer movementSynchronizer = movementSynchronizers[i];
+
+                    if  //Real need of synchronization 
+                    (Time.realtimeSinceStartup > this.lastInterpolationUpdateTimer && movementSynchronizer.NeedToUpdate())
+                    {
+                        updateMask = updateMask | (1 << i);
+                    }
+                    else if //Had to synchronize the lastest position
+                        (Time.realtimeSinceStartup > this.lastInterpolationUpdateTimer && !this.m_sendEndingLastInterpolation)
+                    {
+                        updateMask = updateMask | (1 << i);
+                    }
+                }
+            }
+
+            if (updateMask != 0)
+            {
+                if (movementSynchronizers.Length > 1)
+                {
+                    if (movementSynchronizers.Length <= 4)
+                        writer.Write((byte)updateMask);
+                    else if (movementSynchronizers.Length <= 8)
+                        writer.Write((short)updateMask);
+                    else
+                        writer.Write(updateMask);
+                }
+
+                for (int i = 0; i < movementSynchronizers.Length; i++)
+                {
+                    MovementSynchronizer movementSynchronizer = movementSynchronizers[i];
+
+                    if ((updateMask & (1 << i)) != 0)
+                    {
+                        if (movementSynchronizer.NeedToUpdate())    //Other client interpolating
+                        {
+                            this.lastInterpolationUpdateTimer = Time.realtimeSinceStartup + 1f / this.updateRate;
+                            this.m_sendEndingLastInterpolation = false;
+                        }
+                        else //Other clients extrapolating
+                        {
+                            this.lastInterpolationUpdateTimer = Time.realtimeSinceStartup + 1f / this.updateRate; //It's like an interpolation
+                            this.m_sendEndingLastInterpolation = true;
+                        }
+
+                        movementSynchronizer.GetCurrentState(writer);
+                    }
+                }
+
+                SendMovementsInformations(writer.ToArray(), m_sendEndingLastInterpolation);
+            }
+        }
+
+
+        void SendMovementsInformations(byte[] info, bool useReliableChannel)
+        {
+            if (isServer)
+                foreach (NetworkingConnection n in this.connection.m_server.connections)
+                {
+                    if (n == null)
+                        continue;
+
+                    if (this.connection.m_connectionId != n.m_connectionId)
+                    {
+                        SendToConnection(n, "RpcGetMovementInformations", useReliableChannel ? NetworkingMessageType.Channels.DefaultReliable : NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
+                    }
+                }
+            else
+                SendToServer("CmdSendMovementInformations", useReliableChannel ? NetworkingMessageType.Channels.DefaultReliable : NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
+        }
+
 
         /// <summary>
         /// Only server
@@ -96,92 +189,6 @@ namespace BC_Solution.UnetNetwork
 
                 SendToConnection(netMsg.m_connection, "RpcGetMovementSyncInformations", NetworkingMessageType.Channels.DefaultReliable, writer.ToArray());
             }
-        }
-
-
-
-
-        void FixedUpdate()
-        {
-            if (!hasAuthority)
-                return;
-
-            writer.SeekZero(true);
-
-            int updateMask = 0;
-
-            if (movementSynchronizers.Length != 0)
-            {
-                for (int i = 0; i < movementSynchronizers.Length; i++)
-                {
-                    MovementSynchronizer movementSynchronizer = movementSynchronizers[i];
-
-                    if  //Real need of synchronization 
-                    (Time.realtimeSinceStartup > movementSynchronizer.lastInterpolationUpdateTimer && movementSynchronizer.NeedToUpdate())
-                    {
-                        updateMask = updateMask | (1 << i);
-                    }
-                    else if //Other clients are extrapolating
-                        (Time.realtimeSinceStartup - movementSynchronizer.lastInterpolationUpdateTimer > 0
-                        && Time.realtimeSinceStartup - movementSynchronizer.lastInterpolationUpdateTimer < m_extraInterpolationTimeFactor * movementSynchronizer.extrapolationTime
-                        && Time.realtimeSinceStartup > movementSynchronizer.lastExtrapolationUpdateTimer)
-                    {
-                        updateMask = updateMask | (1 << i);
-                    }
-                }
-            }
-
-            if (updateMask != 0)
-            {
-                if (movementSynchronizers.Length > 1)
-                {
-                    if (movementSynchronizers.Length <= 4)
-                        writer.Write((byte)updateMask);
-                    else if (movementSynchronizers.Length <= 8)
-                        writer.Write((short)updateMask);
-                    else
-                        writer.Write(updateMask);
-                }
-
-                for (int i = 0; i < movementSynchronizers.Length; i++)
-                {
-                    MovementSynchronizer movementSynchronizer = movementSynchronizers[i];
-
-                    if ((updateMask & (1 << i)) != 0)
-                    {
-                        if (movementSynchronizer.NeedToUpdate())    //Other client interpolating
-                        {
-                            movementSynchronizer.lastInterpolationUpdateTimer = Time.realtimeSinceStartup + 1f / movementSynchronizer.UpdateRate();
-                        }
-                        else //Other clients extrapolating
-                        {
-                            movementSynchronizer.lastExtrapolationUpdateTimer = Time.realtimeSinceStartup + 1f / movementSynchronizer.UpdateRate();
-                        }
-
-                        movementSynchronizer.GetCurrentState(writer);
-                    }
-                }
-
-                SendMovementsInformations(writer.ToArray());
-            }
-        }
-
-
-        void SendMovementsInformations(byte[] info)
-        {
-            if (isServer)
-                foreach (NetworkingConnection n in this.connection.m_server.connections)
-                {
-                    if (n == null)
-                        continue;
-
-                    if (this.connection.m_connectionId != n.m_connectionId)
-                    {
-                        SendToConnection(n, "RpcGetMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
-                    }
-                }
-            else
-                SendToServer("CmdSendMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
         }
 
         [Networked]

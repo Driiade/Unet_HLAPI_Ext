@@ -35,12 +35,6 @@ namespace BC_Solution.UnetNetwork
         public enum INTERPOLATION_MODE { LINEAR, CATMULL_ROM};
         public enum COMPRESS_MODE {NONE, USHORT}
 
-        [System.Serializable]
-        public class Config
-        {
-            [Tooltip("Update x per second")]
-            public float updateRate = 20f;
-        }
 
         public class State
         {
@@ -51,9 +45,6 @@ namespace BC_Solution.UnetNetwork
         [Tooltip("If this is != null, no one can set the velocity except who has authority on the object")]
         protected NetworkingIdentity networkingIdentity;
 
-        public Config onlineConfig;
-        public Config lanConfig;
-        public Config defaultConfig;
 
         [SerializeField]
         int maxBufferSize = 60;
@@ -62,15 +53,6 @@ namespace BC_Solution.UnetNetwork
         protected State[] statesBuffer;
         protected int currentStatesIndex = -1;
 
-        /// <summary>
-        /// Used when real Update is needed for interpolation
-        /// </summary>
-        public float lastInterpolationUpdateTimer = -1;
-
-        /// <summary>
-        /// Used to compensate extrapolation side effect
-        /// </summary>
-        public float lastExtrapolationUpdateTimer = -1;
 
         [Space(20)]
         public bool useExtrapolation = false;
@@ -127,7 +109,8 @@ namespace BC_Solution.UnetNetwork
             this.networkMovementSynchronization = movSynchronization;
         }
 
-
+        public bool m_isExtrapolating { get; private set; }
+        public bool m_isInterpolating { get; private set; }
 
         protected void Update()
         {
@@ -151,11 +134,15 @@ namespace BC_Solution.UnetNetwork
                 {
                     if (Time.realtimeSinceStartup > extrapolationTimer)
                     {
+                        m_isExtrapolating = false;
+                        m_isInterpolating = true;
                         OnEndExtrapolation(statesBuffer[0]);
                     }
                     else if (extrapolatingState == null || extrapolatingState != statesBuffer[0])    // we are not yet extrapolating
                     {
-                       OnBeginExtrapolation(extrapolatingState, Time.realtimeSinceStartup - statesBuffer[0].m_relativeTime);
+                        m_isExtrapolating = true;
+                        m_isInterpolating = false;
+                        OnBeginExtrapolation(extrapolatingState, Time.realtimeSinceStartup - statesBuffer[0].m_relativeTime);
 
                         if (extrapolatingState == null)
                             extrapolationTimer = Time.realtimeSinceStartup + extrapolationTime;
@@ -164,7 +151,10 @@ namespace BC_Solution.UnetNetwork
                     }
                     else
                     {
-                      OnExtrapolation();
+                        m_isExtrapolating = true;
+                        m_isInterpolating = false;
+                        OnExtrapolation();
+
                     }
                 }
             }
@@ -177,16 +167,6 @@ namespace BC_Solution.UnetNetwork
             }
 
             OnErrorCorrection();
-        }
-
-        public float UpdateRate()
-        {
-            if (MatchmakingSystem.IsOnOnlineMatch)
-                return onlineConfig.updateRate;
-            else if (MatchmakingSystem.IsOnLanMatch)
-                return lanConfig.updateRate;
-            else
-                return defaultConfig.updateRate;
         }
 
 
