@@ -155,6 +155,7 @@ namespace BC_Solution.UnetNetwork
 
             netIdentity.m_connection = conn;
             netIdentity.m_netId = currentNetId;
+            netIdentity.m_isServer = true;
             AddNetworkingIdentity(netIdentity, server, m_serverNetworkedObjects);
 
             server.SendTo(conn.m_connectionId, NetworkingMessageType.ObjectSpawn, new SpawnMessage(netIdentity.m_assetId, currentNetId, netIdentity.localPlayerAuthority));
@@ -186,6 +187,7 @@ namespace BC_Solution.UnetNetwork
                 netIdentity = FindLocalNetworkIdentity(netMsg.m_connection.m_server, spawnMessage.m_gameObjectNetId, m_serverNetworkedObjects);
             }
             netIdentity.m_hasAuthority = spawnMessage.m_hasAuthority;
+            netIdentity.m_isClient = true;
             AddNetworkingIdentity(netIdentity, netMsg.m_connection, m_connectionNetworkedObjects);
         }
 

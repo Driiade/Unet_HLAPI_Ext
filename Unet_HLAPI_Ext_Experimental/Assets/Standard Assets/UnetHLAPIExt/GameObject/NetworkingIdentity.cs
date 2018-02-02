@@ -68,9 +68,12 @@ namespace BC_Solution.UnetNetwork
         List<NetworkingConnection> m_observers;
         internal NetworkingConnection m_connection;
 
+        internal bool m_isClient;
+        internal bool m_isServer;
+
         // properties
-        public bool isClient { get { return m_connection.m_server == null; } }
-        public bool isServer{ get { return m_connection.m_server != null; } }
+        public bool isClient { get { return m_isClient; } }
+        public bool isServer{ get { return m_isServer; } }
 
 
         public bool hasAuthority { get { return m_hasAuthority; } }

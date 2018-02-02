@@ -27,20 +27,13 @@ namespace BC_Solution.UnetNetwork
     [NetworkSettings(sendInterval = 0)]
     public class NetworkMovementSynchronization : NetworkingBehaviour
     {
-        [System.Serializable]
-        public class Config
-        {
-            public float adaptativeSynchronizationBackTime = 0.15f;
-            public float maxSynchronizationBacktime = 0.3f;
-            public float minSynchronisationBacktime = 0.1f;
-            public float adaptationAmount = 1.5f;
-        }
+        public float m_adaptativeSynchronizationBackTime = 0.15f;
+        public float m_maxSynchronizationBacktime = 0.3f;
+        public float m_minSynchronisationBacktime = 0.1f;
+        public float m_adaptationAmount = 1.5f;
 
-        public Config onlineConfig;
-        public Config lanConfig;
-        public Config defaultConfig;
-        public float nonAdaptativeBacktime = 0.1f;
-        public float extraInterpolationTimeFactor = 10f;
+        public float m_nonAdaptativeBacktime = 0.1f;
+        public float m_extraInterpolationTimeFactor = 10f;
 
         [Tooltip("Synchronised object will have their movement synchronised.")]
         public MovementSynchronizer[] movementSynchronizers;
@@ -58,7 +51,7 @@ namespace BC_Solution.UnetNetwork
                 movementSynchronizers[i].Init(this);
             }
 
-            //  NetworkingSystem.RegisterServerHandler(NetworkingMessageType.Connect, ServerSyncPosition);
+             NetworkingSystem.RegisterServerHandler(NetworkingMessageType.Connect, ServerSyncPosition);
         }
 
         void OnDestroy()
@@ -66,43 +59,7 @@ namespace BC_Solution.UnetNetwork
             NetworkingSystem.UnRegisterServerHandler(NetworkingMessageType.Connect, ServerSyncPosition);
         }
 
-        public float AdaptativeSynchronizationBackTime()
-        {
-            if (MatchmakingSystem.IsOnOnlineMatch)
-                return onlineConfig.adaptativeSynchronizationBackTime;
-            else if (MatchmakingSystem.IsOnLanMatch)
-                return lanConfig.adaptativeSynchronizationBackTime;
-            else return defaultConfig.adaptativeSynchronizationBackTime;
 
-        }
-
-        public float MaxSynchronizationBacktime()
-        {
-            if (MatchmakingSystem.IsOnOnlineMatch)
-                return onlineConfig.maxSynchronizationBacktime;
-            else if (MatchmakingSystem.IsOnLanMatch)
-                return lanConfig.maxSynchronizationBacktime;
-            else return defaultConfig.maxSynchronizationBacktime;
-        }
-
-        public float AdaptationAmount()
-        {
-            if (MatchmakingSystem.IsOnOnlineMatch)
-                return onlineConfig.adaptationAmount;
-            else if (MatchmakingSystem.IsOnLanMatch)
-                return lanConfig.adaptationAmount;
-            else return defaultConfig.adaptationAmount;
-        }
-
-        public float MinSynchronisationBacktime()
-        {
-
-            if (MatchmakingSystem.IsOnOnlineMatch)
-                return onlineConfig.minSynchronisationBacktime;
-            else if (MatchmakingSystem.IsOnLanMatch)
-                return lanConfig.minSynchronisationBacktime;
-            else return defaultConfig.minSynchronisationBacktime;
-        }
 
         public override void OnStartAuthority()     //Send position the first time
         {
@@ -137,7 +94,7 @@ namespace BC_Solution.UnetNetwork
                     movementSynchronizers[i].GetCurrentState(writer);
                 }
 
-                SendToConnection(netMsg.m_connection, "GetMovementSyncInformations", NetworkingMessageType.Channels.DefaultReliable, writer.ToArray());
+                SendToConnection(netMsg.m_connection, "RpcGetMovementSyncInformations", NetworkingMessageType.Channels.DefaultReliable, writer.ToArray());
             }
         }
 
@@ -166,7 +123,7 @@ namespace BC_Solution.UnetNetwork
                     }
                     else if //Other clients are extrapolating
                         (Time.realtimeSinceStartup - movementSynchronizer.lastInterpolationUpdateTimer > 0
-                        && Time.realtimeSinceStartup - movementSynchronizer.lastInterpolationUpdateTimer < extraInterpolationTimeFactor * movementSynchronizer.extrapolationTime
+                        && Time.realtimeSinceStartup - movementSynchronizer.lastInterpolationUpdateTimer < m_extraInterpolationTimeFactor * movementSynchronizer.extrapolationTime
                         && Time.realtimeSinceStartup > movementSynchronizer.lastExtrapolationUpdateTimer)
                     {
                         updateMask = updateMask | (1 << i);
@@ -224,12 +181,15 @@ namespace BC_Solution.UnetNetwork
                     }
                 }
             else
-                SendToServer("CmdGetMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
+                SendToServer("CmdSendMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
         }
 
         [Networked]
-        void GetMovementSyncInformations(byte[] info)
+        void RpcGetMovementSyncInformations(byte[] info)
         {
+            if (hasAuthority || isServer)
+                return;
+
             NetworkingReader reader = new NetworkingReader(info);
             int updateMask = 0;
 
@@ -258,35 +218,38 @@ namespace BC_Solution.UnetNetwork
         [Networked]
         void RpcGetMovementInformations(int timestamp, byte[] info)
         {
-            if (hasAuthority)
+            if (hasAuthority || isServer)
                 return;
 
+            LocalGetMovementInformations(timestamp, info);
+        }
+
+        [Networked]
+        void CmdSendMovementInformations(int timeStamp, byte[] info)
+        {
+            byte error;
+            LocalGetMovementInformations(timeStamp, info);
+
+            timeStamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timeStamp, out error);
+            SendToAllConnections("RpcGetMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable, timeStamp, info);
+        }
+
+        /// <summary>
+        /// Unlike Networked, uncheck autority and server condition
+        /// </summary>
+        /// <param name="timeStam"></param>
+        /// <param name="info"></param>
+        void LocalGetMovementInformations(int timestamp, byte[] info)
+        {
             NetworkingReader reader = new NetworkingReader(info);
 
             float relativeTime = 0;
             byte error;
             relativeTime = Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timestamp, out error) / 1000f;
-            /* if (!isServer)
-             {
-                 byte error;
-                 relativeTime = Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timestamp, out error) / 1000f;
-                 // Debug.Log(NetworkTransport.GetRemoteDelayTimeMS(NetworkingSystem.Instance.Client.connection.hostId, NetworkingSystem.Instance.Client.connection.connectionId, timestamp, out error) / 1000f);
-                 Debug.Log(relativeTime);
-             }
-             else
-             {
-                 relativeTime = Time.realtimeSinceStartup - (NetworkTransport.GetNetworkTimestamp() - timestamp) / 1000f;
-                 //Debug.Log((NetworkTransport.GetNetworkTimestamp() - timestamp) / 1000f);
-             }*/
 
             lagAverage = 0.99f * lagAverage + 0.01f * (Time.realtimeSinceStartup - relativeTime);
 
-            if (MatchmakingSystem.IsOnOnlineMatch)
-                onlineConfig.adaptativeSynchronizationBackTime = Mathf.Max(lanConfig.minSynchronisationBacktime, Mathf.Min(onlineConfig.maxSynchronizationBacktime, lagAverage * (onlineConfig.adaptationAmount)));
-            else if (MatchmakingSystem.IsOnLanMatch)
-                lanConfig.adaptativeSynchronizationBackTime = Mathf.Max(lanConfig.minSynchronisationBacktime, Mathf.Min(lanConfig.maxSynchronizationBacktime, lagAverage * (lanConfig.adaptationAmount)));
-            else
-                defaultConfig.adaptativeSynchronizationBackTime = Mathf.Max(defaultConfig.minSynchronisationBacktime, Mathf.Min(defaultConfig.maxSynchronizationBacktime, lagAverage * (defaultConfig.adaptationAmount)));
+            m_adaptativeSynchronizationBackTime = Mathf.Max(m_minSynchronisationBacktime, Mathf.Min(m_maxSynchronizationBacktime, lagAverage * (m_adaptationAmount)));
 
             int updateMask = 0;
 
@@ -301,7 +264,7 @@ namespace BC_Solution.UnetNetwork
                     updateMask = reader.ReadInt32();
             }
 
-            while (reader.Position < reader.Length-1)
+            while (reader.Position < reader.Length - 1)
             {
                 for (int i = 0; i < movementSynchronizers.Length; i++)
                 {
@@ -311,14 +274,6 @@ namespace BC_Solution.UnetNetwork
                     }
                 }
             }
-        }
-
-        [Networked]
-        void CmdGetMovementInformations(int timeStamp, byte[] info)
-        {
-            byte error;
-            timeStamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timeStamp, out error);
-            SendToAllConnections("RpcGetMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable, timeStamp, info);
         }
     }
 }

@@ -259,9 +259,9 @@ namespace BC_Solution.UnetNetwork
             float synchronisationBackTime;
 
             if (!useAdaptativeSynchronizationBackTime)
-                synchronisationBackTime = networkMovementSynchronization.nonAdaptativeBacktime;
+                synchronisationBackTime = networkMovementSynchronization.m_nonAdaptativeBacktime;
             else
-                synchronisationBackTime =  networkMovementSynchronization.AdaptativeSynchronizationBackTime();
+                synchronisationBackTime =  networkMovementSynchronization.m_adaptativeSynchronizationBackTime;
 
            // Debug.Log("First delay : " + firstStateDelay);
           // Debug.Log("lastStateDelay : " + ((NetworkingSystem.Instance.ServerTimestamp - statesBuffer[currentStatesIndex-1].timestamp) / 1000f));

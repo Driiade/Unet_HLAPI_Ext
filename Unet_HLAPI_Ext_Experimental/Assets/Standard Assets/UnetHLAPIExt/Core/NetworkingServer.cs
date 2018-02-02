@@ -286,8 +286,8 @@ namespace BC_Solution.UnetNetwork {
             BaseOnStopServer();
 
             DisconnectAllConnections();
-            byte error;
-            NetworkTransport.DisconnectNetworkHost(m_hostId, out error);
+           // byte error;
+            //NetworkTransport.DisconnectNetworkHost(m_hostId, out error);
 
             m_hostId = -1;
         }
@@ -301,6 +301,7 @@ namespace BC_Solution.UnetNetwork {
             if(callbacks != null)
             {
                 callbacks += handler;
+                m_messageHandlers[msgType] = callbacks;
             }
             else
             {
@@ -345,7 +346,7 @@ namespace BC_Solution.UnetNetwork {
         // this can be used independantly of Update() - such as when using external connections and not listening.
         public void UpdateConnections()
         {
-            foreach(NetworkingConnection conn in m_connections)
+            foreach(NetworkingConnection conn in connections)
             { 
                 if (conn != null)
                 {
