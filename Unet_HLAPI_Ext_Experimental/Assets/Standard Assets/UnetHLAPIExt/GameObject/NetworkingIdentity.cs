@@ -33,9 +33,15 @@ namespace BC_Solution.UnetNetwork
     [AddComponentMenu("Networking/NetworkingIdentity")]
     public class NetworkingIdentity : MonoBehaviour
     {
-     //   public static Action<NetworkingIdentity> OnNetworkingIdentityDestroy;
+        public enum TYPE { SPAWNED, SINGLE_SCENE_OBJECT, REPLICATED_SCENE_OBJECT}
+
+        public static List<NetworkingIdentity> s_spawnedNetworkingIdentities = new List<NetworkingIdentity>();
+        public static List<NetworkingIdentity> s_singleSceneNetworkingIdentities = new List<NetworkingIdentity>();
+        public static List<NetworkingIdentity> s_replicatedSceneNetworkingIdentities = new List<NetworkingIdentity>();
+
 
         // configuration
+        [SerializeField] TYPE m_type;
         [SerializeField] internal ushort m_sceneId;
         [SerializeField] internal ushort m_assetId;
         [SerializeField] bool m_ServerOnly;
@@ -58,7 +64,7 @@ namespace BC_Solution.UnetNetwork
        // NetworkingConnection m_connectionToServer;
         //NetworkingConnection m_connectionToClient;
 
-        short m_PlayerId = -1;
+       // short m_PlayerId = -1;
 
         [SerializeField]
         NetworkingBehaviour[] m_networkingBehaviours;
@@ -87,8 +93,54 @@ namespace BC_Solution.UnetNetwork
         public bool localPlayerAuthority { get { return m_localPlayerAuthority; } set { m_localPlayerAuthority = value; } }
 
         public bool isLocalPlayer { get { return m_isLocalPlayer; } }
-        public short playerControllerId { get { return m_PlayerId; } }
+        //  public short playerControllerId { get { return m_PlayerId; } }
 
+
+        private void Awake()
+        {
+            ChangeType(m_type);
+
+            if (m_type == TYPE.REPLICATED_SCENE_OBJECT) // If you have a player in the scene and you want it to be replicated on others clients.
+                NetworkingGameObjectSystem.Instance.Replicate(this);
+        }
+
+        internal void ChangeType(TYPE type)
+        {
+            switch (m_type)
+            {
+                case TYPE.SPAWNED:
+                    s_spawnedNetworkingIdentities.Remove(this); break;
+                case TYPE.SINGLE_SCENE_OBJECT:
+                    s_singleSceneNetworkingIdentities.Remove(this); break;
+                case TYPE.REPLICATED_SCENE_OBJECT:
+                    s_replicatedSceneNetworkingIdentities.Remove(this); break;
+            }
+
+
+            m_type = type;
+            switch (m_type)
+            {
+                case TYPE.SPAWNED:
+                    s_spawnedNetworkingIdentities.Add(this); break;
+                case TYPE.SINGLE_SCENE_OBJECT:
+                    s_singleSceneNetworkingIdentities.Add(this); break;
+                case TYPE.REPLICATED_SCENE_OBJECT:
+                    s_replicatedSceneNetworkingIdentities.Add(this); break;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            switch (m_type)
+            {
+                case TYPE.SPAWNED:
+                    s_spawnedNetworkingIdentities.Remove(this); break;
+                case TYPE.SINGLE_SCENE_OBJECT:
+                    s_singleSceneNetworkingIdentities.Remove(this); break;
+                case TYPE.REPLICATED_SCENE_OBJECT:
+                    s_replicatedSceneNetworkingIdentities.Remove(this); break;
+            }
+        }
 
 
         internal void HandleMethodCall(NetworkingReader reader)
@@ -97,56 +149,8 @@ namespace BC_Solution.UnetNetwork
             m_networkingBehaviours[networkBehaviourIndex].HandleMethodCall(reader);
         }
 
-        // public NetworkingConnection connectionToClient { get { return m_connectionToClient; } } USELESS ?
-
-
-        //Because we don't work only with one server, don't use static here
-        /* static ushort s_lastAssignedNetworkId = 0;
-         static internal ushort GetNextNetworkId()
-         {
-             s_lastAssignedNetworkId++;
-             return s_lastAssignedNetworkId;
-         }
-
-         static internal void AddNetworkId(ushort id)
-         {
-             if (id >= s_lastAssignedNetworkId)
-             {
-                 s_lastAssignedNetworkId = (ushort)(id + 1);
-             }
-         } */
-
 
         static NetworkingWriter s_updateWriter = new NetworkingWriter();
-
-        /*public NetworkHash128 assetId //Shit
-        {
-            get
-            {
-#if UNITY_EDITOR
-                // This is important because sometimes OnValidate does not run (like when adding view to prefab with no child links)
-                if (!m_assetId.IsValid())
-                    SetupIDs();
-#endif
-                return m_assetId;
-            }
-        }*/
-
-
-
-
-        /* internal void SetDynamicAssetId(NetworkHash128 newAssetId)
-         {
-             if (!m_assetId.IsValid() || m_assetId.Equals(newAssetId))
-             {
-                 m_assetId = newAssetId;
-             }
-             else
-             {
-                 if (LogFilter.logWarn) { Debug.LogWarning("SetDynamicAssetId object already has an assetId <" + m_assetId + ">"); }
-             }
-         }*/
-
 
 
         // used when adding players
@@ -160,11 +164,6 @@ namespace BC_Solution.UnetNetwork
             m_connectionAuthorityOwner.AddOwnedObject(this);
         }*/
 
-        // used during dispose after disconnect
-        internal void ClearClientOwner()
-        {
-         //   m_connectionAuthorityOwner = null;
-        }
 
         internal void ForceAuthority(bool authority)
         {
@@ -196,18 +195,9 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        //A function for that ? ok ok
-        /* void CacheBehaviours()
-         {
-             if (m_NetworkBehaviours == null)
-             {
-                 m_NetworkBehaviours = GetComponents<NetworkBehaviour>();
-             }
-         } */
 
         /*  public delegate void ClientAuthorityCallback(NetworkingConnection conn, NetworkingIdentity uv, bool authorityState);
           public static ClientAuthorityCallback clientAuthorityCallback;*/
-
 
 
         // only used when fixing duplicate scene IDs duing post-processing
@@ -887,7 +877,7 @@ namespace BC_Solution.UnetNetwork
         internal void SetLocalPlayer(short localPlayerControllerId)
         {
             m_isLocalPlayer = true;
-            m_PlayerId = localPlayerControllerId;
+           // m_PlayerId = localPlayerControllerId;
 
             // there is an ordering issue here that originAuthority solves. OnStartAuthority should only be called if m_HasAuthority was false when this function began,
             // or it will be called twice for this object. But that state is lost by the time OnStartAuthority is called below, so the original value is cached
@@ -1203,7 +1193,7 @@ namespace BC_Solution.UnetNetwork
             m_isLocalPlayer = false;
             //m_connectionToServer = null;
             //m_connectionToClient = null;
-            m_PlayerId = -1;
+           // m_PlayerId = -1;
             m_networkingBehaviours = null;
 
             ClearObservers();

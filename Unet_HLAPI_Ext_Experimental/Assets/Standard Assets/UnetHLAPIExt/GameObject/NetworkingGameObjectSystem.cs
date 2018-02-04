@@ -156,6 +156,7 @@ namespace BC_Solution.UnetNetwork
             netIdentity.m_connection = conn;
             netIdentity.m_netId = currentNetId;
             netIdentity.m_isServer = true;
+            netIdentity.ChangeType(NetworkingIdentity.TYPE.SPAWNED);
             AddNetworkingIdentity(netIdentity, server, m_serverNetworkedObjects);
 
             server.SendTo(conn.m_connectionId, NetworkingMessageType.ObjectSpawn, new SpawnMessage(netIdentity.m_assetId, currentNetId, netIdentity.localPlayerAuthority));
@@ -181,6 +182,7 @@ namespace BC_Solution.UnetNetwork
                 netIdentity = go.GetComponent<NetworkingIdentity>();
                 netIdentity.m_netId = spawnMessage.m_gameObjectNetId;
                 netIdentity.m_connection = netMsg.m_connection;
+                netIdentity.ChangeType(NetworkingIdentity.TYPE.SPAWNED);
             }
             else
             {
@@ -190,6 +192,14 @@ namespace BC_Solution.UnetNetwork
             netIdentity.m_isClient = true;
             AddNetworkingIdentity(netIdentity, netMsg.m_connection, m_connectionNetworkedObjects);
         }
+
+
+        public zeqze void Replicate(NetworkingIdentity netIdentity
+        {
+
+        }
+
+
 
         void OnServerCommand(NetworkingMessage netMsg)
         {
