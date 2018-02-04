@@ -1,0 +1,34 @@
+
+https://github.com/Driiade/Unet_HLAPI_Ext
+
+-La LLAPI d'Unet est efficace (et sera un must have dans le futur) mais pas la HLAPI.
+
+Features améliorées par rapport à UNET :
+
+-Plusieurs servers sur plusieurs ports.
+-Plusieurs connections possibles.
+-La déconnection d'un serveur ou d'un client est maintenant directement informée chez chaque clients/servers (et non plus l'attente d'un timeout pour provoquer une déconnection).
+-Moins de classes static et obscures.
+-Si un message n'est pas connu par le serveur, ce message sera renvoyé tel quel chez tous les clients (Moins de création de code de la part des développeurs côtés serveur pour juste relayer un message).
+-Possibilité d'ajouter plusieurs handler par type de message (avant on ne pouvait en ajouter qu'un seul).
+
+-Chaque serveur gère son lot d'objet networké (avant c'était global à l'application, pas de découpage par serveur)
+-Les id des objets networkés sont des ushort choisis par le développeur et non des hash 128 bytes générés par l'emplacement du fichier. Ceci permettra de communiquer entre deux projets différents.
+
+-Rpc/Command/TargetRpc (avec la définition de channels) ne seront plus des fonctions séparées avec création de code par le compilateur. 
+ Une fontion NetworkingBehaviour.Send("NameOfTheFunction",object[] parameter, int channel) sera proposée aux développeurs pour l'envoie de Rpc/Command.
+
+
+Features à remettre par rapport à Unet :
+
+-booléen hasAuthority et handle correctement la connection sur chaque objet networké.
+-Création automatique de serialisation sur les messages.
+-Matchmaking Online/LAN
+
+
+
+Features futures à améliorer :
+
+
+-La gestion des scenes devrait être indépendante du NetworkingSystem (beaucoup de projets ne l'utilisent pas).
+
