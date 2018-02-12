@@ -145,7 +145,7 @@ namespace BC_Solution.UnetNetwork
         void SendMovementsInformations(byte[] info, bool useReliableChannel)
         {
             if (isServer)
-                foreach (NetworkingConnection n in this.connection.m_server.connections)
+                foreach (NetworkingConnection n in this.server.connections)
                 {
                     if (n == null)
                         continue;

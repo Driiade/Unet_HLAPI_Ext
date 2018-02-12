@@ -49,12 +49,12 @@ namespace BC_Solution.UnetNetwork {
         /// <summary>
         /// Called on server when a client become ready on server
         /// </summary>
-        public static Action<NetworkingServer, NetworkingMessage> OnConnectionReady;
+       // public static Action<NetworkingServer, NetworkingMessage> OnConnectionReady;
 
         /// <summary>
         /// Called on server when the server start
         /// </summary>
-        public static Action<NetworkingServer, NetworkingMessage> OnStartServer;
+        public static Action<NetworkingServer> OnStartServer;
 
         /// <summary>
         /// Called on server when the server stop
@@ -124,7 +124,7 @@ namespace BC_Solution.UnetNetwork {
             this.RegisterHandler(NetworkingMessageType.Connect, BaseOnServerConnect);
             this.RegisterHandler(NetworkingMessageType.AddPlayer, BaseOnServerAddPlayer);
             this.RegisterHandler(NetworkingMessageType.Disconnect, BaseOnServerDisconnect);
-            this.RegisterHandler(NetworkingMessageType.Ready, BaseOnClientReadyOnServer);
+           // this.RegisterHandler(NetworkingMessageType.Ready, BaseOnClientReadyOnServer);
             this.RegisterHandler(NetworkingMessageType.Error, BaseOnServerError);
         }
 
@@ -691,7 +691,7 @@ namespace BC_Solution.UnetNetwork {
         }
 
 
-        void BaseOnClientReadyOnServer(NetworkingMessage netMsg)
+       /* void BaseOnClientReadyOnServer(NetworkingMessage netMsg)
         {
             Debug.Log("Client ready on server");
 
@@ -704,7 +704,7 @@ namespace BC_Solution.UnetNetwork {
                 OnConnectionReady(this, netMsg);
 
            // this.SendToAll(NetworkingMessageType.ClientReadyFromServerMessage, new EmptyMessage());
-        }
+        }*/
 
 
        internal void BaseOnStopServer()

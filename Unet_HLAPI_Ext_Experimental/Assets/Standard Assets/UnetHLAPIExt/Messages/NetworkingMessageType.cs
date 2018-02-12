@@ -48,7 +48,8 @@ namespace BC_Solution.UnetNetwork
         public const ushort ObjectDestroy = 1;
         public const ushort Rpc = 2;
         public const ushort ObjectSpawn = 3;
-        public const ushort Owner = 4;
+        public const ushort SceneObjectConnection = 4;
+        //public const ushort Owner = 4;
         public const ushort Command = 5;
         public const ushort LocalPlayerTransform = 6;
         public const ushort SyncEvent = 7;

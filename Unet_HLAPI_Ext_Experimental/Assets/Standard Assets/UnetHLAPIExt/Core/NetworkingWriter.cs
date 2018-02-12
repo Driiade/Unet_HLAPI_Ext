@@ -486,41 +486,28 @@ namespace BC_Solution.UnetNetwork
             Write(value.netId);
         }
 
-        public void Write(Transform value)
+        public void Write<T>(T value) where T : Component
         {
-            if (value == null || value.gameObject == null)
-            {
-                WritePackedUInt32(0);
-                return;
-            }
-            var uv = value.gameObject.GetComponent<NetworkingIdentity>();
-            if (uv != null)
-            {
-                Write(uv.netId);
-            }
-            else
-            {
-                if (LogFilter.logWarn) { Debug.LogWarning("NetworkWriter " + value + " has no NetworkIdentity"); }
-                WritePackedUInt32(0);
-            }
+            Write(value.gameObject);
         }
 
         public void Write(GameObject value)
         {
-            if (value == null)
-            {
-                WritePackedUInt32(0);
-                return;
-            }
-            var uv = value.GetComponent<NetworkingIdentity>();
+            NetworkingIdentity uv = value.GetComponent<NetworkingIdentity>();
             if (uv != null)
             {
-                Write(uv.netId);
+                Write((byte)uv.m_type);
+
+                switch (uv.m_type)
+                {
+                    case NetworkingIdentity.TYPE.SPAWNED:
+                    case NetworkingIdentity.TYPE.REPLICATED_SCENE_OBJECT: Write(uv.netId); break;
+                    case NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT: Write(uv.sceneId); break;
+                }
             }
             else
             {
                 if (LogFilter.logWarn) { Debug.LogWarning("NetworkWriter " + value + " has no NetworkIdentity"); }
-                WritePackedUInt32(0);
             }
         }
 

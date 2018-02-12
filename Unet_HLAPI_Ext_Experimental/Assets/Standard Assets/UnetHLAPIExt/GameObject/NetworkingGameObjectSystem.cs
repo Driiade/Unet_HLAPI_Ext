@@ -27,7 +27,6 @@ namespace BC_Solution.UnetNetwork
 {
     public class NetworkingGameObjectSystem : Singleton<NetworkingGameObjectSystem>
     {
-
         /// <summary>
         /// Networked GameObject which need to be registered
         /// </summary>
@@ -40,9 +39,10 @@ namespace BC_Solution.UnetNetwork
 
         /// <summary>
         /// NetworkIdentity by connection, only available on server
+        /// Used because netIdentity are specific by server (between server, same netIdentity can be found)
         /// </summary>
-        private Dictionary<NetworkingServer, Dictionary<ushort, NetworkingIdentity>> m_serverNetworkedObjects = new Dictionary<NetworkingServer, Dictionary<ushort, NetworkingIdentity>>();
-        private Dictionary<NetworkingConnection, Dictionary<ushort, NetworkingIdentity>> m_connectionNetworkedObjects = new Dictionary<NetworkingConnection, Dictionary<ushort, NetworkingIdentity>>();
+        private Dictionary<NetworkingServer, Dictionary<ushort, NetworkingIdentity>> m_serverSpawnedNetworkedObjects = new Dictionary<NetworkingServer, Dictionary<ushort, NetworkingIdentity>>();
+        private Dictionary<NetworkingConnection, Dictionary<ushort, NetworkingIdentity>> m_connectionSpawnedNetworkedObjects = new Dictionary<NetworkingConnection, Dictionary<ushort, NetworkingIdentity>>();
 
         private Dictionary<ushort, GameObject> registeredNetworkedGameObjectsDictionnary = new Dictionary<ushort, GameObject>();
 
@@ -51,6 +51,10 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         private Dictionary<NetworkingServer, ushort> m_serverCurrentNetId = new Dictionary<NetworkingServer, ushort>();
 
+        /// <summary>
+        /// Used when scene is loading and sceneObject can't be found
+        /// </summary>
+       // private Dictionary<ushort, NetworkingConnection> m_pendingSceneNetworkedObjects = new Dictionary<ushort, NetworkingConnection>();
 
         protected override void Awake()
         {
@@ -62,8 +66,10 @@ namespace BC_Solution.UnetNetwork
                 registeredNetworkedGameObjectsDictionnary.Add(go.GetComponent<NetworkingIdentity>().m_assetId, go);
             }
 
-            NetworkingServer.OnConnectionReady += SpawnConnectionGameObjects;
+            NetworkingServer.OnStartServer += OnStartServer;
+            NetworkingServer.OnServerConnect += SpawnConnectionGameObjects;
             NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.ObjectSpawn, OnClientSpawnMessage);
+            NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.SceneObjectConnection, OnClientSceneObjectMessage);
             //NetworkingIdentity.OnNetworkingIdentityDestroy += RemoveNetworkingIdentity;
 
             NetworkingConnection.OnConnectionDisconnect += OnConnectionDisconnect;
@@ -78,12 +84,39 @@ namespace BC_Solution.UnetNetwork
             NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.AutoRpc, OnConnectionRpc);
         }
 
+       /* private void Update()
+        {
+            if (m_pendingSceneNetworkedObjects.Count > 0)
+            {
+                //Find pending scene id not assigned (is used during scene transition)
+                List<ushort> removedSceneIds = new List<ushort>();
+                foreach (ushort sceneId in m_pendingSceneNetworkedObjects.Keys)
+                {
+                    for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
+                    {
+                        if (NetworkingIdentity.s_singleSceneNetworkingIdentities[i].sceneId == sceneId)
+                        {
+                            NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_connection = m_pendingSceneNetworkedObjects[sceneId];
+                            removedSceneIds.Add(sceneId);
+                        }
+                    }
+                }
+
+                foreach (ushort sceneId in removedSceneIds)
+                {
+                    m_pendingSceneNetworkedObjects.Remove(sceneId);
+                }
+            }
+        }*/
+
+
         private void OnDestroy()
         {
-            NetworkingServer.OnConnectionReady -= SpawnConnectionGameObjects;
-            NetworkingServer.OnConnectionReady -= SpawnConnectionGameObjects;
+            NetworkingServer.OnServerConnect -= SpawnConnectionGameObjects;
             NetworkingSystem.UnRegisterConnectionHandler(NetworkingMessageType.ObjectSpawn, OnClientSpawnMessage);
+            NetworkingSystem.UnRegisterConnectionHandler(NetworkingMessageType.SceneObjectConnection, OnClientSceneObjectMessage);
 
+            NetworkingServer.OnStartServer -= OnStartServer;
             NetworkingConnection.OnConnectionDisconnect -= OnConnectionDisconnect;
             NetworkingConnection.OnStopConnection -= OnStopConnection;
             NetworkingServer.OnServerDisconnect -= OnServerDisconnect;
@@ -98,9 +131,9 @@ namespace BC_Solution.UnetNetwork
 
         void RemoveNetworkingIdentity(NetworkingIdentity networkingIdentity, Dictionary<NetworkingServer, Dictionary<ushort, NetworkingIdentity>> dictionary )
         {
-                if (dictionary.ContainsKey(networkingIdentity.m_connection.m_server))
+                if (dictionary.ContainsKey(networkingIdentity.m_server))
                 {
-                   dictionary[networkingIdentity.m_connection.m_server].Remove(networkingIdentity.m_netId);
+                   dictionary[networkingIdentity.m_server].Remove(networkingIdentity.m_netId);
                 }
         }
 
@@ -114,8 +147,14 @@ namespace BC_Solution.UnetNetwork
 
         void SpawnConnectionGameObjects(NetworkingServer server, NetworkingMessage netMsg)
         {
+            //Attribute gameObjects to this server
+            for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
+            {
+                netMsg.m_connection.Send(NetworkingMessageType.SceneObjectConnection, new NetIdMessage(NetworkingIdentity.s_singleSceneNetworkingIdentities[i].assetID));
+            }
+
             Dictionary<ushort, NetworkingIdentity> dictionary;
-            m_serverNetworkedObjects.TryGetValue(server, out dictionary);
+            m_serverSpawnedNetworkedObjects.TryGetValue(server, out dictionary);
 
             if (dictionary != null)
             {
@@ -157,7 +196,7 @@ namespace BC_Solution.UnetNetwork
             netIdentity.m_netId = currentNetId;
             netIdentity.m_isServer = true;
             netIdentity.ChangeType(NetworkingIdentity.TYPE.SPAWNED);
-            AddNetworkingIdentity(netIdentity, server, m_serverNetworkedObjects);
+            AddNetworkingIdentity(netIdentity, server, m_serverSpawnedNetworkedObjects);
 
             server.SendTo(conn.m_connectionId, NetworkingMessageType.ObjectSpawn, new SpawnMessage(netIdentity.m_assetId, currentNetId, netIdentity.localPlayerAuthority));
 
@@ -170,6 +209,21 @@ namespace BC_Solution.UnetNetwork
             }        
         }
 
+        void OnClientSceneObjectMessage(NetworkingMessage netMsg)
+        {
+            ushort sceneId = netMsg.As<NetIdMessage>().m_netId;
+            for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
+            {
+                if (NetworkingIdentity.s_singleSceneNetworkingIdentities[i].sceneId == sceneId)
+                {
+                    NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_connection = netMsg.m_connection;
+                    return;
+                }
+            }
+
+           //Disabled for the moment
+           // m_pendingSceneNetworkedObjects.Add(sceneId, netMsg.m_connection);
+        }
 
         void OnClientSpawnMessage(NetworkingMessage netMsg)
         {
@@ -186,25 +240,35 @@ namespace BC_Solution.UnetNetwork
             }
             else
             {
-                netIdentity = FindLocalNetworkIdentity(netMsg.m_connection.m_server, spawnMessage.m_gameObjectNetId, m_serverNetworkedObjects);
+                netIdentity = FindLocalNetworkIdentity(netMsg.m_connection.m_server, spawnMessage.m_gameObjectNetId, m_serverSpawnedNetworkedObjects);
             }
             netIdentity.m_hasAuthority = spawnMessage.m_hasAuthority;
             netIdentity.m_isClient = true;
-            AddNetworkingIdentity(netIdentity, netMsg.m_connection, m_connectionNetworkedObjects);
+            AddNetworkingIdentity(netIdentity, netMsg.m_connection, m_connectionSpawnedNetworkedObjects);
         }
 
 
-        public zeqze void Replicate(NetworkingIdentity netIdentity
+        public void Replicate(NetworkingIdentity netIdentity)
         {
-
+            Debug.LogError("Not implemented");
         }
-
 
 
         void OnServerCommand(NetworkingMessage netMsg)
         {
-            ushort networkingIdentityID = netMsg.reader.ReadUInt16();
-            NetworkingIdentity netIdentity = FindLocalNetworkIdentity(netMsg.m_connection.m_server, networkingIdentityID, m_serverNetworkedObjects);
+            byte type = netMsg.reader.ReadByte(); //SceneObject or spawned ?
+            NetworkingIdentity netIdentity = null;
+
+            if (type == (byte)NetworkingIdentity.TYPE.SPAWNED || type == (byte)NetworkingIdentity.TYPE.REPLICATED_SCENE_OBJECT)
+            {
+                ushort networkingIdentityID = netMsg.reader.ReadUInt16();
+                netIdentity = FindLocalNetworkIdentity(netMsg.m_connection.m_server, networkingIdentityID, m_serverSpawnedNetworkedObjects);
+            }
+            else
+            {
+                ushort networkingIdentityID = netMsg.reader.ReadUInt16();
+                netIdentity = FindSceneNetworkingIdentity(networkingIdentityID);
+            }
             
             if(netIdentity)
                 netIdentity.HandleMethodCall(netMsg.reader);
@@ -212,8 +276,19 @@ namespace BC_Solution.UnetNetwork
 
         void OnConnectionRpc(NetworkingMessage netMsg)
         {
-            ushort networkingIdentityID = netMsg.reader.ReadUInt16();
-            NetworkingIdentity netIdentity = FindLocalNetworkIdentity(netMsg.m_connection, networkingIdentityID, m_connectionNetworkedObjects);
+            byte type = netMsg.reader.ReadByte(); //SceneObject or spawned ?
+            NetworkingIdentity netIdentity = null;
+
+            if (type == (byte)NetworkingIdentity.TYPE.SPAWNED || type == (byte)NetworkingIdentity.TYPE.REPLICATED_SCENE_OBJECT)
+            {
+                ushort networkingIdentityID = netMsg.reader.ReadUInt16();
+                netIdentity = FindLocalNetworkIdentity(netMsg.m_connection, networkingIdentityID, m_connectionSpawnedNetworkedObjects);
+            }
+            else
+            {
+                ushort networkingIdentityID = netMsg.reader.ReadUInt16();
+                netIdentity = FindSceneNetworkingIdentity(networkingIdentityID);
+            }
 
             if (netIdentity)
                 netIdentity.HandleMethodCall(netMsg.reader);
@@ -227,6 +302,18 @@ namespace BC_Solution.UnetNetwork
             return go;
         }
 
+        public NetworkingIdentity FindSceneNetworkingIdentity(ushort sceneId)
+        {
+            List<NetworkingIdentity> networkingIdentities = NetworkingIdentity.s_singleSceneNetworkingIdentities;
+
+            for (int i = 0; i < networkingIdentities.Count; i++)
+            {
+                if (networkingIdentities[i].m_assetId == sceneId)
+                    return networkingIdentities[i];
+            }
+
+            return null;
+        }
 
         public int GetIndexOfRegisteredGameObject(GameObject go)
         {
@@ -240,17 +327,17 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        public NetworkingIdentity FindLocalNetworkIdentity(NetworkingConnection connection, ushort netId)
+       /* public NetworkingIdentity FindLocalNetworkIdentity(NetworkingConnection connection, ushort netId)
         {
             NetworkingIdentity networkingIdentity = null;
 
             if (connection.m_server == null)
-                networkingIdentity = FindLocalNetworkIdentity(connection, netId, m_connectionNetworkedObjects);
+                networkingIdentity = FindLocalNetworkIdentity(connection, netId, m_connectionSpawnedNetworkedObjects);
             else
-                networkingIdentity = FindLocalNetworkIdentity(connection.m_server, netId, m_serverNetworkedObjects);
+                networkingIdentity = FindLocalNetworkIdentity(connection.m_server, netId, m_serverSpawnedNetworkedObjects);
 
             return networkingIdentity;
-        }
+        }*/
 
 
         public NetworkingIdentity FindLocalNetworkIdentity(NetworkingConnection connection, ushort netId, Dictionary<NetworkingConnection, Dictionary<ushort, NetworkingIdentity>> dictionary)
@@ -318,7 +405,7 @@ namespace BC_Solution.UnetNetwork
         {
             Dictionary<ushort, NetworkingIdentity> netIdentities = null;
 
-            m_connectionNetworkedObjects.TryGetValue(conn, out netIdentities);
+            m_connectionSpawnedNetworkedObjects.TryGetValue(conn, out netIdentities);
             if (netIdentities != null)
             {
                 foreach (NetworkingIdentity i in netIdentities.Values)
@@ -328,14 +415,14 @@ namespace BC_Solution.UnetNetwork
                 }
             }
 
-            m_connectionNetworkedObjects.Remove(conn);
+            m_connectionSpawnedNetworkedObjects.Remove(conn);
         }
 
         void OnStopConnection(NetworkingConnection conn)
         {
             Dictionary<ushort, NetworkingIdentity> netIdentities = null;
 
-            m_connectionNetworkedObjects.TryGetValue(conn, out netIdentities);
+            m_connectionSpawnedNetworkedObjects.TryGetValue(conn, out netIdentities);
             if (netIdentities != null)
             {
                 foreach (NetworkingIdentity i in netIdentities.Values)
@@ -345,14 +432,14 @@ namespace BC_Solution.UnetNetwork
                 }
             }
 
-            m_connectionNetworkedObjects.Remove(conn);
+            m_connectionSpawnedNetworkedObjects.Remove(conn);
         }
 
         void OnServerDisconnect(NetworkingServer server, NetworkingMessage netMsg)
         {
             Dictionary<ushort, NetworkingIdentity> netIdentities = null;
 
-            m_serverNetworkedObjects.TryGetValue(server, out netIdentities);
+            m_serverSpawnedNetworkedObjects.TryGetValue(server, out netIdentities);
             if (netIdentities != null)
             {
                 List<NetworkingIdentity> suppIdentities = new List<NetworkingIdentity>();
@@ -369,46 +456,56 @@ namespace BC_Solution.UnetNetwork
                 {
                     NetworkingIdentity netIdentity = suppIdentities[i];
                     netIdentities.Remove(netIdentity.m_netId);
-                    RemoveNetworkingIdentity(netIdentity, m_connectionNetworkedObjects);//Because we can be host
+                    RemoveNetworkingIdentity(netIdentity, m_connectionSpawnedNetworkedObjects);//Because we can be host
                     server.SendToAll(NetworkingMessageType.ObjectDestroy, new ObjectDestroyMessage(netIdentity.m_netId), NetworkingMessageType.Channels.DefaultReliable);
                     Destroy(netIdentity.gameObject);
                 }
             }
         }
 
+
+        void OnStartServer(NetworkingServer server)
+        {
+            //All object in the scenes are for this server
+            for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
+            {
+                NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_server = server;
+            }
+        }
+
+
         void OnStopServer(NetworkingServer server)
         {
-            foreach (Dictionary<ushort, NetworkingIdentity> d in m_serverNetworkedObjects.Values)
+            foreach (Dictionary<ushort, NetworkingIdentity> d in m_serverSpawnedNetworkedObjects.Values)
                 foreach (NetworkingIdentity i in d.Values)
                 {
                     if (i && i.destroyOnStop)
                         Destroy(i.gameObject);
                 }
 
-            m_serverNetworkedObjects.Remove(server);
+            m_serverSpawnedNetworkedObjects.Remove(server);
         }
 
         private void OnConnectionDestroy(NetworkingMessage netMsg)
         {
+            NetworkingIdentity netIdentity = FindLocalNetworkIdentity(netMsg.m_connection, netMsg.As<ObjectDestroyMessage>().m_gameObjectNetId, m_connectionSpawnedNetworkedObjects);
+            if (netIdentity != null)
+            {
+                netIdentity.OnNetworkDestroy();
+                RemoveNetworkingIdentity(netIdentity, m_connectionSpawnedNetworkedObjects);
 
-                NetworkingIdentity netIdentity = FindLocalNetworkIdentity(netMsg.m_connection, netMsg.As<ObjectDestroyMessage>().m_gameObjectNetId, m_connectionNetworkedObjects);
-                if (netIdentity != null)
-                {
-                    netIdentity.OnNetworkDestroy();
-                    RemoveNetworkingIdentity(netIdentity, m_connectionNetworkedObjects);
-
-                    Destroy(netIdentity.gameObject);
-                }
+                Destroy(netIdentity.gameObject);
+            }
         }
 
         private void OnServerDestroy(NetworkingMessage netMsg)
         {
-            NetworkingIdentity netIdentity = FindLocalNetworkIdentity(netMsg.m_connection.m_server, netMsg.As<ObjectDestroyMessage>().m_gameObjectNetId, m_serverNetworkedObjects);
+            NetworkingIdentity netIdentity = FindLocalNetworkIdentity(netMsg.m_connection.m_server, netMsg.As<ObjectDestroyMessage>().m_gameObjectNetId, m_serverSpawnedNetworkedObjects);
             if (netIdentity != null)
             {
                 netIdentity.OnNetworkDestroy();
-                RemoveNetworkingIdentity(netIdentity, m_serverNetworkedObjects);
-                RemoveNetworkingIdentity(netIdentity, m_connectionNetworkedObjects); //because we can be host
+                RemoveNetworkingIdentity(netIdentity, m_serverSpawnedNetworkedObjects);
+                RemoveNetworkingIdentity(netIdentity, m_connectionSpawnedNetworkedObjects); //because we can be host
                 Destroy(netIdentity.gameObject);
             }
         }

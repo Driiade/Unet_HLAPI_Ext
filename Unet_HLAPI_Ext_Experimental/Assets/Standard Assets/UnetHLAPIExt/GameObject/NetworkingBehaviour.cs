@@ -44,8 +44,9 @@ namespace BC_Solution.UnetNetwork
         public bool hasAuthority { get { return m_networkingIdentity.hasAuthority; } }
 
         public NetworkingConnection connection { get { return m_networkingIdentity.m_connection; } }
+        public NetworkingServer server { get { return m_networkingIdentity.m_server; } }
 
-        public short playerControllerId { get { return m_networkingIdentity.playerControllerId; } }
+        //public short playerControllerId { get { return m_networkingIdentity.playerControllerId; } }
         protected uint syncVarDirtyBits { get { return m_syncVarDirtyBits; } }
         protected bool syncVarHookGuard { get { return m_SyncVarGuard; } set { m_SyncVarGuard = value; } }
 
@@ -85,7 +86,7 @@ namespace BC_Solution.UnetNetwork
             SerializeCall(writer, methodName, parameters);
             writer.FinishMessage();
 
-            connection.m_server.SendToAll(writer, channelId);
+            server.SendToAll(writer, channelId);
         }
 
         public void SendToConnection(NetworkingConnection conn,string methodName, int channelId, params object[] parameters)
@@ -96,7 +97,7 @@ namespace BC_Solution.UnetNetwork
             SerializeCall(writer, methodName, parameters);
             writer.FinishMessage();
 
-            connection.m_server.SendTo(conn.m_connectionId, writer, channelId);
+            server.SendTo(conn.m_connectionId, writer, channelId);
         }
 
         public void AutoSendToConnections(string methodName, int channelId, params object[] parameters)
@@ -112,6 +113,7 @@ namespace BC_Solution.UnetNetwork
 
         void SerializeCall(NetworkingWriter writer, string methodName, object[] parameters)
         {
+            writer.Write((byte)this.networkingIdentity.m_type);
             writer.Write(this.networkingIdentity.netId);
             writer.Write(this.m_netId);
             writer.Write(GetNetworkMethodIndex(methodName, networkedMethods));

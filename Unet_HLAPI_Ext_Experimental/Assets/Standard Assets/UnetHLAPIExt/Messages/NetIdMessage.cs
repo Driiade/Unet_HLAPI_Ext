@@ -29,6 +29,16 @@ namespace BC_Solution.UnetNetwork
     {
         public ushort m_netId;
 
+        public NetIdMessage()
+        {
+            m_netId = 0;
+        }
+
+        public NetIdMessage(ushort netId)
+        {
+            m_netId = netId;
+        }
+
         public override void Deserialize(NetworkingReader reader)
         {
             base.Deserialize(reader);

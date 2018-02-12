@@ -374,9 +374,7 @@ namespace BC_Solution.UnetNetwork
 
             //NetworkServer.SpawnObjects();
             servers.Add(server);
-
-            if (NetworkingServer.OnStartServer != null)
-                NetworkingServer.OnStartServer(servers[0], null);
+            InternalOnStartServer(server);
         }
 
         public void StartServer()
@@ -401,12 +399,9 @@ namespace BC_Solution.UnetNetwork
                 }
             }
 
-            Debug.Log("Start server");
             servers.Add(server);
             //NetworkServer.SpawnObjects();
-
-            if (NetworkingServer.OnStartServer != null)
-                NetworkingServer.OnStartServer(servers[0], null);
+            InternalOnStartServer(server);
         }
 
 
@@ -435,7 +430,7 @@ namespace BC_Solution.UnetNetwork
            server.Configure(Configuration(), (int)maxPlayer);
         }
 
-
+        
 
         /// <summary>
         /// Stop the current connections used by the NetworkingSystem
@@ -594,11 +589,20 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        void InternalOnConnectionConnect(NetworkingConnection conn, NetworkingMessage netMsg)
+        void InternalOnConnectionConnect(NetworkingConnection conn)
         {
-            if (setReadyOnConnect)
-                conn.SetReady();
+            /* if (setReadyOnConnect)
+                 conn.SetReady();*/
         }
+
+        void InternalOnStartServer(NetworkingServer server)
+        {
+            Debug.Log("Start server");
+
+            if (NetworkingServer.OnStartServer != null)
+                NetworkingServer.OnStartServer(server);
+        }
+
 
         void InternalOnConnectionDisconnect(NetworkingConnection conn, NetworkingMessage netMsg)
         {

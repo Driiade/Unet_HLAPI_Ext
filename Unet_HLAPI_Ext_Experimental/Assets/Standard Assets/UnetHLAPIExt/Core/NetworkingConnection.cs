@@ -47,7 +47,7 @@ namespace BC_Solution.UnetNetwork
         /// <summary>
         /// Called on client when the local connection connect
         /// </summary>
-        public static Action<NetworkingConnection, NetworkingMessage> OnConnectionConnect;
+        public static Action<NetworkingConnection> OnConnectionConnect;
 
         /// <summary>
         /// Called on client when the local connection become ready
@@ -507,11 +507,11 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public void SetReady()
+      /*  public void SetReady()
         {
             isReady = true;
             this.Send(NetworkingMessageType.Ready, new EmptyMessage());
-        }
+        } */
 
         //What the use case ? Disabled for the moment
        /* public void Connect(EndPoint secureTunnelEndPoint)
@@ -1049,7 +1049,7 @@ namespace BC_Solution.UnetNetwork
             return NetworkTransport.Send(m_hostId, m_connectionId, channelId, bytes, numBytes, out error);
         }
 
-        internal void AddOwnedObject(NetworkingIdentity obj)
+       /* internal void AddOwnedObject(NetworkingIdentity obj)
         {
             m_clientOwnedObjects.Add(obj.netId);
         }
@@ -1057,7 +1057,7 @@ namespace BC_Solution.UnetNetwork
         internal void RemoveOwnedObject(NetworkingIdentity obj)
         {
             m_clientOwnedObjects.Remove(obj.netId);
-        }
+        }*/
 
         internal static void OnFragment(NetworkingMessage netMsg)
         {
@@ -1128,7 +1128,7 @@ namespace BC_Solution.UnetNetwork
             }*/
 
             if (OnConnectionConnect != null)
-                OnConnectionConnect(this,netMsg);
+                OnConnectionConnect(this);
         }
 
         void InternalOnConnectionReady(NetworkingMessage netMsg)

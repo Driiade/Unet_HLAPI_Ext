@@ -33,7 +33,7 @@ namespace BC_Solution.UnetNetwork
     [AddComponentMenu("Networking/NetworkingIdentity")]
     public class NetworkingIdentity : MonoBehaviour
     {
-        public enum TYPE { SPAWNED, SINGLE_SCENE_OBJECT, REPLICATED_SCENE_OBJECT}
+        public enum TYPE { SPAWNED =0, SINGLE_SCENE_OBJECT=1, REPLICATED_SCENE_OBJECT=2}
 
         public static List<NetworkingIdentity> s_spawnedNetworkingIdentities = new List<NetworkingIdentity>();
         public static List<NetworkingIdentity> s_singleSceneNetworkingIdentities = new List<NetworkingIdentity>();
@@ -41,7 +41,7 @@ namespace BC_Solution.UnetNetwork
 
 
         // configuration
-        [SerializeField] TYPE m_type;
+        [SerializeField] internal TYPE m_type;
         [SerializeField] internal ushort m_sceneId;
         [SerializeField] internal ushort m_assetId;
         [SerializeField] bool m_ServerOnly;
@@ -73,6 +73,7 @@ namespace BC_Solution.UnetNetwork
         HashSet<int> m_observerConnections;
         List<NetworkingConnection> m_observers;
         internal NetworkingConnection m_connection;
+        internal NetworkingServer m_server;
 
         internal bool m_isClient;
         internal bool m_isServer;
