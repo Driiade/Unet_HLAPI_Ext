@@ -113,7 +113,6 @@ namespace BC_Solution.UnetNetwork
 
         void SerializeCall(NetworkingWriter writer, string methodName, object[] parameters)
         {
-            writer.Write((byte)this.networkingIdentity.m_type);
             writer.Write(this.networkingIdentity.netId);
             writer.Write(this.m_netId);
             writer.Write(GetNetworkMethodIndex(methodName, networkedMethods));

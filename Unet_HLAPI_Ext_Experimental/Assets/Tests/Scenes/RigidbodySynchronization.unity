@@ -590,69 +590,6 @@ MeshFilter:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 541670081}
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1 &873530709
-GameObject:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  serializedVersion: 5
-  m_Component:
-  - component: {fileID: 873530712}
-  - component: {fileID: 873530711}
-  - component: {fileID: 873530710}
-  m_Layer: 0
-  m_Name: NetworkedGameObject
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &873530710
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 873530709}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e09113a3a782c54fbd0051d433efff3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_netId: 0
-  sendingRate: 0.5
---- !u!114 &873530711
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 873530709}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8a44e4099fd6dda4c863e895c95b9a25, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_type: 1
-  m_sceneId: 0
-  m_assetId: 0
-  m_ServerOnly: 0
-  m_localPlayerAuthority: 0
-  destroyOnDisconnect: 1
-  destroyOnStop: 1
-  m_networkingBehaviours:
-  - {fileID: 873530710}
---- !u!4 &873530712
-Transform:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 873530709}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.2760265, y: -5.203691, z: 3.3954673}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 7
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &918904453
 GameObject:
   m_ObjectHideFlags: 0
@@ -1215,6 +1152,52 @@ MeshFilter:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1376375086}
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1001 &1385973076
+Prefab:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 4203152821150510, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
+      propertyPath: m_LocalPosition.x
+      value: -0.2760265
+      objectReference: {fileID: 0}
+    - target: {fileID: 4203152821150510, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
+      propertyPath: m_LocalPosition.y
+      value: -5.203691
+      objectReference: {fileID: 0}
+    - target: {fileID: 4203152821150510, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
+      propertyPath: m_LocalPosition.z
+      value: 3.3954673
+      objectReference: {fileID: 0}
+    - target: {fileID: 4203152821150510, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4203152821150510, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4203152821150510, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4203152821150510, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4203152821150510, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
+      propertyPath: m_RootOrder
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 1722806640705446, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+  m_ParentPrefab: {fileID: 100100000, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
+  m_IsPrefabParent: 0
 --- !u!1 &1495624272
 GameObject:
   m_ObjectHideFlags: 0
@@ -1463,7 +1446,6 @@ MonoBehaviour:
   - {fileID: 1231402685847870, guid: d313bee6809531445a0186a4f8705868, type: 2}
   registeredNetworkedGameObjectsArray:
   - {fileID: 1231402685847870, guid: d313bee6809531445a0186a4f8705868, type: 2}
-  - {fileID: 1049942701003990, guid: 3aa7d780f68a99d43ac747cc6a80b227, type: 2}
 --- !u!1 &1961428247
 GameObject:
   m_ObjectHideFlags: 0

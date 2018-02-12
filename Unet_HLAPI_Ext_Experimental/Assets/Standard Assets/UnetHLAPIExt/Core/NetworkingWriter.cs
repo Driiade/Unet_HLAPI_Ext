@@ -496,14 +496,7 @@ namespace BC_Solution.UnetNetwork
             NetworkingIdentity uv = value.GetComponent<NetworkingIdentity>();
             if (uv != null)
             {
-                Write((byte)uv.m_type);
-
-                switch (uv.m_type)
-                {
-                    case NetworkingIdentity.TYPE.SPAWNED:
-                    case NetworkingIdentity.TYPE.REPLICATED_SCENE_OBJECT: Write(uv.netId); break;
-                    case NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT: Write(uv.sceneId); break;
-                }
+                Write(uv.netId);            
             }
             else
             {
