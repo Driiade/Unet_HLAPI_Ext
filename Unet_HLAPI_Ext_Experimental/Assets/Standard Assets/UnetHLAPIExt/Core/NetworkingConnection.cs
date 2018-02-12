@@ -710,6 +710,7 @@ namespace BC_Solution.UnetNetwork
             if (callbacks != null)
             {
                 callbacks -= handler;
+                m_messageHandlers[msgType] = callbacks;
             }
         }
 

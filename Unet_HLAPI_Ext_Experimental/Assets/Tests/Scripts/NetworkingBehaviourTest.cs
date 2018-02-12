@@ -30,8 +30,8 @@ public class NetworkingBehaviourTest : NetworkingBehaviour {
     }
 
     [Networked]
-    void Test(string message, ushort id)
+    void Test(string message, int cpt)
     {
-        Debug.Log(message + id);
+        Debug.Log(message + cpt);
     }
 }

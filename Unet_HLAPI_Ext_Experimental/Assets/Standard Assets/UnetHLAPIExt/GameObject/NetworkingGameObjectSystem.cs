@@ -84,31 +84,6 @@ namespace BC_Solution.UnetNetwork
             NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.AutoRpc, OnConnectionRpc);
         }
 
-       /* private void Update()
-        {
-            if (m_pendingSceneNetworkedObjects.Count > 0)
-            {
-                //Find pending scene id not assigned (is used during scene transition)
-                List<ushort> removedSceneIds = new List<ushort>();
-                foreach (ushort sceneId in m_pendingSceneNetworkedObjects.Keys)
-                {
-                    for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
-                    {
-                        if (NetworkingIdentity.s_singleSceneNetworkingIdentities[i].sceneId == sceneId)
-                        {
-                            NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_connection = m_pendingSceneNetworkedObjects[sceneId];
-                            removedSceneIds.Add(sceneId);
-                        }
-                    }
-                }
-
-                foreach (ushort sceneId in removedSceneIds)
-                {
-                    m_pendingSceneNetworkedObjects.Remove(sceneId);
-                }
-            }
-        }*/
-
 
         private void OnDestroy()
         {
@@ -150,7 +125,8 @@ namespace BC_Solution.UnetNetwork
             //Attribute gameObjects to this server
             for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
             {
-                netMsg.m_connection.Send(NetworkingMessageType.SceneObjectConnection, new NetIdMessage(NetworkingIdentity.s_singleSceneNetworkingIdentities[i].assetID));
+                if(NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_server == server)
+                    netMsg.m_connection.Send(NetworkingMessageType.SceneObjectConnection, new NetIdMessage(NetworkingIdentity.s_singleSceneNetworkingIdentities[i].assetID));
             }
 
             Dictionary<ushort, NetworkingIdentity> dictionary;
@@ -195,6 +171,7 @@ namespace BC_Solution.UnetNetwork
             netIdentity.m_connection = conn;
             netIdentity.m_netId = currentNetId;
             netIdentity.m_isServer = true;
+            netIdentity.m_server = server;
             netIdentity.ChangeType(NetworkingIdentity.TYPE.SPAWNED);
             AddNetworkingIdentity(netIdentity, server, m_serverSpawnedNetworkedObjects);
 
@@ -216,13 +193,11 @@ namespace BC_Solution.UnetNetwork
             {
                 if (NetworkingIdentity.s_singleSceneNetworkingIdentities[i].sceneId == sceneId)
                 {
+                    NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_isClient = true;
                     NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_connection = netMsg.m_connection;
                     return;
                 }
             }
-
-           //Disabled for the moment
-           // m_pendingSceneNetworkedObjects.Add(sceneId, netMsg.m_connection);
         }
 
         void OnClientSpawnMessage(NetworkingMessage netMsg)
@@ -327,7 +302,7 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-       /* public NetworkingIdentity FindLocalNetworkIdentity(NetworkingConnection connection, ushort netId)
+     /*   public NetworkingIdentity FindLocalNetworkIdentity(NetworkingConnection connection, ushort netId)
         {
             NetworkingIdentity networkingIdentity = null;
 
@@ -416,7 +391,18 @@ namespace BC_Solution.UnetNetwork
             }
 
             m_connectionSpawnedNetworkedObjects.Remove(conn);
+
+
+            for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
+            {
+                if (NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_connection == conn)
+                {
+                    NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_connection = null;      //unassigne connection
+                    NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_isClient = false;
+                }
+            }
         }
+
 
         void OnStopConnection(NetworkingConnection conn)
         {
@@ -433,6 +419,16 @@ namespace BC_Solution.UnetNetwork
             }
 
             m_connectionSpawnedNetworkedObjects.Remove(conn);
+
+
+            for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
+            {
+                if (NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_connection == conn)
+                {
+                    NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_connection = null;      //unassigne connection
+                    NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_isClient = false;
+                }
+            }
         }
 
         void OnServerDisconnect(NetworkingServer server, NetworkingMessage netMsg)
@@ -469,7 +465,11 @@ namespace BC_Solution.UnetNetwork
             //All object in the scenes are for this server
             for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
             {
-                NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_server = server;
+                if (NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_server == null)      //no server assigned
+                {
+                    NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_server = server;
+                    NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_isServer = true;
+                }
             }
         }
 
@@ -484,6 +484,15 @@ namespace BC_Solution.UnetNetwork
                 }
 
             m_serverSpawnedNetworkedObjects.Remove(server);
+
+            for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
+            {
+                if (NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_server == server)
+                {
+                    NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_server = null;      //unassigne server
+                    NetworkingIdentity.s_singleSceneNetworkingIdentities[i].m_isServer = false;
+                }
+            }
         }
 
         private void OnConnectionDestroy(NetworkingMessage netMsg)

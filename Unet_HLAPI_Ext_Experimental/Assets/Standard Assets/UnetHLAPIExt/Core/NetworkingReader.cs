@@ -469,15 +469,17 @@ namespace BC_Solution.UnetNetwork
 
         public GameObject ReadGameObject(NetworkingConnection networkingConnection)
         {
-            ushort netId = ReadUInt16();
-            NetworkingIdentity netIdentity = NetworkingGameObjectSystem.Instance.FindLocalNetworkIdentity(networkingConnection, netId);
+            /* ushort netId = ReadUInt16();
+             NetworkingIdentity netIdentity = NetworkingGameObjectSystem.Instance.FindLocalNetworkIdentity(networkingConnection, netId);
 
-            if (netIdentity == null)
-            {
-                if (LogFilter.logDebug) { Debug.Log("ReadGameObject netId:" + netId + "go: null"); }
-            }
+             if (netIdentity == null)
+             {
+                 if (LogFilter.logDebug) { Debug.Log("ReadGameObject netId:" + netId + "go: null"); }
+             }
 
-            return netIdentity.gameObject;
+             return netIdentity.gameObject;*/
+            Debug.LogError("Not implemented");
+            return null;
         }
 
         public T Read<T>(NetworkingConnection networkingConnection)

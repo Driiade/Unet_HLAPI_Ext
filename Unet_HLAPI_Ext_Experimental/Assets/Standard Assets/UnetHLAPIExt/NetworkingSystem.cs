@@ -479,7 +479,7 @@ namespace BC_Solution.UnetNetwork
 
         IEnumerator RemoveHostCoroutine(int hostId)
         {
-            yield return new WaitForEndOfFrame();
+            yield return new WaitForSecondsRealtime(1f);
             NetworkTransport.RemoveHost(hostId);
         }
 

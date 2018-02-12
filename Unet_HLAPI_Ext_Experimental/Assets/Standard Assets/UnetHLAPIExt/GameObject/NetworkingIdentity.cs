@@ -46,7 +46,7 @@ namespace BC_Solution.UnetNetwork
         [SerializeField] internal ushort m_assetId;
         [SerializeField] bool m_ServerOnly;
         [SerializeField] bool m_localPlayerAuthority;
-        [SerializeField] bool m_isSceneObject = false;
+
         public bool destroyOnDisconnect = true;
         public bool destroyOnStop = true;
 
@@ -347,7 +347,7 @@ namespace BC_Solution.UnetNetwork
             }
             else
             {
-                if (m_isSceneObject)
+               /* if (m_isSceneObject)
                 {
                     //allowed
                 }
@@ -355,7 +355,7 @@ namespace BC_Solution.UnetNetwork
                 {
                     if (LogFilter.logError) { Debug.LogError("Object has non-zero netId " + netId + " for " + gameObject); }
                     return;
-                }
+                }*/
             }
 
             if (LogFilter.logDev) { Debug.Log("OnStartServer " + gameObject + " GUID:" + netId); }
