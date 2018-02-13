@@ -34,7 +34,7 @@ namespace BC_Solution.UnetNetwork
 
         MemoryStream m_currentPacket = new MemoryStream();
 
-        float m_LastFlushTime;
+        //float m_LastFlushTime;
 
         byte m_ChannelId;
         int m_MaxPacketSize;
@@ -149,7 +149,7 @@ namespace BC_Solution.UnetNetwork
             if (m_currentPacket.Position > 0)
             {
                 SendInternalBuffer(conn);
-                m_LastFlushTime = Time.realtimeSinceStartup;
+                //m_LastFlushTime = Time.realtimeSinceStartup;
             }
             //}
 

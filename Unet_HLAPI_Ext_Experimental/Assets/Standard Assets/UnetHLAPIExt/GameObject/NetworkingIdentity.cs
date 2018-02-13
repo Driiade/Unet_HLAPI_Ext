@@ -35,9 +35,8 @@ namespace BC_Solution.UnetNetwork
     {
         public enum TYPE { SPAWNED =0, SINGLE_SCENE_OBJECT=1, REPLICATED_SCENE_OBJECT=2}
 
-        public static List<NetworkingIdentity> s_spawnedNetworkingIdentities = new List<NetworkingIdentity>();
-        public static List<NetworkingIdentity> s_singleSceneNetworkingIdentities = new List<NetworkingIdentity>();
-        public static List<NetworkingIdentity> s_replicatedSceneNetworkingIdentities = new List<NetworkingIdentity>();
+        public static List<NetworkingIdentity> s_networkingIdentities = new List<NetworkingIdentity>();
+
 
 
         // configuration
@@ -97,48 +96,17 @@ namespace BC_Solution.UnetNetwork
 
         private void Awake()
         {
-            ChangeType(m_type);
+            s_networkingIdentities.Add(this);
 
-            if (m_type == TYPE.REPLICATED_SCENE_OBJECT) // If you have a player in the scene and you want it to be replicated on others clients.
-                NetworkingGameObjectSystem.Instance.Replicate(this);
+           // if (m_type == TYPE.REPLICATED_SCENE_OBJECT) // If you have a player in the scene and you want it to be replicated on others clients.
+               // NetworkingGameObjectSystem.Instance.Replicate(this);
         }
 
-        internal void ChangeType(TYPE type)
-        {
-            switch (m_type)
-            {
-                case TYPE.SPAWNED:
-                    s_spawnedNetworkingIdentities.Remove(this); break;
-                case TYPE.SINGLE_SCENE_OBJECT:
-                    s_singleSceneNetworkingIdentities.Remove(this); break;
-                case TYPE.REPLICATED_SCENE_OBJECT:
-                    s_replicatedSceneNetworkingIdentities.Remove(this); break;
-            }
-
-
-            m_type = type;
-            switch (m_type)
-            {
-                case TYPE.SPAWNED:
-                    s_spawnedNetworkingIdentities.Add(this); break;
-                case TYPE.SINGLE_SCENE_OBJECT:
-                    s_singleSceneNetworkingIdentities.Add(this); break;
-                case TYPE.REPLICATED_SCENE_OBJECT:
-                    s_replicatedSceneNetworkingIdentities.Add(this); break;
-            }
-        }
+    
 
         private void OnDestroy()
         {
-            switch (m_type)
-            {
-                case TYPE.SPAWNED:
-                    s_spawnedNetworkingIdentities.Remove(this); break;
-                case TYPE.SINGLE_SCENE_OBJECT:
-                    s_singleSceneNetworkingIdentities.Remove(this); break;
-                case TYPE.REPLICATED_SCENE_OBJECT:
-                    s_replicatedSceneNetworkingIdentities.Remove(this); break;
-            }
+            s_networkingIdentities.Remove(this);
         }
 
 
@@ -149,7 +117,7 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        static NetworkingWriter s_updateWriter = new NetworkingWriter();
+        //static NetworkingWriter s_updateWriter = new NetworkingWriter();
 
 
         // used when adding players

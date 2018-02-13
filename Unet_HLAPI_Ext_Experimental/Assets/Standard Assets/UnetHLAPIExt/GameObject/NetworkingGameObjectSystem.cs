@@ -173,7 +173,7 @@ namespace BC_Solution.UnetNetwork
             netIdentity.m_netId = currentNetId;
             netIdentity.m_isServer = true;
             netIdentity.m_server = server;
-            netIdentity.ChangeType(NetworkingIdentity.TYPE.SPAWNED);
+            netIdentity.m_type = NetworkingIdentity.TYPE.SPAWNED;
             AddNetworkingIdentity(netIdentity, server, m_serverSpawnedNetworkedObjects);
 
             server.SendTo(conn.m_connectionId, NetworkingMessageType.ObjectSpawn, new SpawnMessage(netIdentity.m_assetId, currentNetId, netIdentity.localPlayerAuthority));
@@ -210,7 +210,7 @@ namespace BC_Solution.UnetNetwork
                 netIdentity = go.GetComponent<NetworkingIdentity>();
                 netIdentity.m_netId = spawnMessage.m_gameObjectNetId;
                 netIdentity.m_connection = netMsg.m_connection;
-                netIdentity.ChangeType(NetworkingIdentity.TYPE.SPAWNED);
+                netIdentity.m_type = NetworkingIdentity.TYPE.SPAWNED;
             }
             else
             {
@@ -262,12 +262,12 @@ namespace BC_Solution.UnetNetwork
 
         public NetworkingIdentity FindSceneNetworkingIdentity(ushort sceneId)
         {
-            List<NetworkingIdentity> networkingIdentities = NetworkingIdentity.s_singleSceneNetworkingIdentities;
-
-            for (int i = 0; i < networkingIdentities.Count; i++)
+            for (int i = 0; i < NetworkingIdentity.s_networkingIdentities.Count; i++)
             {
-                if (networkingIdentities[i].m_assetId == sceneId)
-                    return networkingIdentities[i];
+                NetworkingIdentity netIdentity = NetworkingIdentity.s_networkingIdentities[i];
+
+                if (netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT && netIdentity.m_assetId == sceneId)
+                    return netIdentity;
             }
 
             return null;
@@ -370,7 +370,7 @@ namespace BC_Solution.UnetNetwork
                 {
                     if (i)
                     {
-                        if (i && i.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
+                        if (i.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
                         {
                             i.m_connection = null;      //unassigne connection
                             i.m_isClient = false;
@@ -448,18 +448,18 @@ namespace BC_Solution.UnetNetwork
 
 
                 //All object in the scenes are for this server
-                for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
+                for (int i = 0; i < NetworkingIdentity.s_networkingIdentities.Count; i++)
                 {
-                    NetworkingIdentity netIdentity = NetworkingIdentity.s_singleSceneNetworkingIdentities[i];
-                    if (netIdentity.m_server == null)      //no server assigned
+                    NetworkingIdentity netIdentity = NetworkingIdentity.s_networkingIdentities[i];
+                    if (netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
                     {
                         currentNetId++;
                         netIdentity.m_netId = currentNetId;
                         netIdentity.m_server = server;
                         netIdentity.m_isServer = true;
-                    }
 
-                    AddNetworkingIdentity(netIdentity, server, m_serverSpawnedNetworkedObjects);
+                        AddNetworkingIdentity(netIdentity, server, m_serverSpawnedNetworkedObjects);
+                    }
                 }
 
 
@@ -517,10 +517,10 @@ namespace BC_Solution.UnetNetwork
             m_serverCurrentNetId.TryGetValue(server, out currentNetId);
 
             //All object in the scenes are for this server
-            for (int i = 0; i < NetworkingIdentity.s_singleSceneNetworkingIdentities.Count; i++)
+            for (int i = 0; i < NetworkingIdentity.s_networkingIdentities.Count; i++)
             {
-                NetworkingIdentity netIdentity = NetworkingIdentity.s_singleSceneNetworkingIdentities[i];
-                if (netIdentity.netId == 0)
+                NetworkingIdentity netIdentity = NetworkingIdentity.s_networkingIdentities[i];
+                if (netIdentity.netId == 0 && netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
                 {
                     if (netIdentity.m_server == null)      //no server assigned
                     {

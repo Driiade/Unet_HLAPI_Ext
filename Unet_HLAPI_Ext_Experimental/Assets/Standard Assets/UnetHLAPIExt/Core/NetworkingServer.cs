@@ -68,7 +68,7 @@ namespace BC_Solution.UnetNetwork {
         public int m_serverPort { get; private set; }
         public string m_serverName { get; private set; }
 
-        bool m_Initialized = false;
+        //bool m_Initialized = false;
 
         public bool m_isMainServer { get; internal set; }
         internal int m_hostId = -1;

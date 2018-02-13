@@ -245,7 +245,7 @@ namespace BC_Solution.UnetNetwork
         }
 
         // Track whether Dispose has been called.
-        bool m_Disposed;
+        //bool m_Disposed;
 
         ~NetworkingConnection()
         {
@@ -279,7 +279,7 @@ namespace BC_Solution.UnetNetwork
             }
             m_clientOwnedObjects = null;*/
 
-            m_Disposed = true;
+           // m_Disposed = true;
         }
 
 

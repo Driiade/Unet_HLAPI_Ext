@@ -131,7 +131,7 @@ namespace BC_Solution.UnetNetwork
                 }
 
                 if (NetworkingSystem.Instance.mainServer != null)
-                    NetworkingSystem.Instance.mainServer.RegisterHandler(msgType, callback);
+                    NetworkingSystem.Instance.mainServer.UnregisterHandler(msgType, callback);
             }
         }
 
