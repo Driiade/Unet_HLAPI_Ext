@@ -23,7 +23,7 @@ namespace BC_Solution.UnetNetwork
 
             if (GUI.Button(new Rect(10, 150, 200, 20), "Start server"))
             {
-                NetworkingSystem.Instance.StartServer();
+                NetworkingSystem.Instance.StartMainServer();
             }
 
             if (GUI.Button(new Rect(10, 200, 200, 20), "Start client"))

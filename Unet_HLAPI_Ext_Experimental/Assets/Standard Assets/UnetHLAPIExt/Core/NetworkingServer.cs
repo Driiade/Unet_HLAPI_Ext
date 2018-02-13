@@ -70,6 +70,7 @@ namespace BC_Solution.UnetNetwork {
 
         bool m_Initialized = false;
 
+        public bool m_isMainServer { get; internal set; }
         internal int m_hostId = -1;
         int m_RelaySlotId = -1;
       //  bool m_UseWebSockets; // WTF ? If so, create a NetworkServer WebSocket xD
@@ -171,14 +172,16 @@ namespace BC_Solution.UnetNetwork {
             if (LogFilter.logDebug) { Debug.Log("NetworkingServer initialize."); }
         } */ 
 
-        public bool Configure(ConnectionConfig config, int maxConnections, string serverName = "Default")
+        public bool Configure(ConnectionConfig config, int maxConnections,  bool isMainServer, string serverName = "Default")
         {
-            return Configure(new HostTopology(config, maxConnections), serverName);
+            return Configure(new HostTopology(config, maxConnections), isMainServer, serverName);
         }
 
-        public bool Configure(HostTopology topology, string serverName = "Default")
+        public bool Configure(HostTopology topology, bool isMainServer, string serverName = "Default")
         {
             this.m_serverName = serverName;
+            this.m_isMainServer = isMainServer;
+
             m_MsgBuffer = new byte[NetworkMessage.MaxMessageSize];
             m_messageReader = new NetworkingReader(m_MsgBuffer);
             m_hostTopology = topology;

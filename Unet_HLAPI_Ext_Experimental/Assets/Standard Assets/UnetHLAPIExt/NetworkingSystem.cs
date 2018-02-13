@@ -108,11 +108,15 @@ namespace BC_Solution.UnetNetwork
 
             if (NetworkingSystem.Instance)
             {
-                for (int i = 0; i < NetworkingSystem.Instance.servers.Count; i++)
+                for (int i = 0; i < NetworkingSystem.Instance.additionnalServers.Count; i++)
                 {
-                    NetworkingSystem.Instance.servers[i].RegisterHandler(msgType, callback);
+                    NetworkingSystem.Instance.additionnalServers[i].RegisterHandler(msgType, callback);
                 }
+
+                if (NetworkingSystem.Instance.mainServer != null)
+                    NetworkingSystem.Instance.mainServer.RegisterHandler(msgType, callback);
             }
+
         }
 
         public static void UnRegisterServerHandler(ushort msgType, Action<NetworkingMessage> callback)
@@ -121,10 +125,13 @@ namespace BC_Solution.UnetNetwork
 
             if (NetworkingSystem.Instance)
             {
-                for (int i = 0; i < NetworkingSystem.Instance.servers.Count; i++)
+                for (int i = 0; i < NetworkingSystem.Instance.additionnalServers.Count; i++)
                 {
-                    NetworkingSystem.Instance.servers[i].UnregisterHandler(msgType, callback);
+                    NetworkingSystem.Instance.additionnalServers[i].UnregisterHandler(msgType, callback);
                 }
+
+                if (NetworkingSystem.Instance.mainServer != null)
+                    NetworkingSystem.Instance.mainServer.RegisterHandler(msgType, callback);
             }
         }
 
@@ -187,10 +194,15 @@ namespace BC_Solution.UnetNetwork
         public bool ConnectionIsActive() { return connections.Count > 0; }
 
         /// <summary>
-        /// List of all servers running on this app
+        /// The main server used for every basic aspect of a game (like gameObject, general timing...)
         /// </summary>
-        public List<NetworkingServer> servers = new List<NetworkingServer>();
-        public bool ServerIsActive(){ return servers.Count > 0; }
+        public NetworkingServer mainServer;
+
+        /// <summary>
+        /// List of all additionnal servers running on this app
+        /// </summary>
+        public List<NetworkingServer> additionnalServers = new List<NetworkingServer>();
+        public bool MainServerIsActive(){ return mainServer != null; }
 
         /// <summary>
         /// Called On client when the server ask to change the scene
@@ -205,6 +217,7 @@ namespace BC_Solution.UnetNetwork
 
             NetworkingConnection.OnConnectionDisconnect += InternalOnConnectionDisconnect;
             NetworkingConnection.OnConnectionConnect += InternalOnConnectionConnect;
+            SceneManager.sceneLoaded += InternalOnSceneLoaded;
         }
 
         void Start()
@@ -218,9 +231,12 @@ namespace BC_Solution.UnetNetwork
 
         private void Update()
         {
-            for (int i = 0; i < servers.Count; i++)
+            if (mainServer != null)
+                mainServer.Update();
+
+            for (int i = 0; i < additionnalServers.Count; i++)
             {
-                servers[i].Update();
+                additionnalServers[i].Update();
             }
 
             for (int i = 0; i < connections.Count; i++)
@@ -233,6 +249,7 @@ namespace BC_Solution.UnetNetwork
         {
             NetworkingConnection.OnConnectionDisconnect -= InternalOnConnectionDisconnect;
             NetworkingConnection.OnConnectionConnect -= InternalOnConnectionConnect;
+            SceneManager.sceneLoaded -= InternalOnSceneLoaded;
         }
 
 
@@ -258,12 +275,12 @@ namespace BC_Solution.UnetNetwork
         /// <returns></returns>
         public NetworkingConnection StartHost(MatchInfo matchInfo)
         {
-            StartServer(matchInfo);
+            NetworkingServer server = StartMainServer(matchInfo);
             //StartLocalClient();
-            StartConnection(matchInfo);
-            connections[0].m_server = servers[0];
+           NetworkingConnection conn = StartConnection(matchInfo);
+            conn.m_server = server;
 
-            return connections[0];
+            return conn;
         }
 
         /// <summary>
@@ -272,12 +289,12 @@ namespace BC_Solution.UnetNetwork
         /// <returns></returns>
         public NetworkingConnection StartHost()
         {
-            StartServer();
+            NetworkingServer server = StartMainServer();
             //StartLocalClient();
-            StartConnection();
-            connections[0].m_server = servers[0];
+            NetworkingConnection conn = StartConnection();
+            conn.m_server = server;
 
-            return connections[0];
+            return conn;
         }
 
 
@@ -363,45 +380,54 @@ namespace BC_Solution.UnetNetwork
         /// Start a new server
         /// </summary>
         /// <param name="matchInfo"> if null, will start a server with no relay</param>
-        public void StartServer(MatchInfo matchInfo)
+        public NetworkingServer StartMainServer(MatchInfo matchInfo)
         {
-            StopAllServers();
+            //StopAllServers();
+            if(mainServer != null)
+                StopServer(mainServer);
 
-            NetworkingServer server = new NetworkingServer();
-            ConfigureServer(server);
+            mainServer = new NetworkingServer();
+            ConfigureServer(mainServer, true);
 
-            server.ListenRelay(serverPort,matchInfo.address, matchInfo.port, matchInfo.networkId, SourceID.Invalid, matchInfo.nodeId);
+            mainServer.ListenRelay(serverPort,matchInfo.address, matchInfo.port, matchInfo.networkId, SourceID.Invalid, matchInfo.nodeId);
 
             //NetworkServer.SpawnObjects();
-            servers.Add(server);
-            InternalOnStartServer(server);
+           // servers.Add(server);
+            InternalOnStartServer(mainServer);
+
+            return mainServer;
         }
 
-        public void StartServer()
+        public NetworkingServer StartMainServer()
         {
-            StopAllServers();
+            //StopAllServers();
+            if (mainServer != null)
+                StopServer(mainServer);
 
             NetworkingServer server = new NetworkingServer();
-            ConfigureServer(server);
+            ConfigureServer(server, true);
 
             if (string.IsNullOrEmpty(serverAdress) || serverAdress.Equals("localhost") || serverAdress.Equals("127.0.0.1"))
             {
                 if (!server.Listen(serverPort))
                 {
-                    return;
+                    return null;
                 }
             }
             else
             {
                 if (!server.Listen(serverAdress, serverPort))
                 {
-                    return;
+                    return null;
                 }
             }
 
-            servers.Add(server);
+            //servers.Add(server);
             //NetworkServer.SpawnObjects();
             InternalOnStartServer(server);
+
+            mainServer = server;
+            return server;
         }
 
 
@@ -420,14 +446,14 @@ namespace BC_Solution.UnetNetwork
              //   ClientScene.RegisterPrefab(i);
         }
 
-        public void ConfigureServer(NetworkingServer server)
+        public void ConfigureServer(NetworkingServer server, bool isMainServer)
         {
 
             foreach (NetworkingConfiguration i in serverConfigurations)
                 server.RegisterHandler(i.message, i.func);
 
           // server.SetMaxDelay(maxDelayForSendingData);
-           server.Configure(Configuration(), (int)maxPlayer);
+           server.Configure(Configuration(), (int)maxPlayer, isMainServer);
         }
 
         
@@ -458,13 +484,24 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         public void StopAllServers()
         {
-            for (int i = 0; i < servers.Count; i++)
-            {
-                StartCoroutine(RemoveHostCoroutine(servers[i].m_hostId));
-                servers[i].Stop();
-            }
+            if(mainServer != null)
+                 StopServer(mainServer);
 
-            servers.Clear();
+            for (int i = 0; i < additionnalServers.Count; i++)
+            {
+                StopServer(additionnalServers[i]);
+            }
+        }
+
+        public void StopServer(NetworkingServer server)
+        {
+            StartCoroutine(RemoveHostCoroutine(server.m_hostId));
+            server.Stop();
+
+            if (mainServer == server)
+                mainServer = null;
+
+            additionnalServers.Remove(server);
         }
 
 
@@ -607,6 +644,14 @@ namespace BC_Solution.UnetNetwork
         void InternalOnConnectionDisconnect(NetworkingConnection conn, NetworkingMessage netMsg)
         {
             this.connections.Remove(conn);
+        }
+
+        void InternalOnSceneLoaded(Scene s, LoadSceneMode loadSceneMode)
+        {
+            foreach(NetworkingConnection conn in connections)
+            {
+                conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(s.name));
+            }
         }
 
         private void OnApplicationQuit()

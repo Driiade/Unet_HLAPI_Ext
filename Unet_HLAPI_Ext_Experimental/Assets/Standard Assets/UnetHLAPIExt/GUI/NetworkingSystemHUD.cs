@@ -47,13 +47,13 @@ namespace BC_Solution.UnetNetwork
             if (!showGUI)
                 return;
 
-            if (networkingSystem.servers.Count == 0 && networkingSystem.connections.Count == 0)
+            if (!networkingSystem.MainServerIsActive() && !networkingSystem.ConnectionIsActive())
             {
                 if (UnityEngine.Application.platform != RuntimePlatform.WebGLPlayer)
                 {
                     if (Input.GetKeyDown(KeyCode.S))
                     {
-                        networkingSystem.StartServer();
+                        networkingSystem.StartMainServer();
                     }
                     if (Input.GetKeyDown(KeyCode.H))
                     {
@@ -65,7 +65,7 @@ namespace BC_Solution.UnetNetwork
                     networkingSystem.StartConnection();
                 }
             }
-            if (networkingSystem.servers.Count > 0)
+            if (networkingSystem.MainServerIsActive())
             {
                 if (networkingSystem.connections.Count > 0)
                 {
@@ -94,7 +94,7 @@ namespace BC_Solution.UnetNetwork
             const int spacing = 24;
 
 
-            if (networkingSystem.servers.Count == 0 && networkingSystem.connections.Count == 0)
+            if (!networkingSystem.MainServerIsActive() && !networkingSystem.ConnectionIsActive())
             {
                 if (networkingSystem.connections.Count == 0)
                 {
@@ -125,7 +125,7 @@ namespace BC_Solution.UnetNetwork
                     {
                         if (GUI.Button(new Rect(xpos, ypos, 400, 20), "Server Only(S) with NetworkingSystem configuration"))
                         {
-                            networkingSystem.StartServer();
+                            networkingSystem.StartMainServer();
                         }
                         ypos += spacing;
                     }
@@ -144,9 +144,9 @@ namespace BC_Solution.UnetNetwork
             }
             else
             {
-                if (networkingSystem.servers.Count != 0)
+                if (networkingSystem.MainServerIsActive())
                 {
-                    string serverMsg = "Server: port=" + networkingSystem.servers[0].m_serverAddress;
+                    string serverMsg = "Server: port=" + networkingSystem.mainServer.m_serverAddress;
                     /*  if (networkingSystem.useWebSockets)
                       {
                           serverMsg += " (Using WebSockets)";
@@ -175,7 +175,7 @@ namespace BC_Solution.UnetNetwork
                 ypos += spacing;
             }*/
 
-            if (networkingSystem.servers.Count != 0 || networkingSystem.connections.Count != 0)
+            if (networkingSystem.MainServerIsActive() || networkingSystem.ConnectionIsActive())
             {
                 if (GUI.Button(new Rect(xpos, ypos, 200, 20), "Stop (X)"))
                 {
@@ -184,7 +184,7 @@ namespace BC_Solution.UnetNetwork
                 ypos += spacing;
             }
 
-            if (networkingSystem.servers.Count == 0 && networkingSystem.connections.Count == 0)
+            if (!networkingSystem.MainServerIsActive() && networkingSystem.ConnectionIsActive())
             {
                 ypos += 10;
 

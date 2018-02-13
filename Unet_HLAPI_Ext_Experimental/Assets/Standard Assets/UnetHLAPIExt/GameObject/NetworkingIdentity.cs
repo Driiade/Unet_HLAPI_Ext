@@ -47,8 +47,6 @@ namespace BC_Solution.UnetNetwork
         [SerializeField] bool m_ServerOnly;
         [SerializeField] bool m_localPlayerAuthority;
 
-        public bool destroyOnDisconnect = true;
-        public bool destroyOnStop = true;
 
         // runtime data
         internal bool m_hasAuthority;

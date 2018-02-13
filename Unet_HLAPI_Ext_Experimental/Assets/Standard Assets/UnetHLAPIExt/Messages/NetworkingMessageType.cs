@@ -65,6 +65,7 @@ namespace BC_Solution.UnetNetwork
         public const ushort Fragment = 17;
         public const ushort PeerClientAuthority = 18;
         public const ushort AutoRpc = 19;
+        public const ushort ConnectionLoadScene = 20;
 
         // used for profiling
         internal const ushort UserMessage = 0;
