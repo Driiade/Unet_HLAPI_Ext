@@ -374,6 +374,7 @@ namespace BC_Solution.UnetNetwork
                         {
                             i.m_connection = null;      //unassigne connection
                             i.m_isClient = false;
+                            i.m_netId = 0;
                         }
                         else
                             Destroy(i.gameObject);
@@ -400,6 +401,7 @@ namespace BC_Solution.UnetNetwork
                         {
                             i.m_connection = null;      //unassigne connection
                             i.m_isClient = false;
+                            i.m_netId = 0;
                         }
                         else
                             Destroy(i.gameObject);
@@ -457,6 +459,7 @@ namespace BC_Solution.UnetNetwork
                         netIdentity.m_netId = currentNetId;
                         netIdentity.m_server = server;
                         netIdentity.m_isServer = true;
+                        netIdentity.m_netId = 0;
 
                         AddNetworkingIdentity(netIdentity, server, m_serverSpawnedNetworkedObjects);
                     }
