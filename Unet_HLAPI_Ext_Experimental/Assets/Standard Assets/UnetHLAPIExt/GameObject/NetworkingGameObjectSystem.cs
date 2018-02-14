@@ -68,33 +68,37 @@ namespace BC_Solution.UnetNetwork
             }
 
             SceneManager.sceneLoaded += OnSceneLoaded;
-            NetworkingServer.OnStartServer += OnStartServer;
-            NetworkingServer.OnServerConnect += SpawnConnectionGameObjects;
-            NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.ObjectSpawn, OnClientSpawnMessage);
-            NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.SceneObjectConnection, OnClientSceneObjectMessage);
-            //NetworkingIdentity.OnNetworkingIdentityDestroy += RemoveNetworkingIdentity;
 
+            //Connection
+            NetworkingConnection.OnConnectionConnect += OnConnectionConnect;
             NetworkingConnection.OnConnectionDisconnect += OnConnectionDisconnect;
             NetworkingConnection.OnStopConnection += OnStopConnection;
-            NetworkingServer.OnServerDisconnect += OnServerDisconnect;
-            NetworkingServer.OnStopServer += OnStopServer;
-
-            NetworkingSystem.RegisterServerHandler(NetworkingMessageType.ConnectionLoadScene, OnConnectionLoadScene);
+            NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.ObjectSpawn, OnConnectionSpawnMessage);
+            NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.SceneObjectNetId, OnConnectionSceneObjectMessage);
             NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.ObjectDestroy, OnConnectionDestroy);
-            NetworkingSystem.RegisterServerHandler(NetworkingMessageType.ObjectDestroy, OnServerDestroy);
-            NetworkingSystem.RegisterServerHandler(NetworkingMessageType.Command, OnServerCommand);
             NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.Rpc, OnConnectionRpc);
             NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.AutoRpc, OnConnectionRpc);
+            //NetworkingIdentity.OnNetworkingIdentityDestroy += RemoveNetworkingIdentity;
+
+            //Server
+            NetworkingServer.OnServerDisconnect += OnServerDisconnect;
+            NetworkingServer.OnStopServer += OnStopServer;
+            NetworkingServer.OnStartServer += OnStartServer;
+            NetworkingServer.OnServerConnect += OnServerConnect;
+            NetworkingSystem.RegisterServerHandler(NetworkingMessageType.ConnectionLoadScene, OnConnectionLoadScene);
+            NetworkingSystem.RegisterServerHandler(NetworkingMessageType.ObjectDestroy, OnServerDestroy);
+            NetworkingSystem.RegisterServerHandler(NetworkingMessageType.Command, OnServerCommand);
         }
 
 
         private void OnDestroy()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
-            NetworkingServer.OnServerConnect -= SpawnConnectionGameObjects;
-            NetworkingSystem.UnRegisterConnectionHandler(NetworkingMessageType.ObjectSpawn, OnClientSpawnMessage);
-            NetworkingSystem.UnRegisterConnectionHandler(NetworkingMessageType.SceneObjectConnection, OnClientSceneObjectMessage);
+            NetworkingServer.OnServerConnect -= OnServerConnect;
+            NetworkingSystem.UnRegisterConnectionHandler(NetworkingMessageType.ObjectSpawn, OnConnectionSpawnMessage);
+            NetworkingSystem.UnRegisterConnectionHandler(NetworkingMessageType.SceneObjectNetId, OnConnectionSceneObjectMessage);
 
+            NetworkingConnection.OnConnectionConnect -= OnConnectionConnect;
             NetworkingServer.OnStartServer -= OnStartServer;
             NetworkingConnection.OnConnectionDisconnect -= OnConnectionDisconnect;
             NetworkingConnection.OnStopConnection -= OnStopConnection;
@@ -125,23 +129,8 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        void SpawnConnectionGameObjects(NetworkingServer server, NetworkingMessage netMsg)
+        void OnServerConnect(NetworkingServer server, NetworkingMessage netMsg)
         {
-            Dictionary<ushort, NetworkingIdentity> dictionary;
-            m_serverSpawnedNetworkedObjects.TryGetValue(server, out dictionary);
-
-            if (dictionary != null)
-            {
-                foreach (NetworkingIdentity i in dictionary.Values)
-                {
-                    if (i.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
-                        netMsg.m_connection.Send(NetworkingMessageType.SceneObjectConnection, new SceneObjectNetIdMessage(i.netId, i.assetID));
-                    else
-                        netMsg.m_connection.Send(NetworkingMessageType.ObjectSpawn, new SpawnMessage(i.m_assetId, i.m_netId, false));
-                }
-            }
-
-
             for (int i = 0; i < spawnedGameObjectOnConnect.Length; i++)
             {
                 SpawnOnServer(server, netMsg.m_connection, spawnedGameObjectOnConnect[i]);
@@ -187,7 +176,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        void OnClientSceneObjectMessage(NetworkingMessage netMsg)
+        void OnConnectionSceneObjectMessage(NetworkingMessage netMsg)
         {
             SceneObjectNetIdMessage mess = netMsg.As<SceneObjectNetIdMessage>();
             ushort sceneId = mess.m_sceneId;
@@ -197,28 +186,6 @@ namespace BC_Solution.UnetNetwork
             networkingIdentity.m_isClient = true;
 
             AddNetworkingIdentity(networkingIdentity, netMsg.m_connection, m_connectionSpawnedNetworkedObjects);
-        }
-
-        void OnClientSpawnMessage(NetworkingMessage netMsg)
-        {
-            SpawnMessage spawnMessage = netMsg.As<SpawnMessage>();
-            NetworkingIdentity netIdentity = null;
-
-            if (netMsg.m_connection.m_server == null)           //Already spawn on server ;)
-            {
-                GameObject go = Instantiate(FindRegisteredGameObject(spawnMessage.m_gameObjectAssetId));
-                netIdentity = go.GetComponent<NetworkingIdentity>();
-                netIdentity.m_netId = spawnMessage.m_gameObjectNetId;
-                netIdentity.m_connection = netMsg.m_connection;
-                netIdentity.m_type = NetworkingIdentity.TYPE.SPAWNED;
-            }
-            else
-            {
-                netIdentity = FindLocalNetworkIdentity(netMsg.m_connection.m_server, spawnMessage.m_gameObjectNetId, m_serverSpawnedNetworkedObjects);
-            }
-            netIdentity.m_hasAuthority = spawnMessage.m_hasAuthority;
-            netIdentity.m_isClient = true;
-            AddNetworkingIdentity(netIdentity, netMsg.m_connection, m_connectionSpawnedNetworkedObjects);
         }
 
 
@@ -445,84 +412,115 @@ namespace BC_Solution.UnetNetwork
         {
             if (server.m_isMainServer)
             {
-                ushort currentNetId;
-                m_serverCurrentNetId.TryGetValue(server, out currentNetId);
-
-
-                //All object in the scenes are for this server
-                for (int i = 0; i < NetworkingIdentity.s_networkingIdentities.Count; i++)
+                for (int i = 0; i < SceneManager.sceneCount; i++)
                 {
-                    NetworkingIdentity netIdentity = NetworkingIdentity.s_networkingIdentities[i];
-                    if (netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
-                    {
-                        currentNetId++;
-                        netIdentity.m_netId = currentNetId;
-                        netIdentity.m_server = server;
-                        netIdentity.m_isServer = true;
-                        netIdentity.m_netId = 0;
-
-                        AddNetworkingIdentity(netIdentity, server, m_serverSpawnedNetworkedObjects);
-                    }
-                }
-
-
-                if (currentNetId != 0)
-                {
-                    if (!m_serverCurrentNetId.ContainsKey(server))
-                        m_serverCurrentNetId.Add(server, currentNetId);
-                    else
-                        m_serverCurrentNetId[server] = currentNetId;
+                    //All object in the scenes are for this server
+                    AssignSceneObjectNetIds(server, SceneManager.GetSceneAt(i));
                 }
             }
         }
 
         void OnSceneLoaded(Scene s, LoadSceneMode loadSceneMode)
         {
-            if(NetworkingSystem.Instance && NetworkingSystem.Instance.mainServer != null)
+            if (NetworkingSystem.Instance)
             {
-                AssignSceneObjectNetIds();
-
-                Dictionary<ushort, NetworkingIdentity> dictionary;
-                m_serverSpawnedNetworkedObjects.TryGetValue(NetworkingSystem.Instance.mainServer, out dictionary);
-
-                if (dictionary != null)
+                if (NetworkingSystem.Instance.mainServer != null) //Server assign scene object ids
                 {
-                    foreach (NetworkingIdentity i in dictionary.Values)
-                    {
-                        if (i.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
-                            NetworkingSystem.Instance.mainServer.SendToAll(NetworkingMessageType.SceneObjectConnection, new SceneObjectNetIdMessage(i.netId, i.assetID));
-                    }
+                    AssignSceneObjectNetIds(NetworkingSystem.Instance.mainServer, s);
+
+                    //No extra sending, connection has to ask informations instead. (Server has to be the first in the scene)
+                    /* Dictionary<ushort, NetworkingIdentity> dictionary;
+                     m_serverSpawnedNetworkedObjects.TryGetValue(NetworkingSystem.Instance.mainServer, out dictionary);
+
+                     if (dictionary != null)
+                     {
+                         foreach (NetworkingIdentity i in dictionary.Values)
+                         {
+                             if (i.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
+                                 NetworkingSystem.Instance.mainServer.SendToAll(NetworkingMessageType.SceneObjectConnection, new SceneObjectNetIdMessage(i.netId, i.assetID));
+                         }
+                     }*/
                 }
+                else //Connections ask scene object net ids
+                {
+                    foreach (NetworkingConnection conn in NetworkingSystem.Instance.connections)
+                    {
+                        if(conn.m_server == null) //not host
+                            conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(s.name));
+                    }
+                 }
             }
         }
 
         void OnConnectionLoadScene(NetworkingMessage netMsg)
         {
-            Dictionary<ushort, NetworkingIdentity> dictionary;
-            m_serverSpawnedNetworkedObjects.TryGetValue(netMsg.m_connection.m_server, out dictionary);
+            string sceneName = netMsg.As<StringMessage>().m_value;
+            Scene scene = SceneManager.GetSceneByName(sceneName);
 
-            if (dictionary != null)
+            if (scene == null)
             {
-                foreach (NetworkingIdentity i in dictionary.Values)
+                Debug.LogWarning("The server don't know the scene : " + scene); //Can be normal
+            }
+            else
+            {
+                 GameObject[] gameObjects = scene.GetRootGameObjects();
+                List<NetworkingIdentity> netIdentities = new List<NetworkingIdentity>();
+                foreach(GameObject go in gameObjects)
+                {
+                    netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>());
+                }
+
+                foreach (NetworkingIdentity i in netIdentities)
                 {
                     if (i.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
-                        netMsg.m_connection.Send(NetworkingMessageType.SceneObjectConnection, new SceneObjectNetIdMessage(i.netId, i.assetID));
+                        netMsg.m_connection.Send(NetworkingMessageType.SceneObjectNetId, new SceneObjectNetIdMessage(i.netId, i.assetID));
+                    else if (i.m_type == NetworkingIdentity.TYPE.SPAWNED)
+                    {
+                        if(netMsg.m_connection.m_server == i.m_server && netMsg.m_connection != i.m_connection) //Connection is on the same server than the server of the gameObject or connection already know this object
+                            netMsg.m_connection.Send(NetworkingMessageType.ObjectSpawn, new SpawnMessage(i.m_assetId, i.m_netId, false));
+                    }
                 }
             }
         }
 
-
-        void AssignSceneObjectNetIds()
+        void OnConnectionSpawnMessage(NetworkingMessage netMsg)
         {
-            NetworkingServer server = NetworkingSystem.Instance.mainServer;
+            SpawnMessage spawnMessage = netMsg.As<SpawnMessage>();
+            NetworkingIdentity netIdentity = null;
+
+            if (netMsg.m_connection.m_server == null)           //Already spawn on server ;)
+            {
+                GameObject go = Instantiate(FindRegisteredGameObject(spawnMessage.m_gameObjectAssetId));
+                netIdentity = go.GetComponent<NetworkingIdentity>();
+                netIdentity.m_netId = spawnMessage.m_gameObjectNetId;
+                netIdentity.m_connection = netMsg.m_connection;
+                netIdentity.m_type = NetworkingIdentity.TYPE.SPAWNED;
+            }
+            else
+            {
+                netIdentity = FindLocalNetworkIdentity(netMsg.m_connection.m_server, spawnMessage.m_gameObjectNetId, m_serverSpawnedNetworkedObjects);
+            }
+            netIdentity.m_hasAuthority = spawnMessage.m_hasAuthority;
+            netIdentity.m_isClient = true;
+            AddNetworkingIdentity(netIdentity, netMsg.m_connection, m_connectionSpawnedNetworkedObjects);
+        }
+
+        void AssignSceneObjectNetIds(NetworkingServer server, Scene scene)
+        {
+            GameObject[] gameObjects = scene.GetRootGameObjects();
+            List<NetworkingIdentity> netIdentities = new List<NetworkingIdentity>();
+            foreach (GameObject go in gameObjects)
+            {
+                netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>());
+            }
 
             ushort currentNetId;
             m_serverCurrentNetId.TryGetValue(server, out currentNetId);
 
             //All object in the scenes are for this server
-            for (int i = 0; i < NetworkingIdentity.s_networkingIdentities.Count; i++)
+            for (int i = 0; i < netIdentities.Count; i++)
             {
-                NetworkingIdentity netIdentity = NetworkingIdentity.s_networkingIdentities[i];
+                NetworkingIdentity netIdentity = netIdentities[i];
                 if (netIdentity.netId == 0 && netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
                 {
                     if (netIdentity.m_server == null)      //no server assigned
@@ -544,6 +542,14 @@ namespace BC_Solution.UnetNetwork
                     m_serverCurrentNetId.Add(server, currentNetId);
                 else
                     m_serverCurrentNetId[server] = currentNetId;
+            }
+        }
+
+        void OnConnectionConnect(NetworkingConnection conn)
+        {
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(SceneManager.GetSceneAt(i).name));
             }
         }
 

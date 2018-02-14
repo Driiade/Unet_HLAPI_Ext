@@ -217,7 +217,6 @@ namespace BC_Solution.UnetNetwork
 
             NetworkingConnection.OnConnectionDisconnect += InternalOnConnectionDisconnect;
             NetworkingConnection.OnConnectionConnect += InternalOnConnectionConnect;
-            SceneManager.sceneLoaded += InternalOnSceneLoaded;
         }
 
         void Start()
@@ -249,7 +248,6 @@ namespace BC_Solution.UnetNetwork
         {
             NetworkingConnection.OnConnectionDisconnect -= InternalOnConnectionDisconnect;
             NetworkingConnection.OnConnectionConnect -= InternalOnConnectionConnect;
-            SceneManager.sceneLoaded -= InternalOnSceneLoaded;
         }
 
 
@@ -646,13 +644,6 @@ namespace BC_Solution.UnetNetwork
             this.connections.Remove(conn);
         }
 
-        void InternalOnSceneLoaded(Scene s, LoadSceneMode loadSceneMode)
-        {
-            foreach(NetworkingConnection conn in connections)
-            {
-                conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(s.name));
-            }
-        }
 
         private void OnApplicationQuit()
         {
