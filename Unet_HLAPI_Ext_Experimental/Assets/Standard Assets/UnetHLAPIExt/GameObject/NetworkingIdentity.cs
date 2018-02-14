@@ -33,7 +33,7 @@ namespace BC_Solution.UnetNetwork
     [AddComponentMenu("Networking/NetworkingIdentity")]
     public class NetworkingIdentity : MonoBehaviour
     {
-        public enum TYPE { SPAWNED =0, SINGLE_SCENE_OBJECT=1, REPLICATED_SCENE_OBJECT=2}
+        public enum TYPE { SPAWNED =0, SINGLE_SCENE_OBJECT=1, REPLICATED_SCENE_PREFAB=2}
 
         public static List<NetworkingIdentity> s_networkingIdentities = new List<NetworkingIdentity>();
 
