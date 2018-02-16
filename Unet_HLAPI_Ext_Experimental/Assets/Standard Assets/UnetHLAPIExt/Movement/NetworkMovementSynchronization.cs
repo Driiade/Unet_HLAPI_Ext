@@ -155,7 +155,7 @@ namespace BC_Solution.UnetNetwork
                         SendToConnection(n, "RpcGetMovementInformations", useReliableChannel ? NetworkingMessageType.Channels.DefaultReliable : NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
                     }
                 }
-            else
+            else if (isClient)
                 SendToServer("CmdSendMovementInformations", useReliableChannel ? NetworkingMessageType.Channels.DefaultReliable : NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
         }
 

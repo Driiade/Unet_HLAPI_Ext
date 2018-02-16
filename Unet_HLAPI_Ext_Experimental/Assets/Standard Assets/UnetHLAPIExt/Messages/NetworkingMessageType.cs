@@ -60,7 +60,7 @@ namespace BC_Solution.UnetNetwork
         public const ushort NetworkInfo = 11;
 
         public const ushort CRC = 12;
-        public const ushort AssignClientAuthority = 12;
+        public const ushort AssignClientAuthority = 13;
         public const ushort UnassignClientAuthority = 14;
         public const ushort Fragment = 15;
         public const ushort PeerClientAuthority = 16;

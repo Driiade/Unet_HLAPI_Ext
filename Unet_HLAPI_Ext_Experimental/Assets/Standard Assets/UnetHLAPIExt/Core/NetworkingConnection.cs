@@ -647,7 +647,7 @@ namespace BC_Solution.UnetNetwork
                 else
                 {
                     //NOTE: this throws away the rest of the buffer. Need moar error codes
-                    if (LogFilter.logError) { Debug.LogError("Unknown message ID " + msgType + " connId:" + m_connectionId); }
+                    if (LogFilter.logError) { Debug.LogError("Unknown message ID " + msgType + " connId:" + m_connectionId + " channelID : " + channelId); }
 
                     return false;
                 }

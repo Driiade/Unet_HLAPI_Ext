@@ -165,7 +165,7 @@ namespace BC_Solution.UnetNetwork
 
             GameObject go = Instantiate(gameObject);
             NetworkingIdentity networkingIdentity = go.GetComponent<NetworkingIdentity>();
-            ServerAssignNetId(server, conn, networkingIdentity);
+            ServerAssignNetId(server, networkingIdentity);
             networkingIdentity.m_type = NetworkingIdentity.TYPE.SPAWNED;
 
             server.SendTo(conn.m_connectionId, NetworkingMessageType.ObjectSpawn, new SpawnMessage(networkingIdentity.m_assetId, networkingIdentity.netId, networkingIdentity.localPlayerAuthority, scene.name));
@@ -179,7 +179,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        void ServerAssignNetId(NetworkingServer server,NetworkingConnection conn, NetworkingIdentity neworkingtIdentity)
+        void ServerAssignNetId(NetworkingServer server, NetworkingIdentity neworkingtIdentity)
         {
             ushort currentNetId;
             m_serverCurrentNetId.TryGetValue(server, out currentNetId);
@@ -192,7 +192,6 @@ namespace BC_Solution.UnetNetwork
             currentNetId++;
             m_serverCurrentNetId[server] = currentNetId;
 
-            neworkingtIdentity.m_connection = conn;
             neworkingtIdentity.m_netId = currentNetId;
             neworkingtIdentity.m_isServer = true;
             neworkingtIdentity.m_server = server;
@@ -567,7 +566,7 @@ namespace BC_Solution.UnetNetwork
                 networkingIdentity.m_type = NetworkingIdentity.TYPE.SPAWNED;
             }
 
-            ServerAssignNetId(netMsg.m_connection.m_server, netMsg.m_connection, networkingIdentity);
+            ServerAssignNetId(netMsg.m_connection.m_server, networkingIdentity);
 
             netMsg.m_connection.Send(NetworkingMessageType.SceneObjectNetId, new SceneObjectNetIdMessage(networkingIdentity.m_netId, replicatedMessage.m_sceneId)); //Just send the assigned netId for the connection which ask replication
 
@@ -603,13 +602,14 @@ namespace BC_Solution.UnetNetwork
                 GameObject go = Instantiate(FindRegisteredGameObject(spawnMessage.m_gameObjectAssetId));
                 netIdentity = go.GetComponent<NetworkingIdentity>();
                 netIdentity.m_netId = spawnMessage.m_gameObjectNetId;
-                netIdentity.m_connection = netMsg.m_connection;
                 netIdentity.m_type = NetworkingIdentity.TYPE.SPAWNED;
             }
             else
             {
                 netIdentity = FindLocalNetworkIdentity(netMsg.m_connection.m_server, spawnMessage.m_gameObjectNetId, m_serverSpawnedNetworkedObjects);
             }
+
+            netIdentity.m_connection = netMsg.m_connection;
             netIdentity.m_hasAuthority = spawnMessage.m_hasAuthority;
             netIdentity.m_isClient = true;
             AddNetworkingIdentity(netIdentity, netMsg.m_connection, m_connectionSpawnedNetworkedObjects);
