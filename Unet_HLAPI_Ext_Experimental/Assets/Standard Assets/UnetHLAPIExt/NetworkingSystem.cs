@@ -274,9 +274,11 @@ namespace BC_Solution.UnetNetwork
         public NetworkingConnection StartHost(MatchInfo matchInfo)
         {
             NetworkingServer server = StartMainServer(matchInfo);
+            server.m_isHost = true;
             //StartLocalClient();
-           NetworkingConnection conn = StartConnection(matchInfo);
+            NetworkingConnection conn = StartConnection(matchInfo);
             conn.m_server = server;
+            conn.m_isHost = true;
 
             return conn;
         }
@@ -288,9 +290,11 @@ namespace BC_Solution.UnetNetwork
         public NetworkingConnection StartHost()
         {
             NetworkingServer server = StartMainServer();
+            server.m_isHost = true;
             //StartLocalClient();
             NetworkingConnection conn = StartConnection();
             conn.m_server = server;
+            conn.m_isHost = true;
 
             return conn;
         }

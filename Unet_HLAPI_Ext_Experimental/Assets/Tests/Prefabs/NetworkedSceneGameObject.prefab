@@ -27,7 +27,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &4203152821150510
 Transform:
   m_ObjectHideFlags: 1
@@ -65,12 +65,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a44e4099fd6dda4c863e895c95b9a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_type: 1
+  m_type: 2
   m_sceneId: 0
-  m_assetId: 0
+  m_assetId: 2
   m_ServerOnly: 0
   m_localPlayerAuthority: 0
-  destroyOnDisconnect: 1
-  destroyOnStop: 1
   m_networkingBehaviours:
   - {fileID: 114155364404170798}

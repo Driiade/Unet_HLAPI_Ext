@@ -46,47 +46,40 @@ namespace BC_Solution.UnetNetwork
         #region core
         // internal system messages - cannot be replaced by user code
         public const ushort ObjectDestroy = 1;
-        public const ushort Rpc = 2;
-        public const ushort ObjectSpawn = 3;
-        public const ushort SceneObjectNetId = 4;
+        public const ushort Command = 2;
+        public const ushort Rpc = 3;
+        public const ushort AutoRpc = 4;
+        public const ushort ObjectSpawn = 5;
+        public const ushort SceneObjectNetId = 6;
+        public const ushort ReplicatedPrefabScene = 7;
         //public const ushort Owner = 4;
-        public const ushort Command = 5;
-        public const ushort LocalPlayerTransform = 6;
-        public const ushort SyncEvent = 7;
-        public const ushort UpdateVars = 8;
-        public const ushort SyncList = 9;
-        public const ushort ObjectSpawnScene = 10;
+
+        public const ushort SyncEvent = 8;
+        public const ushort UpdateVars = 9;
+        public const ushort SyncList = 10;
         public const ushort NetworkInfo = 11;
-        public const ushort SpawnFinished = 12;
-        public const ushort ObjectHide = 13;
-        public const ushort CRC = 14;
-        public const ushort AssignClientAuthority = 15;
-        public const ushort UnassignClientAuthority = 16;
-        public const ushort Fragment = 17;
-        public const ushort PeerClientAuthority = 18;
-        public const ushort AutoRpc = 19;
-        public const ushort ConnectionLoadScene = 20;
+
+        public const ushort CRC = 12;
+        public const ushort AssignClientAuthority = 12;
+        public const ushort UnassignClientAuthority = 14;
+        public const ushort Fragment = 15;
+        public const ushort PeerClientAuthority = 16;
+        public const ushort ConnectionLoadScene = 17;
 
         // used for profiling
         internal const ushort UserMessage = 0;
-        internal const ushort HLAPIMsg = 28;
-        internal const ushort LLAPIMsg = 29;
-        internal const ushort HLAPIResend = 30;
-        internal const ushort HLAPIPending = 31;
-
-        public const ushort InternalHighest = 31;
 
         // public system messages - can be replaced by user code
         public const ushort Connect = 32;
         public const ushort Disconnect = 33;
         public const ushort Error = 34;
-        public const ushort Ready = 35;
-        public const ushort NotReady = 36;
-        public const ushort AddPlayer = 37;
-        public const ushort RemovePlayer = 38;
+       // public const ushort Ready = 35;
+       // public const ushort NotReady = 36;
+       // public const ushort AddPlayer = 37;
+       // public const ushort RemovePlayer = 38;
         public const ushort Scene = 39;
 
-        public const ushort LocalClientConnectMessage = 40;
+       // public const ushort LocalClientConnectMessage = 40;
         //public const ushort ClientConnectFromServerMessage = 41;
         //public const ushort ClientReadyFromServerMessage = 42;
 #if ENABLE_UNET_HOST_MIGRATION

@@ -72,6 +72,8 @@ namespace BC_Solution.UnetNetwork {
 
         public bool m_isMainServer { get; internal set; }
         internal int m_hostId = -1;
+        public bool m_isHost = false;
+
         int m_RelaySlotId = -1;
       //  bool m_UseWebSockets; // WTF ? If so, create a NetworkServer WebSocket xD
 
@@ -123,7 +125,7 @@ namespace BC_Solution.UnetNetwork {
             m_connectionsReadOnly = new ReadOnlyCollection<NetworkingConnection>(m_connections);
 
             this.RegisterHandler(NetworkingMessageType.Connect, BaseOnServerConnect);
-            this.RegisterHandler(NetworkingMessageType.AddPlayer, BaseOnServerAddPlayer);
+           // this.RegisterHandler(NetworkingMessageType.AddPlayer, BaseOnServerAddPlayer);
             this.RegisterHandler(NetworkingMessageType.Disconnect, BaseOnServerDisconnect);
            // this.RegisterHandler(NetworkingMessageType.Ready, BaseOnClientReadyOnServer);
             this.RegisterHandler(NetworkingMessageType.Error, BaseOnServerError);
@@ -581,7 +583,7 @@ namespace BC_Solution.UnetNetwork {
             return result;
         }
 
-        public bool SendToReady(ushort msgType, NetworkingMessage msg, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
+       /* public bool SendToReady(ushort msgType, NetworkingMessage msg, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
         {
             if (LogFilter.logDev) { Debug.Log("Server.SendToReady id:" + msgType); }
 
@@ -593,7 +595,7 @@ namespace BC_Solution.UnetNetwork {
                 }
             }
             return true;
-        }
+        }*/
 
 
         /// //////////////////////////////////////////////////////////////////////////////////
@@ -667,7 +669,7 @@ namespace BC_Solution.UnetNetwork {
         }
 
 
-        void BaseOnServerAddPlayer(NetworkingMessage netMsg)
+       /* void BaseOnServerAddPlayer(NetworkingMessage netMsg)
         {
             Debug.Log("Server add player");
 
@@ -676,7 +678,7 @@ namespace BC_Solution.UnetNetwork {
 
             if (OnServerAddPlayer != null)
                 OnServerAddPlayer(this,netMsg);
-        }
+        } */
 
 
         void BaseOnServerError(NetworkingMessage netMsg)

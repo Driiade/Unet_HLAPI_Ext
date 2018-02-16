@@ -52,13 +52,13 @@ namespace BC_Solution.UnetNetwork
         /// <summary>
         /// Called on client when the local connection become ready
         /// </summary>
-        public static Action<NetworkingConnection, NetworkingMessage> OnConnectionReady;
+       // public static Action<NetworkingConnection, NetworkingMessage> OnConnectionReady;
 
 
         /// <summary>
         /// Called on client when the local connection become not ready
         /// </summary>
-        public static Action<NetworkingConnection, NetworkingMessage> OnClientNotReady;
+       // public static Action<NetworkingConnection, NetworkingMessage> OnClientNotReady;
 
         /// <summary>
         /// Called on client when the local connection stop
@@ -122,7 +122,11 @@ namespace BC_Solution.UnetNetwork
         public int m_hostId = -1;
         public int m_connectionId = -1;
 
-        public bool isReady;
+        /// <summary>
+        /// Specify if this connection is a host
+        /// </summary>
+        public bool m_isHost;
+        //public bool isReady;
 
         public float lastMessageTime;
         public List<PlayerController> playerControllers { get { return m_PlayerControllers; } }
@@ -149,11 +153,11 @@ namespace BC_Solution.UnetNetwork
         {
             this.RegisterHandler(NetworkingMessageType.Connect, InternalOnConnectionConnect);
             this.RegisterHandler(NetworkingMessageType.Disconnect, InternalOnConnectionDisconnect);
-            this.RegisterHandler(NetworkingMessageType.AddPlayer, InternalOnConnectionAddPlayer);
+            //this.RegisterHandler(NetworkingMessageType.AddPlayer, InternalOnConnectionAddPlayer);
             //this.RegisterHandler(NetworkingMessageType.Scene, BaseOnClientChangeScene);
 
-            this.RegisterHandler(NetworkingMessageType.Ready, InternalOnConnectionReady);
-            this.RegisterHandler(NetworkingMessageType.NotReady, InternalOnConnectionNotReady);
+           // this.RegisterHandler(NetworkingMessageType.Ready, InternalOnConnectionReady);
+           // this.RegisterHandler(NetworkingMessageType.NotReady, InternalOnConnectionNotReady);
 
             //this.RegisterHandler(NetworkingMessageType.ClientConnectFromServerMessage, InternalOnConnectionConnectFromServer);
             //this.RegisterHandler(NetworkingMessageType.ClientReadyFromServerMessage, InternalOnConnectionReadyFromServer);
@@ -168,9 +172,9 @@ namespace BC_Solution.UnetNetwork
 
             this.RegisterHandler(NetworkingMessageType.Connect, InternalOnConnectionConnect);
             this.RegisterHandler(NetworkingMessageType.Disconnect, InternalOnConnectionDisconnect);
-            this.RegisterHandler(NetworkingMessageType.AddPlayer, InternalOnConnectionAddPlayer);
+            //this.RegisterHandler(NetworkingMessageType.AddPlayer, InternalOnConnectionAddPlayer);
             //this.RegisterHandler(NetworkingMessageType.Scene, BaseOnClientChangeScene);
-            this.RegisterHandler(NetworkingMessageType.NotReady, InternalOnConnectionNotReady);
+            //this.RegisterHandler(NetworkingMessageType.NotReady, InternalOnConnectionNotReady);
 
            // this.RegisterHandler(NetworkingMessageType.ClientConnectFromServerMessage, InternalOnConnectionConnectFromServer); //Bad design ?
             //this.RegisterHandler(NetworkingMessageType.ClientReadyFromServerMessage, InternalOnConnectionReadyFromServer);
@@ -589,7 +593,7 @@ namespace BC_Solution.UnetNetwork
         public void Disconnect()
         {
             m_currentState = ConnectState.Disconnected;
-            isReady = false;
+           // isReady = false;
            // ClientScene.HandleClientDisconnect(this); NOPE
             byte error;
             NetworkTransport.Disconnect(m_hostId, m_connectionId, out error);
@@ -1008,7 +1012,7 @@ namespace BC_Solution.UnetNetwork
 
         public override string ToString()
         {
-            return string.Format("hostId: {0} connectionId: {1} isReady: {2} channel count: {3}", m_hostId, m_connectionId, isReady, (m_channels != null ? m_channels.Length : 0));
+            return string.Format("hostId: {0} connectionId: {1} channel count: {2}", m_hostId, m_connectionId, (m_channels != null ? m_channels.Length : 0));
         }
 
       /*  internal void AddToVisList(NetworkIdentity uv)
@@ -1132,7 +1136,7 @@ namespace BC_Solution.UnetNetwork
                 OnConnectionConnect(this);
         }
 
-        void InternalOnConnectionReady(NetworkingMessage netMsg)
+       /* void InternalOnConnectionReady(NetworkingMessage netMsg)
         {
             Debug.Log("Local connection ready");
 
@@ -1140,14 +1144,14 @@ namespace BC_Solution.UnetNetwork
 
             if (OnConnectionReady != null)
                 OnConnectionReady(this, netMsg);
-        }
+        }*/
 
-        void InternalOnConnectionAddPlayer(NetworkingMessage netMsg)
+      /*  void InternalOnConnectionAddPlayer(NetworkingMessage netMsg)
         {
 
-        }
+        } */
 
-        void InternalOnConnectionNotReady(NetworkingMessage netMsg)
+       /* void InternalOnConnectionNotReady(NetworkingMessage netMsg)
         {
             Debug.Log("Client set as not ready");
 
@@ -1156,7 +1160,7 @@ namespace BC_Solution.UnetNetwork
 
             if (OnClientNotReady != null)
                 OnClientNotReady(this, netMsg);
-        }
+        } */
 
         void InternalOnConnectionDisconnect(NetworkingMessage netMsg)
         {
