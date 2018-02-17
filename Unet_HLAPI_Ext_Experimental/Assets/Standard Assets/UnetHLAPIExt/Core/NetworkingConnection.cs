@@ -156,8 +156,8 @@ namespace BC_Solution.UnetNetwork
             //this.RegisterHandler(NetworkingMessageType.AddPlayer, InternalOnConnectionAddPlayer);
             //this.RegisterHandler(NetworkingMessageType.Scene, BaseOnClientChangeScene);
 
-           // this.RegisterHandler(NetworkingMessageType.Ready, InternalOnConnectionReady);
-           // this.RegisterHandler(NetworkingMessageType.NotReady, InternalOnConnectionNotReady);
+            // this.RegisterHandler(NetworkingMessageType.Ready, InternalOnConnectionReady);
+            // this.RegisterHandler(NetworkingMessageType.NotReady, InternalOnConnectionNotReady);
 
             //this.RegisterHandler(NetworkingMessageType.ClientConnectFromServerMessage, InternalOnConnectionConnectFromServer);
             //this.RegisterHandler(NetworkingMessageType.ClientReadyFromServerMessage, InternalOnConnectionReadyFromServer);
@@ -176,7 +176,7 @@ namespace BC_Solution.UnetNetwork
             //this.RegisterHandler(NetworkingMessageType.Scene, BaseOnClientChangeScene);
             //this.RegisterHandler(NetworkingMessageType.NotReady, InternalOnConnectionNotReady);
 
-           // this.RegisterHandler(NetworkingMessageType.ClientConnectFromServerMessage, InternalOnConnectionConnectFromServer); //Bad design ?
+            // this.RegisterHandler(NetworkingMessageType.ClientConnectFromServerMessage, InternalOnConnectionConnectFromServer); //Bad design ?
             //this.RegisterHandler(NetworkingMessageType.ClientReadyFromServerMessage, InternalOnConnectionReadyFromServer);
 
             m_msgBuffer = new byte[NetworkingMessage.MaxMessageSize];
@@ -283,11 +283,11 @@ namespace BC_Solution.UnetNetwork
             }
             m_clientOwnedObjects = null;*/
 
-           // m_Disposed = true;
+            // m_Disposed = true;
         }
 
 
-        public bool SetChannelOption(int channelId, NetworkingMessageType.ChannelOption option, int value)
+        public bool SetChannelOption(int channelId, NetworkingChannel.ChannelOption option, int value)
         {
             if (m_channels == null)
                 return false;
@@ -791,7 +791,7 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         /// <param name="msg"></param>
         /// <returns></returns>
-        public bool Send(ushort msgType, NetworkingMessage msg, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
+        public bool Send(ushort msgType, NetworkingMessage msg, int channelId = NetworkingChannel.DefaultReliableSequenced)
         {
             return SendByChannel(msgType, msg, channelId);
         }

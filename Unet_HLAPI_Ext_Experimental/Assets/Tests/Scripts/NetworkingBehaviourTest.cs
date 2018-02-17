@@ -18,12 +18,12 @@ public class NetworkingBehaviourTest : NetworkingBehaviour {
             timer = Time.time + sendingRate;
             if (isClient)
             {
-                SendToServer("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Command] hello world : ", cpt);
-                AutoSendToConnections("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Auto Rpc] hello world : ", cpt);
+                SendToServer("Test", NetworkingChannel.DefaultReliableSequenced, "[Command] hello world : ", cpt);
+                AutoSendToConnections("Test", NetworkingChannel.DefaultReliableSequenced, "[Auto Rpc] hello world : ", cpt);
             }
 
             if (isServer)
-                SendToAllConnections("Test", NetworkingMessageType.Channels.DefaultReliableSequenced, "[Rpc] hello world : ", cpt);
+                SendToAllConnections("Test", NetworkingChannel.DefaultReliableSequenced, "[Rpc] hello world : ", cpt);
 
             cpt++;
         }

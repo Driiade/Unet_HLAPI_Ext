@@ -28,20 +28,6 @@ namespace BC_Solution.UnetNetwork
 {
     public class NetworkingMessageType
     {
-        public class Channels
-        {
-            public const int DefaultReliableSequenced = 0;
-            public const int DefaultReliable = 1;
-            public const int DefaultUnreliable = 2;
-        }
-
-        public enum ChannelOption
-        {
-            MaxPendingBuffers = 1,
-            AllowFragmentation = 2,
-            MaxPacketSize = 3
-            // maybe add an InitialCapacity for Pending Buffers list if needed in the future
-        }
 
         #region core
         // internal system messages - cannot be replaced by user code
@@ -52,19 +38,20 @@ namespace BC_Solution.UnetNetwork
         public const ushort ObjectSpawn = 5;
         public const ushort SceneObjectNetId = 6;
         public const ushort ReplicatedPrefabScene = 7;
+        public const ushort ObjectSpawnFinish = 8;
         //public const ushort Owner = 4;
 
-        public const ushort SyncEvent = 8;
-        public const ushort UpdateVars = 9;
-        public const ushort SyncList = 10;
-        public const ushort NetworkInfo = 11;
+        public const ushort SyncEvent = 9;
+        public const ushort UpdateVars = 10;
+        public const ushort SyncList = 11;
+        public const ushort NetworkInfo = 12;
 
-        public const ushort CRC = 12;
-        public const ushort AssignClientAuthority = 13;
-        public const ushort UnassignClientAuthority = 14;
-        public const ushort Fragment = 15;
-        public const ushort PeerClientAuthority = 16;
-        public const ushort ConnectionLoadScene = 17;
+        public const ushort CRC = 13;
+        public const ushort AssignClientAuthority = 14;
+        public const ushort UnassignClientAuthority = 15;
+        public const ushort Fragment = 16;
+        public const ushort PeerClientAuthority = 17;
+        public const ushort ConnectionLoadScene = 18;
 
         // used for profiling
         internal const ushort UserMessage = 0;

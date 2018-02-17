@@ -150,13 +150,13 @@ namespace BC_Solution.UnetNetwork
                     if (n == null)
                         continue;
 
-                    if (this.connection.m_connectionId != n.m_connectionId)
+                    if (this.connection== null || this.connection.m_connectionId != n.m_connectionId)
                     {
-                        SendToConnection(n, "RpcGetMovementInformations", useReliableChannel ? NetworkingMessageType.Channels.DefaultReliable : NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
+                        SendToConnection(n, "RpcGetMovementInformations", useReliableChannel ? NetworkingChannel.DefaultReliable : NetworkingChannel.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
                     }
                 }
             else if (isClient)
-                SendToServer("CmdSendMovementInformations", useReliableChannel ? NetworkingMessageType.Channels.DefaultReliable : NetworkingMessageType.Channels.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
+                SendToServer("CmdSendMovementInformations", useReliableChannel ? NetworkingChannel.DefaultReliable : NetworkingChannel.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
         }
 
 
@@ -187,7 +187,7 @@ namespace BC_Solution.UnetNetwork
                     movementSynchronizers[i].GetCurrentState(writer);
                 }
 
-                SendToConnection(netMsg.m_connection, "RpcGetMovementSyncInformations", NetworkingMessageType.Channels.DefaultReliable, writer.ToArray());
+                SendToConnection(netMsg.m_connection, "RpcGetMovementSyncInformations", NetworkingChannel.DefaultReliable, writer.ToArray());
             }
         }
 
@@ -238,7 +238,7 @@ namespace BC_Solution.UnetNetwork
             LocalGetMovementInformations(timeStamp, info);
 
             timeStamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timeStamp, out error);
-            SendToAllConnections("RpcGetMovementInformations", NetworkingMessageType.Channels.DefaultUnreliable, timeStamp, info);
+            SendToAllConnections("RpcGetMovementInformations", NetworkingChannel.DefaultUnreliable, timeStamp, info);
         }
 
         /// <summary>

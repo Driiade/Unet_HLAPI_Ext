@@ -89,11 +89,11 @@ namespace BC_Solution.UnetNetwork
 
 
 
-        public bool SetOption(NetworkingMessageType.ChannelOption option, int value)
+        public bool SetOption(NetworkingChannel.ChannelOption option, int value)
         {
             switch (option)
             {
-                case NetworkingMessageType.ChannelOption.MaxPendingBuffers:
+                case NetworkingChannel.ChannelOption.MaxPendingBuffers:
                     {
                         if (!m_IsReliable)
                         {
@@ -110,13 +110,13 @@ namespace BC_Solution.UnetNetwork
                         return true;
                     }
 
-                case NetworkingMessageType.ChannelOption.AllowFragmentation:
+                case NetworkingChannel.ChannelOption.AllowFragmentation:
                     {
                         m_AllowFragmentation = (value != 0);
                         return true;
                     }
 
-                case NetworkingMessageType.ChannelOption.MaxPacketSize:
+                case NetworkingChannel.ChannelOption.MaxPacketSize:
                     {
                         if (m_currentPacket.Position > 0 || m_PendingPackets.Count > 0)
                         {

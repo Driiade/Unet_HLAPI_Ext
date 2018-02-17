@@ -526,25 +526,25 @@ namespace BC_Solution.UnetNetwork {
         //Sending purpose////////////////////////////////////////////////////////////
 
 
-        public bool SendTo(int connectionId, byte[] bytes, int numBytes, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
+        public bool SendTo(int connectionId, byte[] bytes, int numBytes, int channelId = NetworkingChannel.DefaultReliableSequenced)
         {
            var outConn = m_connections[connectionId];
            return  outConn.Send(bytes, numBytes, channelId);
         }
 
-        public bool SendTo(int connectionId, NetworkingWriter writer, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
+        public bool SendTo(int connectionId, NetworkingWriter writer, int channelId = NetworkingChannel.DefaultReliableSequenced)
         {
             var outConn = m_connections[connectionId];
             return outConn.Send(writer, channelId);
         }
 
-        public bool SendTo(int connectionId, ushort msgType, NetworkingMessage msg, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
+        public bool SendTo(int connectionId, ushort msgType, NetworkingMessage msg, int channelId = NetworkingChannel.DefaultReliableSequenced)
         {
             var outConn = m_connections[connectionId];
             return outConn.Send(msgType, msg, channelId);
         }
 
-        public bool SendToAll(NetworkingWriter writer, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
+        public bool SendToAll(NetworkingWriter writer, int channelId = NetworkingChannel.DefaultReliableSequenced)
         {
             bool result = true;
             foreach (NetworkingConnection conn in connections)
@@ -556,7 +556,7 @@ namespace BC_Solution.UnetNetwork {
             return result;
         }
 
-        public bool SendToAll(byte[] bytes, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
+        public bool SendToAll(byte[] bytes, int channelId = NetworkingChannel.DefaultReliableSequenced)
         {
             bool result = true;
             foreach (NetworkingConnection conn in connections)
@@ -569,7 +569,7 @@ namespace BC_Solution.UnetNetwork {
         }
 
 
-        public bool SendToAll(ushort msgType, NetworkingMessage msg, int channelId = NetworkingMessageType.Channels.DefaultReliableSequenced)
+        public bool SendToAll(ushort msgType, NetworkingMessage msg, int channelId = NetworkingChannel.DefaultReliableSequenced)
         {
             msg.m_type = msgType;
 
@@ -641,12 +641,12 @@ namespace BC_Solution.UnetNetwork {
 
         public virtual void OnConnected(NetworkingConnection conn)
         {
-            conn.InvokeHandler(NetworkingMessageType.Connect, null, NetworkingMessageType.Channels.DefaultReliable);
+            conn.InvokeHandler(NetworkingMessageType.Connect, null, NetworkingChannel.DefaultReliable);
         }
 
         public virtual void OnDisconnected(NetworkingConnection conn)
         {
-            conn.InvokeHandler(NetworkingMessageType.Disconnect, null, NetworkingMessageType.Channels.DefaultReliable);
+            conn.InvokeHandler(NetworkingMessageType.Disconnect, null, NetworkingChannel.DefaultReliable);
         }
 
         public virtual void OnData(NetworkingConnection conn, int receivedSize, int channelId)

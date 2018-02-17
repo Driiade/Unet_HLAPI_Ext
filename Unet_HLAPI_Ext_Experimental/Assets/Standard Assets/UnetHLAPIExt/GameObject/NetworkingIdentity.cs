@@ -66,9 +66,12 @@ namespace BC_Solution.UnetNetwork
         [SerializeField]
         NetworkingBehaviour[] m_networkingBehaviours;
 
-        // there is a list AND a hashSet of connections, for fast verification of dupes, but the main operation is iteration over the list.
-        HashSet<int> m_observerConnections;
-        List<NetworkingConnection> m_observers;
+        /// <summary>
+        /// Connection on server which listen for RPC/Command
+        /// </summary>
+        public List<NetworkingConnection> m_serverConnectionListeners = new List<NetworkingConnection>();
+
+        internal NetworkingConnection m_serverConnection;
         internal NetworkingConnection m_connection;
         internal NetworkingServer m_server;
 
@@ -151,18 +154,6 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        public ReadOnlyCollection<NetworkingConnection> observers
-        {
-            get
-            {
-                if (m_observers == null)
-                    return null;
-
-                return new ReadOnlyCollection<NetworkingConnection>(m_observers);
-            }
-        }
-
-
         /*  public delegate void ClientAuthorityCallback(NetworkingConnection conn, NetworkingIdentity uv, bool authorityState);
           public static ClientAuthorityCallback clientAuthorityCallback;*/
 
@@ -194,15 +185,6 @@ namespace BC_Solution.UnetNetwork
             m_hasAuthority = false;
         }
 
-        // this is used when a connection is destroyed, since the "observers" property is read-only
-        internal void RemoveObserverInternal(NetworkingConnection conn)
-        {
-            if (m_observers != null)
-            {
-                m_observers.Remove(conn);
-                m_observerConnections.Remove(conn.m_connectionId);
-            }
-        }
 
 #if UNITY_EDITOR
         void OnValidate()
@@ -301,9 +283,6 @@ namespace BC_Solution.UnetNetwork
                 // enemy on server has authority
                 m_hasAuthority = true;
             }
-
-            m_observers = new List<NetworkingConnection>();
-            m_observerConnections = new HashSet<int>();
 
 
             // If the instance/net ID is invalid here then this is an object instantiated from a prefab and the server should assign a valid ID
@@ -890,57 +869,6 @@ namespace BC_Solution.UnetNetwork
             //m_isServer = false;
         }
 
-        internal void ClearObservers()
-        {
-            if (m_observers != null)
-            {
-                /* int count = m_observers.Count;
-                 for (int i = 0; i < count; i++)
-                 {
-                     var c = m_observers[i];
-                     c.RemoveFromVisList(this, true);
-                 }*/
-                m_observers.Clear();
-                m_observerConnections.Clear();
-            }
-        }
-
-        internal void AddObserver(NetworkingConnection conn)
-        {
-            //What the case ?
-            /* if (m_observers == null)
-             {
-                 if (LogFilter.logError) { Debug.LogError("AddObserver for " + gameObject + " observer list is null"); }
-                 return;
-             }*/
-
-            // uses hashset for better-than-list-iteration lookup performance.
-            /*  if (m_observerConnections.Contains(conn.connectionId))
-              {
-                  if (LogFilter.logDebug) { Debug.Log("Duplicate observer " + conn.address + " added for " + gameObject); }
-                  return;
-              } */ //Not an error if you look for...
-
-            if (LogFilter.logDev) { Debug.Log("Added observer " + conn.m_serverAddress + " added for " + gameObject); }
-
-            if (!m_observerConnections.Contains(conn.m_connectionId))
-            {
-                m_observers.Add(conn);
-                m_observerConnections.Add(conn.m_connectionId);
-            }
-            //conn.AddToVisList(this);
-        }
-
-        internal void RemoveObserver(NetworkingConnection conn)
-        {
-            if (m_observers == null)
-                return;
-
-            // NOTE this is linear performance now..
-            m_observers.Remove(conn);
-            m_observerConnections.Remove(conn.m_connectionId);
-            //conn.RemoveFromVisList(this, false);
-        }
 
         //What is the use case ?
         /* public void RebuildObservers(bool initialize)
@@ -1145,25 +1073,27 @@ namespace BC_Solution.UnetNetwork
              m_Reset = true;
          }*/
 
-        // if we have marked an identity for reset we do the actual reset.
-        void Reset()
+
+        internal void Reset()
         {
             //  if (!m_Reset)
             //   return;
 
             // m_Reset = false;
-          //  m_isServer = false;
-           // m_isClient = false;
+            m_isServer = false;
+            m_isClient = false;
             m_hasAuthority = false;
-
+            m_serverConnection = null;
             m_netId = 0;// NetworkInstanceId.Zero;
             m_isLocalPlayer = false;
             //m_connectionToServer = null;
             //m_connectionToClient = null;
            // m_PlayerId = -1;
-            m_networkingBehaviours = null;
+           // m_networkingBehaviours = null;
 
-            ClearObservers();
+            m_serverConnectionListeners.Clear();
+
+
             //m_connectionAuthorityOwner = null;
             m_connection = null;
         }

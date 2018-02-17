@@ -78,6 +78,12 @@ namespace BC_Solution.UnetNetwork
             connection.Send(writer, channelId);
         }
 
+        /// <summary>
+        /// Send to all connection which listen
+        /// </summary>
+        /// <param name="methodName"></param>
+        /// <param name="channelId"></param>
+        /// <param name="parameters"></param>
         public void SendToAllConnections(string methodName, int channelId, params object[] parameters)
         {
             writer.SeekZero(true);
@@ -86,7 +92,10 @@ namespace BC_Solution.UnetNetwork
             SerializeCall(writer, methodName, parameters);
             writer.FinishMessage();
 
-            server.SendToAll(writer, channelId);
+            foreach(NetworkingConnection connection in m_networkingIdentity.m_serverConnectionListeners)
+            {
+                connection.Send(writer, channelId);
+            }
         }
 
         public void SendToConnection(NetworkingConnection conn,string methodName, int channelId, params object[] parameters)
@@ -798,7 +807,7 @@ namespace BC_Solution.UnetNetwork
 
         public virtual int GetNetworkChannel()
         {
-            return NetworkingMessageType.Channels.DefaultReliableSequenced;
+            return NetworkingChannel.DefaultReliableSequenced;
         }
 
       /*  public virtual float GetNetworkSendInterval()
