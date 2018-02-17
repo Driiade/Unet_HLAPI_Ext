@@ -131,12 +131,7 @@ namespace BC_Solution.UnetNetwork {
             this.RegisterHandler(NetworkingMessageType.Error, BaseOnServerError);
         }
 
-        ushort s_lastAssignedNetworkId = 0;
-        internal ushort GetNextNetworkId()
-        {
-            s_lastAssignedNetworkId++;
-            return s_lastAssignedNetworkId;
-        }
+
 
         /*internal void AddNetworkId(ushort id)
         {

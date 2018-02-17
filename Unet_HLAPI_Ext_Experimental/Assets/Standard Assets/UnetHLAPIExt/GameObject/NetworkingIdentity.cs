@@ -38,7 +38,6 @@ namespace BC_Solution.UnetNetwork
         public static List<NetworkingIdentity> s_networkingIdentities = new List<NetworkingIdentity>();
 
 
-
         // configuration
         [SerializeField] internal TYPE m_type;
         [SerializeField] internal ushort m_sceneId;
@@ -46,22 +45,12 @@ namespace BC_Solution.UnetNetwork
         [SerializeField] bool m_ServerOnly;
         [SerializeField] bool m_localPlayerAuthority;
 
-
         // runtime data
         internal bool m_hasAuthority;
 
-        internal ushort m_netId; //Gain place with ushort
+        internal ushort m_netId; //Gain space with ushort
         bool m_isLocalPlayer;
 
-        /// <summary>
-        /// The server this networkIdentity belong to
-        /// </summary>
-       // NetworkingServer m_networkingServer;
-
-       // NetworkingConnection m_connectionToServer;
-        //NetworkingConnection m_connectionToClient;
-
-       // short m_PlayerId = -1;
 
         [SerializeField]
         NetworkingBehaviour[] m_networkingBehaviours;
@@ -82,7 +71,6 @@ namespace BC_Solution.UnetNetwork
         public bool isClient { get { return m_isClient; } }
         public bool isServer{ get { return m_isServer; } }
 
-
         public bool hasAuthority { get { return m_hasAuthority; } }
 
         public ushort netId { get { return m_netId; } }
@@ -93,19 +81,11 @@ namespace BC_Solution.UnetNetwork
         public bool serverOnly { get { return m_ServerOnly; } set { m_ServerOnly = value; } }
         public bool localPlayerAuthority { get { return m_localPlayerAuthority; } set { m_localPlayerAuthority = value; } }
 
-        public bool isLocalPlayer { get { return m_isLocalPlayer; } }
-        //  public short playerControllerId { get { return m_PlayerId; } }
-
 
         private void Awake()
         {
             s_networkingIdentities.Add(this);
-
-           // if (m_type == TYPE.REPLICATED_SCENE_OBJECT) // If you have a player in the scene and you want it to be replicated on others clients.
-               // NetworkingGameObjectSystem.Instance.Replicate(this);
         }
-
-    
 
         private void OnDestroy()
         {
@@ -118,22 +98,6 @@ namespace BC_Solution.UnetNetwork
             byte networkBehaviourIndex = reader.ReadByte();
             m_networkingBehaviours[networkBehaviourIndex].HandleMethodCall(reader);
         }
-
-
-        //static NetworkingWriter s_updateWriter = new NetworkingWriter();
-
-
-        // used when adding players
-        /*internal void SetClientOwner(NetworkingConnection conn)
-        {
-            if (m_connectionAuthorityOwner != null)
-            {
-                if (LogFilter.logError) { Debug.LogError("SetClientOwner m_ClientAuthorityOwner already set!"); }
-            }
-            m_connectionAuthorityOwner = conn;
-            m_connectionAuthorityOwner.AddOwnedObject(this);
-        }*/
-
 
         internal void ForceAuthority(bool authority)
         {
@@ -154,17 +118,6 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        /*  public delegate void ClientAuthorityCallback(NetworkingConnection conn, NetworkingIdentity uv, bool authorityState);
-          public static ClientAuthorityCallback clientAuthorityCallback;*/
-
-
-        // only used when fixing duplicate scene IDs duing post-processing
-        // Developpers has to do that check.
-        /*  public void ForceSceneId(int newSceneId)
-          {
-              m_sceneId = new NetworkSceneId((uint)newSceneId);
-          }*/
-
         // only used in SetLocalObject
        /* internal void UpdateClientServer(bool isClientFlag, bool isServerFlag)
         {
@@ -172,18 +125,6 @@ namespace BC_Solution.UnetNetwork
             m_isServer |= isServerFlag;
         }*/
 
-        // used when the player object for a connection changes
-        internal void SetNotLocalPlayer()
-        {
-            m_isLocalPlayer = false;
-
-            /*  if (NetworkServer.active && NetworkServer.localClientActive)  WHY ?
-              {
-                  // dont change authority for objects on the host
-                  return;
-              } */
-            m_hasAuthority = false;
-        }
 
 
 #if UNITY_EDITOR
@@ -202,194 +143,61 @@ namespace BC_Solution.UnetNetwork
                 m_networkingBehaviours[i].m_netId = (byte)i;
             }
 
-            //SetupIDs();
         }
-
-        /* void AssignAssetID(GameObject prefab)
-         {
-             string path = AssetDatabase.GetAssetPath(prefab);
-             m_AssetId = NetworkHash128.Parse(AssetDatabase.AssetPathToGUID(path));
-         }
-
-         bool ThisIsAPrefab()
-         {
-             PrefabType prefabType = PrefabUtility.GetPrefabType(gameObject);
-             if (prefabType == PrefabType.Prefab)
-                 return true;
-             return false;
-         }
-
-         bool ThisIsASceneObjectWithPrefabParent(out GameObject prefab)
-         {
-             prefab = null;
-             PrefabType prefabType = PrefabUtility.GetPrefabType(gameObject);
-             if (prefabType == PrefabType.None)
-                 return false;
-             prefab = (GameObject)PrefabUtility.GetPrefabParent(gameObject);
-             if (prefab == null)
-             {
-                 if (LogFilter.logError) { Debug.LogError("Failed to find prefab parent for scene object [name:" + gameObject.name + "]"); }
-                 return false;
-             }
-             return true;
-         }
-
-         void SetupIDs()
-         {
-             GameObject prefab;
-             if (ThisIsAPrefab())
-             {
-                 if (LogFilter.logDev) { Debug.Log("This is a prefab: " + gameObject.name); }
-                 ForceSceneId(0);
-                 AssignAssetID(gameObject);
-             }
-             else if (ThisIsASceneObjectWithPrefabParent(out prefab))
-             {
-                 if (LogFilter.logDev) { Debug.Log("This is a scene object with prefab link: " + gameObject.name); }
-                 AssignAssetID(prefab);
-             }
-             else
-             {
-                 if (LogFilter.logDev) { Debug.Log("This is a pure scene object: " + gameObject.name); }
-                 m_AssetId.Reset();
-             }
-         }*/
-
 #endif
-        /* void OnDestroy()  //If so .. the programmer didn't do his job correctly (sorry :) )
-         {
-             if (m_IsServer && NetworkServer.active)
-             {
-                 NetworkServer.Destroy(gameObject);
-             }
-         }*/
 
         internal void OnStartServer(NetworkingServer networkingServer)
         {
-            //m_networkingServer = networkingServer;
-
-            if (isServer)
-            {
-                return;
-            }
-
-            if (m_localPlayerAuthority)
-            {
-                // local player on server has NO authority
-                m_hasAuthority = false;
-            }
-            else
-            {
-                // enemy on server has authority
-                m_hasAuthority = true;
-            }
-
-
-            // If the instance/net ID is invalid here then this is an object instantiated from a prefab and the server should assign a valid ID
-            if (netId == 0)
-            {
-                m_netId = networkingServer.GetNextNetworkId();
-            }
-            else
-            {
-               /* if (m_isSceneObject)
-                {
-                    //allowed
-                }
-                else
-                {
-                    if (LogFilter.logError) { Debug.LogError("Object has non-zero netId " + netId + " for " + gameObject); }
-                    return;
-                }*/
-            }
-
-            if (LogFilter.logDev) { Debug.Log("OnStartServer " + gameObject + " GUID:" + netId); }
-            //NetworkServer.instance.SetLocalObjectOnServer(netId, gameObject);
-           // UpdateClientServer(false, true);
-
-            for (int i = 0; i < m_networkingBehaviours.Length; i++)
-            {
-                NetworkingBehaviour comp = m_networkingBehaviours[i];
-                try
-                {
-                    comp.OnStartServer(networkingServer);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError("Exception in OnStartServer:" + e.Message + " " + e.StackTrace);
-                }
-            }
-
-            /*if (NetworkClient.active && NetworkServer.localClientActive)
-            {
-                // there will be no spawn message, so start the client here too
-                ClientScene.SetLocalObject(netId, gameObject);
-                OnStartClient();
-            }*/
-
-            if (m_hasAuthority)
-            {
-                OnStartAuthority();
-            }
+            foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
+                b.OnStartServer(networkingServer);
         }
 
-        internal void OnStartClient()
+        internal void OnStartConnection()
         {
-           /* if (!m_isClient)
+            foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
             {
-                m_isClient = true;
-            }*/
-            //CacheBehaviours(); NO NEED
-
-            if (LogFilter.logDev) { Debug.Log("OnStartClient " + gameObject + " GUID:" + netId + " localPlayerAuthority:" + localPlayerAuthority); }
-            for (int i = 0; i < m_networkingBehaviours.Length; i++)
-            {
-                NetworkingBehaviour comp = m_networkingBehaviours[i];
                 try
                 {
-                    //comp.PreStartClient(); // generated startup to resolve object references, It only search syncVar/command
-                    comp.OnStartClient(); // user implemented startup
+                    b.OnStartConnection();
                 }
-                catch (Exception e)
+                catch (System.Exception e)
                 {
-                    Debug.LogError("Exception in OnStartClient:" + e.Message + " " + e.StackTrace);
+                    Debug.LogError(e);
                 }
             }
         }
 
         internal void OnStartAuthority()
         {
-            for (int i = 0; i < m_networkingBehaviours.Length; i++)
+            foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
             {
-                NetworkingBehaviour comp = m_networkingBehaviours[i];
                 try
                 {
-                    comp.OnStartAuthority();
+                    b.OnStartAuthority();
                 }
-                catch (Exception e)
+                catch (System.Exception e)
                 {
-                    Debug.LogError("Exception in OnStartAuthority:" + e.Message + " " + e.StackTrace);
+                    Debug.LogError(e);
                 }
             }
         }
 
         internal void OnStopAuthority()
         {
-            for (int i = 0; i < m_networkingBehaviours.Length; i++)
+            foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
             {
-                NetworkingBehaviour comp = m_networkingBehaviours[i];
                 try
                 {
-                    comp.OnStopAuthority();
+                    b.OnStopAuthority();
                 }
-                catch (Exception e)
+                catch (System.Exception e)
                 {
-                    Debug.LogError("Exception in OnStopAuthority:" + e.Message + " " + e.StackTrace);
+                    Debug.LogError(e);
                 }
             }
         }
 
-        internal void OnSetLocalVisibility(bool vis)
+       /* internal void OnSetLocalVisibility(bool vis)
         {
             for (int i = 0; i < m_networkingBehaviours.Length; i++)
             {
@@ -403,7 +211,7 @@ namespace BC_Solution.UnetNetwork
                     Debug.LogError("Exception in OnSetLocalVisibility:" + e.Message + " " + e.StackTrace);
                 }
             }
-        }
+        }*/
 
         /*  internal bool OnCheckObserver(NetworkingConnection conn) //Disable for the moment
           {
@@ -820,305 +628,36 @@ namespace BC_Solution.UnetNetwork
             */
         }
 
-        internal void SetLocalPlayer(short localPlayerControllerId)
+      
+
+        internal void OnNetworkDestroy()
         {
-            m_isLocalPlayer = true;
-           // m_PlayerId = localPlayerControllerId;
-
-            // there is an ordering issue here that originAuthority solves. OnStartAuthority should only be called if m_HasAuthority was false when this function began,
-            // or it will be called twice for this object. But that state is lost by the time OnStartAuthority is called below, so the original value is cached
-            // here to be checked below.
-            bool originAuthority = m_hasAuthority;
-            if (localPlayerAuthority)
+            foreach(NetworkingBehaviour b in this.m_networkingBehaviours)
             {
-                m_hasAuthority = true;
-            }
-
-            for (int i = 0; i < m_networkingBehaviours.Length; i++)
-            {
-                NetworkingBehaviour comp = m_networkingBehaviours[i];
-                comp.OnStartLocalPlayer();
-
-                if (localPlayerAuthority && !originAuthority)
+                try
                 {
-                    comp.OnStartAuthority();
+                    b.OnNetworkDestroy();
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError(e);
                 }
             }
         }
 
-       /* internal void SetConnectionToServer(NetworkingConnection conn)
-        {
-            m_connectionToServer = conn;
-        }
 
-        internal void SetConnectionToClient(NetworkingConnection conn, short newPlayerControllerId)
-        {
-            m_PlayerId = newPlayerControllerId;
-            m_connectionToClient = conn;
-        }*/
-
-        internal void OnNetworkDestroy()
-        {
-            for (int i = 0;
-                 m_networkingBehaviours != null && i < m_networkingBehaviours.Length;
-                 i++)
-            {
-                NetworkingBehaviour comp = m_networkingBehaviours[i];
-                comp.OnNetworkDestroy();
-            }
-            //m_isServer = false;
-        }
-
-
-        //What is the use case ?
-        /* public void RebuildObservers(bool initialize)
-         {
-             //if (m_observers == null)
-              //   return; //-_-
-
-             bool changed = false;
-             bool result = false;
-             HashSet<NetworkConnection> newObservers = new HashSet<NetworkConnection>();
-             HashSet<NetworkConnection> oldObservers = new HashSet<NetworkConnection>(m_observers);
-
-             for (int i = 0; i < m_networkingBehaviours.Length; i++)
-             {
-                 NetworkBehaviour comp = m_networkingBehaviours[i];
-                 result |= comp.OnRebuildObservers(newObservers, initialize);
-             }
-             if (!result)
-             {
-                 // none of the behaviours rebuilt our observers, use built-in rebuild method
-                 if (initialize)
-                 {
-                     for (int i = 0; i < NetworkServer.connections.Count; i++)
-                     {
-                         var conn = NetworkServer.connections[i];
-                         if (conn == null) continue;
-                         if (conn.isReady)
-                             AddObserver(conn);
-                     }
-
-                     for (int i = 0; i < NetworkServer.localConnections.Count; i++)
-                     {
-                         var conn = NetworkServer.localConnections[i];
-                         if (conn == null) continue;
-                         if (conn.isReady)
-                             AddObserver(conn);
-                     }
-                 }
-                 return;
-             }
-
-             // apply changes from rebuild
-             foreach (var conn in newObservers)
-             {
-                 if (conn == null)
-                 {
-                     continue;
-                 }
-
-                 if (!conn.isReady)
-                 {
-                     if (LogFilter.logWarn) { Debug.LogWarning("Observer is not ready for " + gameObject + " " + conn); }
-                     continue;
-                 }
-
-                 if (initialize || !oldObservers.Contains(conn))
-                 {
-                     // new observer
-                     conn.AddToVisList(this);
-                     if (LogFilter.logDebug) { Debug.Log("New Observer for " + gameObject + " " + conn); }
-                     changed = true;
-                 }
-             }
-
-             foreach (var conn in oldObservers)
-             {
-                 if (!newObservers.Contains(conn))
-                 {
-                     // removed observer
-                     conn.RemoveFromVisList(this, false);
-                     if (LogFilter.logDebug) { Debug.Log("Removed Observer for " + gameObject + " " + conn); }
-                     changed = true;
-                 }
-             }
-
-             // special case for local client.
-             if (initialize)
-             {
-                 for (int i = 0; i < NetworkServer.localConnections.Count; i++)
-                 {
-                     if (!newObservers.Contains(NetworkServer.localConnections[i]))
-                     {
-                         OnSetLocalVisibility(false);
-                     }
-                 }
-             }
-
-             if (!changed)
-                 return;
-
-             m_observers = new List<NetworkConnection>(newObservers);
-
-             // rebuild hashset once we have the final set of new observers
-             m_observerConnections.Clear();
-             for (int i = 0; i < m_observers.Count; i++)
-             {
-                 m_observerConnections.Add(m_observers[i].connectionId);
-             }
-         } */
-
-        public bool RemoveClientAuthority(/*NetworkingConnection conn*/)
-        {
-            if (!isServer)
-            {
-                if (LogFilter.logError) { Debug.LogError("RemoveClientAuthority can only be call on the server for spawned objects."); }
-                return false;
-            }
-
-            //One Player for a client is a bad design (sorry ^^ )
-            /* if (connectionToClient != null)
-             {
-                 if (LogFilter.logError) { Debug.LogError("RemoveClientAuthority cannot remove authority for a player object"); }
-                 return false;
-             } */
-
-          /*  if (m_connectionAuthorityOwner == null)
-            {
-                if (LogFilter.logError) { Debug.LogError("RemoveClientAuthority for " + gameObject + " has no clientAuthority owner."); }
-                return false;
-            } */
-
-            /*  if (m_clientAuthorityOwner != conn)
-              {
-                  if (LogFilter.logError) { Debug.LogError("RemoveClientAuthority for " + gameObject + " has different owner."); }
-                  return false;
-              }*/
-
-            //m_connectionAuthorityOwner.RemoveOwnedObject(this);
-            //m_connectionAuthorityOwner = null;
-
-            // server now has authority (this is only called on server)
-            ForceAuthority(true);
-
-            // send msg to that client
-            var msg = new NetIdMessage();
-            msg.m_netId = netId;
-
-            //m_connectionAuthorityOwner.Send(NetworkingMessageType.UnassignClientAuthority, msg);
-
-            /*  if (clientAuthorityCallback != null)
-              {
-                  clientAuthorityCallback(conn, this, false);
-              } */
-            return true;
-        }
-
-        public bool AssignClientAuthority(NetworkingConnection conn)
-        {
-            if (!isServer)
-            {
-                if (LogFilter.logError) { Debug.LogError("AssignClientAuthority can only be call on the server for spawned objects."); }
-                return false;
-            }
-            if (!localPlayerAuthority)
-            {
-                if (LogFilter.logError) { Debug.LogError("AssignClientAuthority can only be used for NetworkingIdentity component with LocalPlayerAuthority set."); }
-                return false;
-            }
-
-            //Nope, do this automatically
-            /* if (m_clientAuthorityOwner != null && conn != m_clientAuthorityOwner)
-             {
-                 if (LogFilter.logError) { Debug.LogError("AssignClientAuthority for " + gameObject + " already has an owner. Use RemoveClientAuthority() first."); }
-                 return false;
-             }*/
-
-            if (conn == null)
-            {
-                if (LogFilter.logError) { Debug.LogError("AssignClientAuthority for " + gameObject + " owner cannot be null. Use RemoveClientAuthority() instead."); }
-                return false;
-            }
-
-            /*if (m_connectionAuthorityOwner != null && conn != m_connectionAuthorityOwner)
-            {
-                RemoveClientAuthority();
-            }*/
-
-
-            //m_connectionAuthorityOwner = conn;
-            //m_connectionAuthorityOwner.AddOwnedObject(this);
-
-            // server no longer has authority (this is called on server). Note that local client could re-acquire authority below
-            ForceAuthority(false);
-
-            // send msg to that client
-            var msg = new NetIdMessage();
-            msg.m_netId = netId;
-            conn.Send(msg.m_type = NetworkingMessageType.AssignClientAuthority, msg);
-
-            /* if (clientAuthorityCallback != null)
-             {
-                 clientAuthorityCallback(conn, this, true);
-             }*/
-            return true;
-        }
-
-        // marks the identity for future reset, this is because we cant reset the identity during destroy
-        // as people might want to be able to read the members inside OnDestroy(), and we have no way
-        // of invoking reset after OnDestroy is called.
-        /* internal void MarkForReset()
-         {
-             m_Reset = true;
-         }*/
 
 
         internal void Reset()
         {
-            //  if (!m_Reset)
-            //   return;
-
-            // m_Reset = false;
             m_isServer = false;
             m_isClient = false;
             m_hasAuthority = false;
             m_serverConnection = null;
-            m_netId = 0;// NetworkInstanceId.Zero;
+            m_netId = 0;
             m_isLocalPlayer = false;
-            //m_connectionToServer = null;
-            //m_connectionToClient = null;
-           // m_PlayerId = -1;
-           // m_networkingBehaviours = null;
-
             m_serverConnectionListeners.Clear();
-
-
-            //m_connectionAuthorityOwner = null;
             m_connection = null;
         }
-
-#if UNITY_EDITOR
-        // this is invoked by the UnityEngine when a Mono Domain reload happens in the editor.
-        // the transport layer has state in C++, so when the C# state is lost (on domain reload), the C++ transport layer must be shutown as well.
-        /*  static internal void UNetDomainReload()
-          {
-              NetworkManager.OnDomainReload(); /// ??? No
-          } */
-
-#endif
-
-        // this is invoked by the UnityEngine (So cool, so we can't modify it ! nice Unity)
-
-        /*   static internal void UNetStaticUpdate()
-           {
-               NetworkServer.Update();
-               NetworkClient.UpdateClients();
-               NetworkManager.UpdateScene();
-
-   #if UNITY_EDITOR
-               NetworkDetailStats.NewProfilerTick(Time.time); 
-   #endif
-           } */
     };
 }

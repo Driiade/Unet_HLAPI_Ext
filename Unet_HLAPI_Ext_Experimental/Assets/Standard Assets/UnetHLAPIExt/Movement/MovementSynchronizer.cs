@@ -204,7 +204,7 @@ namespace BC_Solution.UnetNetwork
                 for (int i = 0; i <= currentStatesIndex; i++)
                 {
                     //If the state in slot i is older than our new state, we found our slot.  
-                    if (statesBuffer[i].m_relativeTime < s.m_relativeTime)
+                    if (statesBuffer[i] == null || statesBuffer[i].m_relativeTime < s.m_relativeTime)
                     {
                         // Shift the buffer sideways, to make room in slot i. possibly deleting last state
                         for (int k = maxBufferSize - 1; k > i; k--)
@@ -221,7 +221,8 @@ namespace BC_Solution.UnetNetwork
                 }
             }
 
-            currentStatesIndex = Mathf.Min(currentStatesIndex + 1, maxBufferSize-1);
+            currentStatesIndex = Mathf.Min(currentStatesIndex + 1, maxBufferSize - 1);
+
             return place;
         }
 

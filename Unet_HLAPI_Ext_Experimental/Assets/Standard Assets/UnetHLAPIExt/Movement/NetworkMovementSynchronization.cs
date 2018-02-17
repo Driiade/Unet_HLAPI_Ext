@@ -59,12 +59,12 @@ namespace BC_Solution.UnetNetwork
                 movementSynchronizers[i].Init(this);
             }
 
-             NetworkingSystem.RegisterServerHandler(NetworkingMessageType.Connect, ServerSyncPosition);
+             NetworkingSystem.RegisterServerHandler(NetworkingMessageType.Connect, ServerSyncState);
         }
 
         void OnDestroy()
         {
-            NetworkingSystem.UnRegisterServerHandler(NetworkingMessageType.Connect, ServerSyncPosition);
+            NetworkingSystem.UnRegisterServerHandler(NetworkingMessageType.Connect, ServerSyncState);
         }
 
 
@@ -164,7 +164,7 @@ namespace BC_Solution.UnetNetwork
         /// Only server
         /// </summary>
         /// <param name="netMsg"></param>
-        void ServerSyncPosition(NetworkingMessage netMsg)
+        void ServerSyncState(NetworkingMessage netMsg)
         {
             writer.SeekZero(true);
             int updateMask = 0;
@@ -237,7 +237,7 @@ namespace BC_Solution.UnetNetwork
             byte error;
             LocalGetMovementInformations(timeStamp, info);
 
-            timeStamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timeStamp, out error);
+            timeStamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.serverConnection.m_hostId, this.serverConnection.m_connectionId, timeStamp, out error);
             SendToAllConnections("RpcGetMovementInformations", NetworkingChannel.DefaultUnreliable, timeStamp, info);
         }
 
