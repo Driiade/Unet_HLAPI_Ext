@@ -49,7 +49,6 @@ namespace BC_Solution.UnetNetwork
         bool m_hasAuthority;
 
         internal ushort m_netId; //Gain space with ushort
-        bool m_isLocalPlayer;
 
 
         [SerializeField]
@@ -685,7 +684,6 @@ namespace BC_Solution.UnetNetwork
             m_hasAuthority = false;
             m_serverConnection = null;
             m_netId = 0;
-            m_isLocalPlayer = false;
             m_serverConnectionListeners.Clear();
             m_connection = null;
         }
