@@ -41,6 +41,7 @@ namespace BC_Solution.UnetNetwork
         public bool isServer { get { return m_networkingIdentity.isServer; } }
         public bool isClient { get { return m_networkingIdentity.isClient; } }
         public bool hasAuthority { get { return m_networkingIdentity.hasAuthority; } }
+        public List<NetworkingConnection> serverConnectionListeners { get { return m_networkingIdentity.m_serverConnectionListeners; } }
 
         public NetworkingConnection serverConnection { get { return m_networkingIdentity.m_serverConnection; } }
         public NetworkingConnection connection { get { return m_networkingIdentity.m_connection; } }

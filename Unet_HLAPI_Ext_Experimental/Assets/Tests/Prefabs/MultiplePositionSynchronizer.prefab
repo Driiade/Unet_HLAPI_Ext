@@ -41,6 +41,7 @@ GameObject:
   - component: {fileID: 4626436379127922}
   - component: {fileID: 114292577741408674}
   - component: {fileID: 114989741402422030}
+  - component: {fileID: 114461354723849972}
   m_Layer: 0
   m_Name: MultiplePositionSynchronizer
   m_TagString: Untagged
@@ -388,15 +389,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a44e4099fd6dda4c863e895c95b9a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_sceneId: 0
+  m_type: 2
+  m_sceneId: 1
   m_assetId: 0
   m_ServerOnly: 0
   m_localPlayerAuthority: 1
-  m_isSceneObject: 0
-  destroyOnDisconnect: 1
-  destroyOnStop: 1
   m_networkingBehaviours:
   - {fileID: 114989741402422030}
+  - {fileID: 114461354723849972}
 --- !u!114 &114307297617218354
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -409,16 +409,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   networkingIdentity: {fileID: 114292577741408674}
-  onlineConfig:
-    updateRate: 20
-  lanConfig:
-    updateRate: 20
-  defaultConfig:
-    updateRate: 20
   maxBufferSize: 60
   useAdaptativeSynchronizationBackTime: 1
-  lastInterpolationUpdateTimer: -1
-  lastExtrapolationUpdateTimer: -1
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
@@ -448,16 +440,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   networkingIdentity: {fileID: 114292577741408674}
-  onlineConfig:
-    updateRate: 20
-  lanConfig:
-    updateRate: 20
-  defaultConfig:
-    updateRate: 20
   maxBufferSize: 60
   useAdaptativeSynchronizationBackTime: 1
-  lastInterpolationUpdateTimer: -1
-  lastExtrapolationUpdateTimer: -1
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
@@ -475,6 +459,23 @@ MonoBehaviour:
   maxVelocityValue: {x: 0, y: 0, z: 0}
   precisionAfterCompression: {x: 0.0006103609, y: 0.0006103609, z: 0.0006103609}
   returnedValueOnCurrentPosition: {x: 0.00061035156, y: 0.00061035156, z: 0.00061035156}
+--- !u!114 &114461354723849972
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1231402685847870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ff324c1c6c28864a875ae7b54f6e37e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_netId: 1
+  m_checkTransform: {fileID: 4205423996803326}
+  m_range: 3
+  m_checkRate: 0.5
+  m_maxNearConnection: 20
+  m_mode: 1
 --- !u!114 &114555180304162554
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -487,16 +488,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   networkingIdentity: {fileID: 114292577741408674}
-  onlineConfig:
-    updateRate: 20
-  lanConfig:
-    updateRate: 20
-  defaultConfig:
-    updateRate: 20
   maxBufferSize: 60
   useAdaptativeSynchronizationBackTime: 1
-  lastInterpolationUpdateTimer: -1
-  lastExtrapolationUpdateTimer: -1
   useExtrapolation: 0
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
@@ -524,16 +517,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   networkingIdentity: {fileID: 114292577741408674}
-  onlineConfig:
-    updateRate: 20
-  lanConfig:
-    updateRate: 20
-  defaultConfig:
-    updateRate: 20
   maxBufferSize: 60
   useAdaptativeSynchronizationBackTime: 1
-  lastInterpolationUpdateTimer: -1
-  lastExtrapolationUpdateTimer: -1
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
@@ -561,16 +546,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   networkingIdentity: {fileID: 114292577741408674}
-  onlineConfig:
-    updateRate: 20
-  lanConfig:
-    updateRate: 20
-  defaultConfig:
-    updateRate: 20
   maxBufferSize: 60
   useAdaptativeSynchronizationBackTime: 1
-  lastInterpolationUpdateTimer: -1
-  lastExtrapolationUpdateTimer: -1
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
@@ -595,16 +572,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   networkingIdentity: {fileID: 114292577741408674}
-  onlineConfig:
-    updateRate: 20
-  lanConfig:
-    updateRate: 20
-  defaultConfig:
-    updateRate: 20
   maxBufferSize: 60
   useAdaptativeSynchronizationBackTime: 1
-  lastInterpolationUpdateTimer: -1
-  lastExtrapolationUpdateTimer: -1
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
@@ -634,16 +603,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   networkingIdentity: {fileID: 114292577741408674}
-  onlineConfig:
-    updateRate: 20
-  lanConfig:
-    updateRate: 20
-  defaultConfig:
-    updateRate: 20
   maxBufferSize: 60
   useAdaptativeSynchronizationBackTime: 1
-  lastInterpolationUpdateTimer: -1
-  lastExtrapolationUpdateTimer: -1
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
@@ -669,23 +630,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_netId: 0
-  onlineConfig:
-    adaptativeSynchronizationBackTime: 0.15
-    maxSynchronizationBacktime: 0.3
-    minSynchronisationBacktime: 0.05
-    adaptationAmount: 1.5
-  lanConfig:
-    adaptativeSynchronizationBackTime: 0.15
-    maxSynchronizationBacktime: 0.3
-    minSynchronisationBacktime: 0.05
-    adaptationAmount: 1.5
-  defaultConfig:
-    adaptativeSynchronizationBackTime: 0.15
-    maxSynchronizationBacktime: 0.3
-    minSynchronisationBacktime: 0.1
-    adaptationAmount: 1.5
-  nonAdaptativeBacktime: 0.1
-  extraInterpolationTimeFactor: 10
+  m_adaptativeSynchronizationBackTime: 0.15
+  m_maxSynchronizationBacktime: 0.3
+  m_minSynchronisationBacktime: 0.1
+  m_adaptationAmount: 1.5
+  updateRate: 20
+  m_nonAdaptativeBacktime: 0.1
   movementSynchronizers:
   - {fileID: 114932352318098096}
   - {fileID: 114411088824737412}
@@ -696,6 +646,7 @@ MonoBehaviour:
   - {fileID: 114992149828315310}
   - {fileID: 114555180304162554}
   lagAverage: 0.15
+  lastInterpolationUpdateTimer: -1
 --- !u!114 &114992149828315310
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -708,16 +659,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   networkingIdentity: {fileID: 114292577741408674}
-  onlineConfig:
-    updateRate: 20
-  lanConfig:
-    updateRate: 20
-  defaultConfig:
-    updateRate: 20
   maxBufferSize: 60
   useAdaptativeSynchronizationBackTime: 1
-  lastInterpolationUpdateTimer: -1
-  lastExtrapolationUpdateTimer: -1
   useExtrapolation: 0
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
