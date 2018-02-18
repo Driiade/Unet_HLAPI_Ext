@@ -338,10 +338,20 @@ namespace BC_Solution.UnetNetwork
                     }
                     else if (conn.m_server != null && conn.m_server == NetworkingSystem.Instance.mainServer)
                     {
+                        NetworkingConnection trueServerConnection = null;
+                        foreach(NetworkingConnection c in conn.m_server.connections)
+                        {
+                            if (c.m_connectionId == conn.m_connectionId)
+                            {
+                                trueServerConnection = c;
+                                break;
+                            }
+                        }
+
                         foreach (NetworkingIdentity netIdentity in netIdentities)
                         {
                             if (netIdentity.m_type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB || netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
-                                netIdentity.m_serverConnection = conn;
+                                netIdentity.m_serverConnection = trueServerConnection;
                         }
                     }
                 }

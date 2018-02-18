@@ -76,7 +76,6 @@ namespace BC_Solution.UnetNetwork
                 NetworkingIdentity netIdentity = colliders[i].GetComponentInParent<NetworkingIdentity>();
                 if (netIdentity && netIdentity.m_serverConnection != null && !networkingIdentity.m_serverConnectionListeners.Contains(netIdentity.m_serverConnection))
                 {
-                    Debug.LogWarning(networkingIdentity.gameObject + " : " + netIdentity.gameObject);
                     networkingIdentity.m_serverConnectionListeners.Add(netIdentity.m_serverConnection);
                 }
             }
