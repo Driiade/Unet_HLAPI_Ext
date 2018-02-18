@@ -58,21 +58,6 @@ namespace BC_Solution.UnetNetwork
             {
                 movementSynchronizers[i].Init(this);
             }
-
-             NetworkingSystem.RegisterServerHandler(NetworkingMessageType.Connect, ServerSyncState);
-        }
-
-        void OnDestroy()
-        {
-            NetworkingSystem.UnRegisterServerHandler(NetworkingMessageType.Connect, ServerSyncState);
-        }
-
-
-
-        public override void OnStartAuthority()     //Send position the first time
-        {
-            base.OnStartAuthority();
-           // ServerSyncPosition(null);
         }
 
 
@@ -160,11 +145,18 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        /// <summary>
-        /// Only server
-        /// </summary>
-        /// <param name="netMsg"></param>
-        void ServerSyncState(NetworkingMessage netMsg)
+
+        public override void OnServerAddListener(NetworkingConnection conn)
+        {
+            ServerSync(conn, NetworkingChannel.DefaultReliable);
+        }
+
+        public override void OnServerSyncNetId(NetworkingConnection conn)
+        {
+            ServerSync(conn, NetworkingChannel.DefaultReliableSequenced);
+        }
+
+        public void ServerSync(NetworkingConnection conn, int channel)
         {
             writer.SeekZero(true);
             int updateMask = 0;
@@ -187,9 +179,10 @@ namespace BC_Solution.UnetNetwork
                     movementSynchronizers[i].GetCurrentState(writer);
                 }
 
-                SendToConnection(netMsg.m_connection, "RpcGetMovementSyncInformations", NetworkingChannel.DefaultReliable, writer.ToArray());
+                SendToConnection(conn, "RpcGetMovementSyncInformations", channel, writer.ToArray());
             }
         }
+
 
         [Networked]
         void RpcGetMovementSyncInformations(byte[] info)

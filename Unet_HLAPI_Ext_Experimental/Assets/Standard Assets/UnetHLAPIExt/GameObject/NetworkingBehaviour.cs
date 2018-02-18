@@ -271,38 +271,62 @@ namespace BC_Solution.UnetNetwork
         {
         }
 
+        /// <summary>
+        /// Called when the gameObject is attached to a server
+        /// </summary>
+        /// <param name="networkingServer"></param>
         public virtual void OnStartServer(NetworkingServer networkingServer)
         {
         }
 
+        /// <summary>
+        /// Called when the gameObject is attached to a connection
+        /// </summary>
         public virtual void OnStartConnection()
         {
         }
 
-        public virtual void OnStartLocalPlayer()
-        {
-        }
-
+        /// <summary>
+        /// Called when status of m_hasAutority change to true
+        /// </summary>
         public virtual void OnStartAuthority()
         {
         }
 
+        /// <summary>
+        /// Called when status of m_hasAutority change to false
+        /// </summary>
         public virtual void OnStopAuthority()
         {
         }
 
-        public virtual bool OnRebuildObservers(HashSet<NetworkingConnection> observers, bool initialize)
+        /// <summary>
+        /// Called on server when a new connection is added
+        /// Can be called if connection don't know the gameObject.
+        /// </summary>
+        /// <param name="conn"></param>
+        public virtual void OnServerConnect(NetworkingConnection conn)
         {
-            return false;
-        } 
 
-        public virtual void OnSetLocalVisibility(bool vis)
-        {
         }
 
-        public virtual bool OnCheckObserver(NetworkingConnection conn)
+        /// <summary>
+        /// Called on server when server add a listener on a networkingIdentity
+        /// This networkingBehaviour will be known by connection
+        /// </summary>
+        /// <param name="conn"></param>
+        public virtual void OnServerAddListener(NetworkingConnection conn)
         {
-            return true;
+
+        }
+
+        /// <summary>
+        /// Called on the server when it is syncing the netId of an object with a connection
+        /// </summary>
+        /// <param name="conn"></param>
+        public virtual void OnServerSyncNetId(NetworkingConnection conn)
+        {
+
         }
 
         public virtual int GetNetworkChannel()

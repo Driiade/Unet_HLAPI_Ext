@@ -46,7 +46,7 @@ namespace BC_Solution.UnetNetwork
         [SerializeField] bool m_localPlayerAuthority;
 
         // runtime data
-        internal bool m_hasAuthority;
+        bool m_hasAuthority;
 
         internal ushort m_netId; //Gain space with ushort
         bool m_isLocalPlayer;
@@ -71,7 +71,19 @@ namespace BC_Solution.UnetNetwork
         public bool isClient { get { return m_isClient; } }
         public bool isServer{ get { return m_isServer; } }
 
-        public bool hasAuthority { get { return m_hasAuthority; } }
+        public bool hasAuthority {
+            get { return m_hasAuthority; }
+            set {
+                if(value != m_hasAuthority)
+                {
+                    m_hasAuthority = value;
+
+                    if (m_hasAuthority)
+                        OnStartAuthority();
+                    else
+                        OnStopAuthority();
+                }
+            } }
 
         public ushort netId { get { return m_netId; } }
         public ushort sceneId { get { return m_sceneId; } }
@@ -97,24 +109,6 @@ namespace BC_Solution.UnetNetwork
         {
             byte networkBehaviourIndex = reader.ReadByte();
             m_networkingBehaviours[networkBehaviourIndex].HandleMethodCall(reader);
-        }
-
-        internal void ForceAuthority(bool authority)
-        {
-            if (m_hasAuthority == authority)
-            {
-                return;
-            }
-
-            m_hasAuthority = authority;
-            if (authority)
-            {
-                OnStartAuthority();
-            }
-            else
-            {
-                OnStopAuthority();
-            }
         }
 
 
@@ -197,21 +191,67 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-       /* internal void OnSetLocalVisibility(bool vis)
+        internal void OnServerConnect(NetworkingConnection conn)
         {
-            for (int i = 0; i < m_networkingBehaviours.Length; i++)
+            foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
             {
-                NetworkingBehaviour comp = m_networkingBehaviours[i];
                 try
                 {
-                    comp.OnSetLocalVisibility(vis);
+                    b.OnServerConnect(conn);
                 }
-                catch (Exception e)
+                catch (System.Exception e)
                 {
-                    Debug.LogError("Exception in OnSetLocalVisibility:" + e.Message + " " + e.StackTrace);
+                    Debug.LogError(e);
                 }
             }
-        }*/
+        }
+
+        internal void OnServerAddListener(NetworkingConnection conn)
+        {
+            foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
+            {
+                try
+                {
+                    b.OnServerAddListener(conn);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError(e);
+                }
+            }
+        }
+
+        internal void OnServerSyncNetId(NetworkingConnection conn)
+        {
+            foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
+            {
+                try
+                {
+                    b.OnServerSyncNetId(conn);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError(e);
+                }
+            }
+        }
+
+
+        /* internal void OnSetLocalVisibility(bool vis)
+         {
+             for (int i = 0; i < m_networkingBehaviours.Length; i++)
+             {
+                 NetworkingBehaviour comp = m_networkingBehaviours[i];
+                 try
+                 {
+                     comp.OnSetLocalVisibility(vis);
+                 }
+                 catch (Exception e)
+                 {
+                     Debug.LogError("Exception in OnSetLocalVisibility:" + e.Message + " " + e.StackTrace);
+                 }
+             }
+         }*/
 
         /*  internal bool OnCheckObserver(NetworkingConnection conn) //Disable for the moment
           {
@@ -286,17 +326,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        // happens on client
-        internal void HandleClientAuthority(bool authority)
-        {
-            if (!localPlayerAuthority)
-            {
-                if (LogFilter.logError) { Debug.LogError("HandleClientAuthority " + gameObject + " does not have localPlayerAuthority"); }
-                return;
-            }
 
-            ForceAuthority(authority);
-        }
         //NOT AVAILABLE FOR THE MOMENT
         // helper function for Handle** functions
         /* bool GetInvokeComponent(int cmdHash, Type invokeClass, out NetworkingBehaviour invokeComponent)
