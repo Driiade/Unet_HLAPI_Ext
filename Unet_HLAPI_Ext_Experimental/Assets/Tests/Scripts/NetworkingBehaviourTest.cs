@@ -29,7 +29,7 @@ public class NetworkingBehaviourTest : NetworkingBehaviour {
         }
     }
 
-    [Networked]
+    [NetworkedFunction]
     void Test(string message, int cpt)
     {
         Debug.Log(message + cpt);
