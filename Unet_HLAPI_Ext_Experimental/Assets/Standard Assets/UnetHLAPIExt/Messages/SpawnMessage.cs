@@ -30,15 +30,17 @@ namespace BC_Solution.UnetNetwork
         public ushort m_gameObjectAssetId;
         public ushort m_netId;
         public bool m_hasAuthority;
+        public bool m_isLocalConnection;
         public string m_sceneName;
 
         public SpawnMessage() { }
 
-        public SpawnMessage(ushort assetId, ushort netId, bool hasAuthority, string sceneName)
+        public SpawnMessage(ushort assetId, ushort netId, bool hasAuthority,bool isLocalConnection, string sceneName)
         {
             m_gameObjectAssetId = assetId;
             m_netId = netId;
             m_hasAuthority = hasAuthority;
+            m_isLocalConnection = isLocalConnection;
             m_sceneName = sceneName;
         }
 
@@ -48,6 +50,7 @@ namespace BC_Solution.UnetNetwork
             writer.Write(m_gameObjectAssetId);
             writer.Write(m_netId);
             writer.Write(m_hasAuthority);
+            writer.Write(m_isLocalConnection);
             writer.Write(m_sceneName);
         }
 
@@ -57,6 +60,7 @@ namespace BC_Solution.UnetNetwork
             m_gameObjectAssetId = reader.ReadUInt16();
             m_netId = reader.ReadUInt16();
             m_hasAuthority = reader.ReadBoolean();
+            m_isLocalConnection = reader.ReadBoolean();
             m_sceneName = reader.ReadString();
         }
     }

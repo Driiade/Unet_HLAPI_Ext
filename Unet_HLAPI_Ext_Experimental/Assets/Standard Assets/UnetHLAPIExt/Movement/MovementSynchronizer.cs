@@ -28,7 +28,7 @@ using UnityEngine.Networking;
 
 namespace BC_Solution.UnetNetwork
 {
-    public abstract class MovementSynchronizer : MonoBehaviour
+    public abstract class MovementSynchronizer : NetworkingBehaviour
     {
         public enum SYNCHRONISATION_MODE { NONE, X, Y, Z, XY, XZ, YZ, XYZ, CALCUL };
         public enum SNAP_MODE { NONE, RESET, CALCUL};
@@ -40,11 +40,6 @@ namespace BC_Solution.UnetNetwork
         {
             public float m_relativeTime = -1;
         }
-
-        [SerializeField]
-        [Tooltip("If this is != null, no one can set the velocity except who has authority on the object")]
-        protected NetworkingIdentity networkingIdentity;
-
 
         [SerializeField]
         int maxBufferSize = 60;
@@ -99,7 +94,7 @@ namespace BC_Solution.UnetNetwork
 
         public virtual bool NeedToUpdate()
         {
-            return isActive && enabled;
+            return isActive;
         }
 
 
@@ -112,9 +107,12 @@ namespace BC_Solution.UnetNetwork
         public bool m_isExtrapolating { get; private set; }
         public bool m_isInterpolating { get; private set; }
 
-        protected void Update()
+        /// <summary>
+        /// Called by NEtworkingMovementSyncronization
+        /// </summary>
+        protected internal void ManualUpdate()
         {
-           if (currentStatesIndex < 0 || networkingIdentity.hasAuthority)
+           if (currentStatesIndex < 0 || networkingIdentity.isLocalConnection)
                 return;
 
             State lhs;

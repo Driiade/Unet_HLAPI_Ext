@@ -214,6 +214,7 @@ namespace BC_Solution.UnetNetwork
         {
             base.Awake();
             Application.runInBackground = true; //obligation for multiplayer games
+            NetworkTransport.Init();
 
             NetworkingConnection.OnConnectionDisconnect += InternalOnConnectionDisconnect;
             NetworkingConnection.OnConnectionConnect += InternalOnConnectionConnect;
@@ -221,8 +222,6 @@ namespace BC_Solution.UnetNetwork
 
         void Start()
         {
-            NetworkTransport.Init();
-
             if (connectOnStart)
                 StartHost();
         }
@@ -271,32 +270,41 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         /// <param name="matchInfo">if null, will not use relay but will connect locally</param>
         /// <returns></returns>
-        public NetworkingConnection StartHost(MatchInfo matchInfo)
+        public void StartHost(MatchInfo matchInfo, out NetworkingServer server, out NetworkingConnection conn)
         {
-            NetworkingServer server = StartMainServer(matchInfo);
+            server = StartMainServer(matchInfo);
             server.m_isHost = true;
             //StartLocalClient();
-            NetworkingConnection conn = StartConnection(matchInfo);
+            conn = StartConnection(matchInfo);
             conn.m_server = server;
             conn.m_isHost = true;
-
-            return conn;
         }
 
         /// <summary>
         /// Start Server And Client
         /// </summary>
         /// <returns></returns>
-        public NetworkingConnection StartHost()
+        public void StartHost()
         {
-            NetworkingServer server = StartMainServer();
+            NetworkingServer server;
+            NetworkingConnection connection;
+
+            StartHost(out server, out connection);
+        }
+
+
+        /// <summary>
+        /// Start Server And Client
+        /// </summary>
+        /// <returns></returns>
+        public void StartHost(out NetworkingServer server, out NetworkingConnection conn)
+        {
+            server = StartMainServer();
             server.m_isHost = true;
             //StartLocalClient();
-            NetworkingConnection conn = StartConnection();
+            conn = StartConnection();
             conn.m_server = server;
             conn.m_isHost = true;
-
-            return conn;
         }
 
 
@@ -341,9 +349,6 @@ namespace BC_Solution.UnetNetwork
         /// <returns></returns>
         public NetworkingConnection StartConnection(string serverAdress, int serverPort)
         {
-            Debug.Log(serverAdress);
-            Debug.Log(serverPort);
-
             if (connections.Count > 0)
                 StopAllConnections();
 
@@ -400,7 +405,17 @@ namespace BC_Solution.UnetNetwork
             return mainServer;
         }
 
+        /// <summary>
+        /// Start a main server with server adress and port of the NetworkingSystem
+        /// </summary>
+        /// <returns></returns>
         public NetworkingServer StartMainServer()
+        {
+           return StartMainServer(this.serverAdress, this.serverPort);
+        }
+
+
+        public NetworkingServer StartMainServer(string serverAdress, int serverPort)
         {
             //StopAllServers();
             if (mainServer != null)
@@ -431,7 +446,6 @@ namespace BC_Solution.UnetNetwork
             mainServer = server;
             return server;
         }
-
 
         public void ConfigureConnection(NetworkingConnection connection)
         {

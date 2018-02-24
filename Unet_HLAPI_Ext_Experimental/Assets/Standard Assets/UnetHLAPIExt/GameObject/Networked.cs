@@ -5,7 +5,7 @@ using System;
 
 namespace BC_Solution.UnetNetwork
 {
-    public sealed class Networked : Attribute
+    public sealed class NetworkedFunction : Attribute
     {
 
 

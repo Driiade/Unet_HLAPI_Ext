@@ -65,11 +65,10 @@ namespace BC_Solution.UnetNetwork
 #if UNITY_EDITOR
         [Space(10)]
         [SerializeField]
-         Vector3 precisionAfterCompression;
+        Vector3 precisionAfterCompression;
         [SerializeField]
         Vector3 returnedValueOnCurrentPosition;
 # endif
-
 
         public override void OnEndExtrapolation(State rhs)
         {
@@ -173,10 +172,52 @@ namespace BC_Solution.UnetNetwork
             ResetStatesBuffer();
         }
 
+        public void Teleport(Vector3 position)
+        {
+            LocalTeleport(position);
+
+            if (isServer)
+            {
+                foreach (NetworkingConnection conn in this.server.connections)
+                {
+                    if(conn != null && conn == this.connection)
+                        SendToConnection(conn,"RpcTeleport", NetworkingChannel.DefaultReliable, position);
+                }
+            }
+            else if (isClient)
+                SendToServer("CmdTeleport", NetworkingChannel.DefaultReliable, position);
+
+        }
+
+        [NetworkedFunction]
+        void CmdTeleport(Vector3 position)
+        {
+            LocalTeleport(position);
+
+            foreach (NetworkingConnection conn in this.server.connections)
+            {
+                if (conn != null && conn == this.connection)
+                    SendToConnection(conn, "RpcTeleport", NetworkingChannel.DefaultReliable, position);
+            }
+        }
+
+        [NetworkedFunction]
+        void RpcTeleport(Vector3 position)
+        {
+            if(!isServer)
+                LocalTeleport(position);
+        }
+
+        public void LocalTeleport(Vector3 position)
+        {
+            m_transform.position = position;
+            this.ResetStatesBuffer();
+        }
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            switch(compressionMode)
+            switch (compressionMode)
             {
                 case COMPRESS_MODE.USHORT:
                     returnedValueOnCurrentPosition.x = Math.Decompress(Math.CompressToShort(this.m_transform.position.x, minPositionValue.x, maxPositionValue.x, out precisionAfterCompression.x), minPositionValue.x, maxPositionValue.x);

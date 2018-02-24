@@ -32,7 +32,7 @@ namespace BC_Solution.UnetNetwork
     {
 
         public NetworkingSystem networkingSystem;
-        [SerializeField]
+
         public bool showGUI = true;
         [SerializeField]
         public int offsetX;
@@ -41,6 +41,11 @@ namespace BC_Solution.UnetNetwork
 
         // Runtime variable
         bool m_ShowServer;
+
+        public KeyCode startMainServerKeyCode = KeyCode.S;
+        public KeyCode startHostKeyCode = KeyCode.H;
+        public KeyCode startConnectionKeyCode = KeyCode.C;
+        public KeyCode stopKeyCode = KeyCode.X;
 
         void Update()
         {
@@ -51,37 +56,50 @@ namespace BC_Solution.UnetNetwork
             {
                 if (UnityEngine.Application.platform != RuntimePlatform.WebGLPlayer)
                 {
-                    if (Input.GetKeyDown(KeyCode.S))
+                    if (Input.GetKeyDown(startMainServerKeyCode))
                     {
                         networkingSystem.StartMainServer();
                     }
-                    if (Input.GetKeyDown(KeyCode.H))
+                    if (Input.GetKeyDown(startHostKeyCode))
                     {
                         networkingSystem.StartHost();
                     }
                 }
-                if (Input.GetKeyDown(KeyCode.C))
+                if (Input.GetKeyDown(startConnectionKeyCode))
                 {
                     networkingSystem.StartConnection();
                 }
             }
-            if (networkingSystem.MainServerIsActive())
+            else if (networkingSystem.MainServerIsActive())
             {
                 if (networkingSystem.connections.Count > 0)
                 {
-                    if (Input.GetKeyDown(KeyCode.X))
+                    if (Input.GetKeyDown(stopKeyCode))
                     {
                         networkingSystem.StopHost();
                     }
                 }
                 else
                 {
-                    if (Input.GetKeyDown(KeyCode.X))
+                    if (Input.GetKeyDown(stopKeyCode))
                     {
                         networkingSystem.StopAllServers();
                     }
                 }
             }
+            else if (networkingSystem.ConnectionIsActive())
+            {
+                if (Input.GetKeyDown(stopKeyCode))
+                {
+                    networkingSystem.StopAllConnections();
+                }
+            }
+        }
+
+        void OnValidate()
+        {
+            if (networkingSystem == null)
+                this.gameObject.GetComponent<NetworkingSystem>();
         }
 
         void OnGUI()

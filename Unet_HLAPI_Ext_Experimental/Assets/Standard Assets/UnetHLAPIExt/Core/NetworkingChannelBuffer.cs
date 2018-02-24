@@ -383,6 +383,11 @@ namespace BC_Solution.UnetNetwork
 #endif
                     return false;
                 }
+                else if (error == (int)NetworkError.WrongConnection)
+                {
+                    //Happen on disconnection
+                    return false;
+                }
 
                 // otherwise something unexpected happened. log the error, reset position and return.
                 if (LogFilter.logError) { Debug.LogError("SendToTransport failed. error:" + (NetworkError)error + " channel:" + channelId + " bytesToSend:" + packet.Position); }

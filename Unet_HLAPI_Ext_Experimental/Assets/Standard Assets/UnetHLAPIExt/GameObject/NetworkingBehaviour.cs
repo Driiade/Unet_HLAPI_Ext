@@ -41,6 +41,9 @@ namespace BC_Solution.UnetNetwork
         public bool isServer { get { return m_networkingIdentity.isServer; } }
         public bool isClient { get { return m_networkingIdentity.isClient; } }
         public bool hasAuthority { get { return m_networkingIdentity.hasAuthority; } }
+
+        public bool isLocalConnection { get { return m_networkingIdentity.isLocalConnection; } }
+
         public List<NetworkingConnection> serverConnectionListeners { get { return m_networkingIdentity.m_serverConnectionListeners; } }
 
         public NetworkingConnection serverConnection { get { return m_networkingIdentity.m_serverConnection; } }
@@ -147,6 +150,18 @@ namespace BC_Solution.UnetNetwork
                 {
                     writer.WriteBytesAndSize(((byte[])param), ((byte[])param).Length);
                 }
+                else if (param is bool)
+                {
+                    writer.Write((bool)param);
+                }
+                else if (param is Vector3)
+                {
+                    writer.Write((Vector3)param);
+                }
+                else if (param is Vector2)
+                {
+                    writer.Write((Vector2)param);
+                }
                 else
                     throw new System.Exception("Serialization is impossible : " + param.GetType());
             }
@@ -179,6 +194,18 @@ namespace BC_Solution.UnetNetwork
                 {
                     parameters[i] = reader.ReadBytesAndSize();
                 }
+                else if (info.ParameterType == typeof(bool))
+                {
+                    parameters[i] = reader.ReadBoolean();
+                }
+                else if (info.ParameterType == typeof(Vector3))
+                {
+                    parameters[i] = reader.ReadVector3();
+                }
+                else if (info.ParameterType == typeof(Vector2))
+                {
+                    parameters[i] = reader.ReadVector2();
+                }
                 else
                     throw new System.Exception("UnSerialization is impossible : " + info.ParameterType.GetType());
             }
@@ -193,10 +220,10 @@ namespace BC_Solution.UnetNetwork
             List<MethodInfo> networkedMethods = new List<MethodInfo>();
             for (int i = 0; i < allMethods.Length; i++)
             {
-                object[] attributes = allMethods[i].GetCustomAttributes(typeof(Networked),true);
+                object[] attributes = allMethods[i].GetCustomAttributes(typeof(NetworkedFunction),true);
                 for (int j = 0; j < attributes.Length; j++)
                 {
-                    if(attributes[j] is Networked)
+                    if(attributes[j] is NetworkedFunction)
                     {
                         networkedMethods.Add(allMethods[i]);
                     }
@@ -281,9 +308,9 @@ namespace BC_Solution.UnetNetwork
         }
 
         /// <summary>
-        /// Called when the gameObject is attached to a connection
+        /// Called when the isLocalConnection is checked
         /// </summary>
-        public virtual void OnStartConnection()
+        public virtual void OnStartLocalConnection()
         {
         }
 

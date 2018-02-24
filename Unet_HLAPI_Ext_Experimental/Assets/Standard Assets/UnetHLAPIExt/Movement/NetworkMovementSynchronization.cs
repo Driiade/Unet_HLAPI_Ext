@@ -48,7 +48,7 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         public float lastInterpolationUpdateTimer = -1;
 
-        bool m_sendEndingLastInterpolation = false;
+        bool m_sentEndInterpolation = false;
         NetworkingWriter writer = new NetworkingWriter();
 
         override protected void Awake()
@@ -60,10 +60,15 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
+        void Update()
+        {
+            foreach (MovementSynchronizer m in movementSynchronizers)
+                m.ManualUpdate();
+        }
 
         void FixedUpdate()
         {
-            if (!hasAuthority)
+            if (!isLocalConnection)
                 return;
 
             writer.SeekZero(true);
@@ -82,7 +87,7 @@ namespace BC_Solution.UnetNetwork
                         updateMask = updateMask | (1 << i);
                     }
                     else if //Had to synchronize the lastest position
-                        (Time.realtimeSinceStartup > this.lastInterpolationUpdateTimer && !this.m_sendEndingLastInterpolation)
+                        (Time.realtimeSinceStartup > this.lastInterpolationUpdateTimer && !this.m_sentEndInterpolation)
                     {
                         updateMask = updateMask | (1 << i);
                     }
@@ -110,19 +115,19 @@ namespace BC_Solution.UnetNetwork
                         if (movementSynchronizer.NeedToUpdate())    //Other client interpolating
                         {
                             this.lastInterpolationUpdateTimer = Time.realtimeSinceStartup + 1f / this.updateRate;
-                            this.m_sendEndingLastInterpolation = false;
+                            this.m_sentEndInterpolation = false;
                         }
                         else //Other clients extrapolating
                         {
                             this.lastInterpolationUpdateTimer = Time.realtimeSinceStartup + 1f / this.updateRate; //It's like an interpolation
-                            this.m_sendEndingLastInterpolation = true;
+                            this.m_sentEndInterpolation = true;
                         }
 
                         movementSynchronizer.GetCurrentState(writer);
                     }
                 }
 
-                SendMovementsInformations(writer.ToArray(), m_sendEndingLastInterpolation);
+                SendMovementsInformations(writer.ToArray(), m_sentEndInterpolation);
             }
         }
 
@@ -184,7 +189,7 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        [Networked]
+        [NetworkedFunction]
         void RpcGetMovementSyncInformations(byte[] info)
         {
             if (hasAuthority || isServer)
@@ -215,20 +220,20 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        [Networked]
+        [NetworkedFunction]
         void RpcGetMovementInformations(int timestamp, byte[] info)
         {
             if (hasAuthority || isServer)
                 return;
 
-            LocalGetMovementInformations(timestamp, info);
+            LocalGetMovementInformations(timestamp, info, this.connection);
         }
 
-        [Networked]
+        [NetworkedFunction]
         void CmdSendMovementInformations(int timeStamp, byte[] info)
         {
             byte error;
-            LocalGetMovementInformations(timeStamp, info);
+            LocalGetMovementInformations(timeStamp, info, this.serverConnection);
 
             timeStamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.serverConnection.m_hostId, this.serverConnection.m_connectionId, timeStamp, out error);
             SendToAllConnections("RpcGetMovementInformations", NetworkingChannel.DefaultUnreliable, timeStamp, info);
@@ -239,13 +244,13 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         /// <param name="timeStam"></param>
         /// <param name="info"></param>
-        void LocalGetMovementInformations(int timestamp, byte[] info)
+        void LocalGetMovementInformations(int timestamp, byte[] info, NetworkingConnection conn)
         {
             NetworkingReader reader = new NetworkingReader(info);
 
             float relativeTime = 0;
             byte error;
-            relativeTime = Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timestamp, out error) / 1000f;
+            relativeTime = Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(conn.m_hostId, conn.m_connectionId, timestamp, out error) / 1000f;
 
             lagAverage = 0.99f * lagAverage + 0.01f * (Time.realtimeSinceStartup - relativeTime);
 

@@ -37,14 +37,18 @@ namespace BC_Solution.UnetNetwork
 
         public static List<NetworkingIdentity> s_networkingIdentities = new List<NetworkingIdentity>();
 
-
         // configuration
         [SerializeField] internal TYPE m_type;
+        public TYPE type
+        {
+            get { return m_type; }
+        }
+
         [SerializeField] internal ushort m_sceneId;
         [SerializeField] internal ushort m_assetId;
         [SerializeField] bool m_ServerOnly;
         [SerializeField] bool m_localPlayerAuthority;
-
+        [SerializeField] bool autoSetNetworkBehaviourNetId = true;
         // runtime data
         bool m_hasAuthority;
 
@@ -65,6 +69,7 @@ namespace BC_Solution.UnetNetwork
 
         internal bool m_isClient;
         internal bool m_isServer;
+        bool m_isLocalConnection;
 
         // properties
         public bool isClient { get { return m_isClient; } }
@@ -84,10 +89,23 @@ namespace BC_Solution.UnetNetwork
                 }
             } }
 
+        public bool isLocalConnection { get { return m_isLocalConnection; }
+            set
+            {
+                if (value == m_isLocalConnection)
+                    return;
+
+                m_isLocalConnection = value;
+
+                if (m_isLocalConnection)
+                    OnStartLocalConnection();
+            }
+        }
+
         public ushort netId { get { return m_netId; } }
         public ushort sceneId { get { return m_sceneId; } }
         public ushort assetID { get { return m_assetId; } }
-        public NetworkingConnection connection { get { return m_connection; } }
+        public NetworkingConnection connection {get { return m_connection; } }
 
         public bool serverOnly { get { return m_ServerOnly; } set { m_ServerOnly = value; } }
         public bool localPlayerAuthority { get { return m_localPlayerAuthority; } set { m_localPlayerAuthority = value; } }
@@ -98,6 +116,7 @@ namespace BC_Solution.UnetNetwork
             s_networkingIdentities.Add(this);
         }
 
+
         private void OnDestroy()
         {
             s_networkingIdentities.Remove(this);
@@ -106,8 +125,16 @@ namespace BC_Solution.UnetNetwork
 
         internal void HandleMethodCall(NetworkingReader reader)
         {
-            byte networkBehaviourIndex = reader.ReadByte();
-            m_networkingBehaviours[networkBehaviourIndex].HandleMethodCall(reader);
+            byte networkBehaviourNetId = reader.ReadByte();
+
+            foreach (NetworkingBehaviour n in m_networkingBehaviours)
+            {
+                if (n.m_netId == networkBehaviourNetId)
+                {
+                    n.HandleMethodCall(reader);
+                    return;
+                }
+            }
         }
 
 
@@ -131,11 +158,13 @@ namespace BC_Solution.UnetNetwork
 
             m_networkingBehaviours = GetComponentsInChildren<NetworkingBehaviour>();
 
-            for (int i = 0; i < m_networkingBehaviours.Length; i++)
+            if (autoSetNetworkBehaviourNetId)
             {
-                m_networkingBehaviours[i].m_netId = (byte)i;
+                for (int i = 0; i < m_networkingBehaviours.Length; i++)
+                {
+                    m_networkingBehaviours[i].m_netId = (byte)i;
+                }
             }
-
         }
 #endif
 
@@ -145,13 +174,13 @@ namespace BC_Solution.UnetNetwork
                 b.OnStartServer(networkingServer);
         }
 
-        internal void OnStartConnection()
+        internal void OnStartLocalConnection()
         {
             foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
             {
                 try
                 {
-                    b.OnStartConnection();
+                    b.OnStartLocalConnection();
                 }
                 catch (System.Exception e)
                 {
@@ -679,6 +708,7 @@ namespace BC_Solution.UnetNetwork
 
         internal void Reset()
         {
+            m_isLocalConnection = false;
             m_isServer = false;
             m_isClient = false;
             m_hasAuthority = false;

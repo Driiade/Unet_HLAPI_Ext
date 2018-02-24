@@ -134,7 +134,7 @@ namespace BC_Solution.UnetNetwork
                         GetVector2(positionSynchronizationMode, ref val, Math.CatmullRomInterpolation(((Rigidbody2DPositionState)statesBuffer[lhsIndex + 1]).m_position, ((Rigidbody2DPositionState)lhs).m_position, ((Rigidbody2DPositionState)rhs).m_position, ((Rigidbody2DPositionState)statesBuffer[lhsIndex - 2]).m_position,
                                                                          statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, statesBuffer[lhsIndex - 2].m_relativeTime, (1f - t) * lhs.m_relativeTime + t * rhs.m_relativeTime));
 #if DEVELOPMENT
-                            Math.DrawCatmullRomInterpolation(((RigidbodyPositionState)statesBuffer[lhsIndex + 1]).m_position, ((RigidbodyPositionState)lhs).m_position, ((RigidbodyPositionState)rhs).m_position, ((RigidbodyPositionState)statesBuffer[lhsIndex - 2]).m_position,
+                            Math.DrawCatmullRomInterpolation(((Rigidbody2DPositionState)statesBuffer[lhsIndex + 1]).m_position, ((Rigidbody2DPositionState)lhs).m_position, ((Rigidbody2DPositionState)rhs).m_position, ((Rigidbody2DPositionState)statesBuffer[lhsIndex - 2]).m_position,
                                                                              statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, statesBuffer[lhsIndex - 2].m_relativeTime);
 #endif
                         break;
