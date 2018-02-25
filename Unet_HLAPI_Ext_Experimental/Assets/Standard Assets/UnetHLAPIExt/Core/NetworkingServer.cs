@@ -66,7 +66,7 @@ namespace BC_Solution.UnetNetwork {
 
         public string m_serverAddress { get; private set; }
         public int m_serverPort { get; private set; }
-        public string m_serverName { get; private set; }
+        public string m_serverId { get; private set; }
 
         //bool m_Initialized = false;
 
@@ -169,14 +169,14 @@ namespace BC_Solution.UnetNetwork {
             if (LogFilter.logDebug) { Debug.Log("NetworkingServer initialize."); }
         } */ 
 
-        public bool Configure(ConnectionConfig config, int maxConnections,  bool isMainServer, string serverName = "Default")
+        public bool Configure(ConnectionConfig config, int maxConnections,  bool isMainServer, string serverName = "MainServer")
         {
             return Configure(new HostTopology(config, maxConnections), isMainServer, serverName);
         }
 
-        public bool Configure(HostTopology topology, bool isMainServer, string serverName = "Default")
+        public bool Configure(HostTopology topology, bool isMainServer, string serverName = "MainServer")
         {
-            this.m_serverName = serverName;
+            this.m_serverId = serverName;
             this.m_isMainServer = isMainServer;
 
             m_MsgBuffer = new byte[NetworkMessage.MaxMessageSize];

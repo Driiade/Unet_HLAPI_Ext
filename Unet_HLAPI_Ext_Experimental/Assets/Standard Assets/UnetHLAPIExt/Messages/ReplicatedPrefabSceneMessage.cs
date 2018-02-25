@@ -9,6 +9,7 @@ namespace BC_Solution.UnetNetwork
         public ushort m_sceneId;
         public ushort m_assetId;
         public string m_sceneName;
+        public string m_serverId;
 
         public ReplicatedPrefabSceneMessage()
         {
@@ -17,11 +18,12 @@ namespace BC_Solution.UnetNetwork
             m_sceneName = "";
         }
 
-        public ReplicatedPrefabSceneMessage(ushort assetId, ushort sceneId, string sceneName)
+        public ReplicatedPrefabSceneMessage(ushort assetId, ushort sceneId, string sceneName, string serverId)
         {
             m_assetId = assetId;
             m_sceneId = sceneId;
             m_sceneName = sceneName;
+            m_serverId = serverId;
         }
 
         public override void Deserialize(NetworkingReader reader)
@@ -30,6 +32,7 @@ namespace BC_Solution.UnetNetwork
             m_assetId = reader.ReadUInt16();
             m_sceneId = reader.ReadUInt16();
             m_sceneName = reader.ReadString();
+            m_serverId = reader.ReadString();
         }
 
         public override void Serialize(NetworkingWriter writer)
@@ -38,6 +41,7 @@ namespace BC_Solution.UnetNetwork
             writer.Write(m_assetId);
             writer.Write(m_sceneId);
             writer.Write(m_sceneName);
+            writer.Write(m_serverId);
         }
     }
 }

@@ -336,18 +336,28 @@ namespace BC_Solution.UnetNetwork
                 }
             }
         }
-
-        void OnSceneLoaded(Scene s, LoadSceneMode loadSceneMode)
+        
+        /// <summary>
+        /// Server has to be the first to load a new scene, however strange behaviour will bagin
+        /// </summary>
+        /// <param name="scene"></param>
+        /// <param name="loadSceneMode"></param>
+        void OnSceneLoaded(Scene scene, LoadSceneMode loadSceneMode)
         {
             if (NetworkingSystem.Instance)
             {
                 if (NetworkingSystem.Instance.mainServer != null) //Server assign scene object ids
                 {
-                    ServerAssignSceneObjectNetIds(NetworkingSystem.Instance.mainServer, s);
+                    ServerAssignSceneObjectNetIds(NetworkingSystem.Instance.mainServer, scene);
+                }
+
+                foreach(NetworkingServer server in NetworkingSystem.Instance.additionnalServers)
+                {
+                    ServerAssignSceneObjectNetIds(server, scene);
                 }
 
                 //Connections ask scene object net ids
-                GameObject[] gameObjects = s.GetRootGameObjects();
+                GameObject[] gameObjects = scene.GetRootGameObjects();
                 List<NetworkingIdentity> netIdentities = new List<NetworkingIdentity>();
                 foreach (GameObject go in gameObjects)
                 {
@@ -358,17 +368,17 @@ namespace BC_Solution.UnetNetwork
                 {
                     if (!conn.m_isHost) //not host
                     {
-                        conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(s.name));
+                        conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(scene.name));
                         foreach (NetworkingIdentity netIdentity in netIdentities)
                         {
                             if (netIdentity.m_type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB)
                             {
-                                conn.Send(NetworkingMessageType.ReplicatedPrefabScene, new ReplicatedPrefabSceneMessage(netIdentity.assetID, netIdentity.sceneId, s.name), NetworkingChannel.DefaultReliableSequenced);
+                                conn.Send(NetworkingMessageType.ReplicatedPrefabScene, new ReplicatedPrefabSceneMessage(netIdentity.assetID, netIdentity.sceneId, scene.name, netIdentity.m_serverId), NetworkingChannel.DefaultReliableSequenced);
                                 netIdentity.OnServerSyncNetId(conn);
                             }
                         }
                     }
-                    else if (conn.m_server != null && conn.m_server == NetworkingSystem.Instance.mainServer)
+                    else if (conn.m_server != null)
                     {
                         NetworkingConnection trueServerConnection = null;
                         foreach(NetworkingConnection c in conn.m_server.connections)
@@ -382,7 +392,7 @@ namespace BC_Solution.UnetNetwork
 
                         foreach (NetworkingIdentity netIdentity in netIdentities)
                         {
-                            if (netIdentity.m_type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB || netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
+                            if ((netIdentity.m_type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB || netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT) && netIdentity.m_serverId == conn.m_server.m_serverId)
                             {
                                 netIdentity.m_serverConnection = trueServerConnection;
                                 netIdentity.isLocalConnection = true;
@@ -417,7 +427,7 @@ namespace BC_Solution.UnetNetwork
                 {
                     if (i.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
                     {
-                        if (netMsg.m_connection.m_server.m_isMainServer)
+                        if (netMsg.m_connection.m_server.m_serverId == i.m_serverId)
                         {
                             netMsg.m_connection.Send(NetworkingMessageType.SceneObjectNetId, new SceneObjectNetIdMessage(i.netId, i.sceneId), NetworkingChannel.DefaultReliableSequenced);
                             i.OnServerSyncNetId(netMsg.m_connection);
@@ -445,12 +455,10 @@ namespace BC_Solution.UnetNetwork
 
         void OnServerReplicatePrefabScene(NetworkingMessage netMsg)
         {
-            if (!netMsg.m_connection.m_server.m_isMainServer)    //The server is not in charge of this behaviour
-            {
-                return;
-            }
-
             ReplicatedPrefabSceneMessage replicatedMessage = netMsg.As<ReplicatedPrefabSceneMessage>();
+
+            if (netMsg.m_connection.m_server.m_serverId != replicatedMessage.m_serverId)
+                return;
 
             if (!string.IsNullOrEmpty(replicatedMessage.m_sceneName))
             {
@@ -473,6 +481,8 @@ namespace BC_Solution.UnetNetwork
             ServerAssignNetId(netMsg.m_connection.m_server, networkingIdentity);
             networkingIdentity.hasAuthority = true;
             networkingIdentity.m_serverConnection = netMsg.m_connection;
+            networkingIdentity.m_serverId = ""; //No information about this (to be reliable with connection behaviour
+            
 
             netMsg.m_connection.Send(NetworkingMessageType.SceneObjectNetId, new SceneObjectNetIdMessage(networkingIdentity.m_netId, replicatedMessage.m_sceneId), NetworkingChannel.DefaultReliableSequenced); //Just send the assigned netId for the connection which ask replication
             networkingIdentity.OnServerSyncNetId(netMsg.m_connection);
@@ -512,6 +522,7 @@ namespace BC_Solution.UnetNetwork
                 netIdentity = go.GetComponent<NetworkingIdentity>();
                 netIdentity.m_netId = spawnMessage.m_netId;
                 netIdentity.m_type = NetworkingIdentity.TYPE.SPAWNED;
+                netIdentity.m_serverId = ""; //No information about this
             }
             else
             {
@@ -584,7 +595,7 @@ namespace BC_Solution.UnetNetwork
             for (int i = 0; i < netIdentities.Count; i++)
             {
                 NetworkingIdentity netIdentity = netIdentities[i];
-                if (netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT || netIdentity.m_type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB)
+                if ((netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT || netIdentity.m_type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB) && netIdentity.m_serverId == server.m_serverId)
                 {
                     ServerAssignNetId(server, netIdentity);
                     netIdentity.hasAuthority = true;
@@ -600,7 +611,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        void ServerAssignNetId(NetworkingServer server, NetworkingIdentity neworkingtIdentity)
+        void ServerAssignNetId(NetworkingServer server, NetworkingIdentity networkingIdentity)
         {
             ushort currentNetId;
             m_serverCurrentNetId.TryGetValue(server, out currentNetId);
@@ -613,13 +624,12 @@ namespace BC_Solution.UnetNetwork
             currentNetId++;
             m_serverCurrentNetId[server] = currentNetId;
 
-            neworkingtIdentity.m_netId = currentNetId;
-            neworkingtIdentity.m_isServer = true;
-            neworkingtIdentity.m_server = server;
-            AddNetworkingIdentity(neworkingtIdentity, server, m_serverNetworkedObjects);
+            networkingIdentity.m_netId = currentNetId;
+            networkingIdentity.m_isServer = true;
+            networkingIdentity.m_server = server;
+
+            AddNetworkingIdentity(networkingIdentity, server, m_serverNetworkedObjects);
         }
-
-
 
 
         void OnServerConnect(NetworkingServer server, NetworkingMessage netMsg)
@@ -674,8 +684,8 @@ namespace BC_Solution.UnetNetwork
                     conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(scene.name));
                     foreach (NetworkingIdentity netIdentity in netIdentities)
                     {
-                        if(netIdentity.m_type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB)
-                            conn.Send(NetworkingMessageType.ReplicatedPrefabScene, new ReplicatedPrefabSceneMessage(netIdentity.assetID, netIdentity.sceneId, scene.name));
+                        if(netIdentity.m_type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB && netIdentity.m_connection == null)
+                            conn.Send(NetworkingMessageType.ReplicatedPrefabScene, new ReplicatedPrefabSceneMessage(netIdentity.assetID, netIdentity.sceneId, scene.name, netIdentity.m_serverId));
                     }
                 }
                 else if (conn.m_server != null && conn.m_server == NetworkingSystem.Instance.mainServer)
@@ -693,7 +703,7 @@ namespace BC_Solution.UnetNetwork
 
                     foreach (NetworkingIdentity netIdentity in netIdentities)
                     {
-                        if (netIdentity.m_type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB || netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT)
+                        if ((netIdentity.m_type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB || netIdentity.m_type == NetworkingIdentity.TYPE.SINGLE_SCENE_OBJECT) && conn.m_server.m_serverId == netIdentity.m_serverId)
                         {
                             netIdentity.m_connection = trueConnection;
                             netIdentity.m_serverConnection = conn;

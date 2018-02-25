@@ -1071,6 +1071,11 @@ Prefab:
       propertyPath: sendingRate
       value: 5
       objectReference: {fileID: 0}
+    - target: {fileID: 114188726879029900, guid: 62a041a6082f59648bf1f43dbe038b08,
+        type: 2}
+      propertyPath: m_serverId
+      value: MainServerss
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
   m_IsPrefabParent: 0
@@ -1479,6 +1484,10 @@ MonoBehaviour:
   showGUI: 1
   offsetX: 0
   offsetY: 0
+  startMainServerKeyCode: 115
+  startHostKeyCode: 104
+  startConnectionKeyCode: 99
+  stopKeyCode: 120
 --- !u!114 &1807647485
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -46,15 +46,17 @@ namespace BC_Solution.UnetNetwork
 
         [SerializeField] internal ushort m_sceneId;
         [SerializeField] internal ushort m_assetId;
+        [SerializeField, Tooltip("The server that manages this networkingIdentity on scene, only used for SINGLE_SCENE_OBJECT and REPLICATED PREFAB_SCENE_PREFAB")] internal string m_serverId = "MainServer";
         [SerializeField] bool m_ServerOnly;
         [SerializeField] bool m_localPlayerAuthority;
         [SerializeField] bool autoSetNetworkBehaviourNetId = true;
         // runtime data
         bool m_hasAuthority;
 
+
         internal ushort m_netId; //Gain space with ushort
 
-
+        [Space(20)]
         [SerializeField]
         NetworkingBehaviour[] m_networkingBehaviours;
 
