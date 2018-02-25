@@ -224,17 +224,17 @@ namespace BC_Solution.UnetNetwork
             if (!synchronizeAngularVelocity)
             {
                 byte direction = networkReader.ReadByte();
-                if (place != -1 && place < currentStatesIndex - 1)
+                if (place != -1 && place < m_currentStatesIndex - 1)
                 {
-                    if (((RigidbodyState)statesBuffer[place]).m_rotation > ((RigidbodyState)statesBuffer[place + 1]).m_rotation && ((direction & 1 << 1) != 0)
-                        || ((RigidbodyState)statesBuffer[place]).m_rotation < ((RigidbodyState)statesBuffer[place + 1]).m_rotation && ((direction & 1 << 1) == 0))
+                    if (((RigidbodyState)m_statesBuffer[place]).m_rotation > ((RigidbodyState)m_statesBuffer[place + 1]).m_rotation && ((direction & 1 << 1) != 0)
+                        || ((RigidbodyState)m_statesBuffer[place]).m_rotation < ((RigidbodyState)m_statesBuffer[place + 1]).m_rotation && ((direction & 1 << 1) == 0))
                     {
-                        newState.m_angularVelocity = (((RigidbodyState)statesBuffer[place]).m_rotation - ((RigidbodyState)statesBuffer[place + 1]).m_rotation) / (statesBuffer[place].m_relativeTime - statesBuffer[place + 1].m_relativeTime);
+                        newState.m_angularVelocity = (((RigidbodyState)m_statesBuffer[place]).m_rotation - ((RigidbodyState)m_statesBuffer[place + 1]).m_rotation) / (m_statesBuffer[place].m_relativeTime - m_statesBuffer[place + 1].m_relativeTime);
                     }
-                    else if (((RigidbodyState)statesBuffer[place]).m_rotation > ((RigidbodyState)statesBuffer[place + 1]).m_rotation)
-                        newState.m_angularVelocity = (((RigidbodyState)statesBuffer[place]).m_rotation - (((RigidbodyState)statesBuffer[place + 1]).m_rotation + 360)) / (statesBuffer[place].m_relativeTime - statesBuffer[place + 1].m_relativeTime);
+                    else if (((RigidbodyState)m_statesBuffer[place]).m_rotation > ((RigidbodyState)m_statesBuffer[place + 1]).m_rotation)
+                        newState.m_angularVelocity = (((RigidbodyState)m_statesBuffer[place]).m_rotation - (((RigidbodyState)m_statesBuffer[place + 1]).m_rotation + 360)) / (m_statesBuffer[place].m_relativeTime - m_statesBuffer[place + 1].m_relativeTime);
                     else
-                        newState.m_angularVelocity = (((RigidbodyState)statesBuffer[place]).m_rotation - (((RigidbodyState)statesBuffer[place + 1]).m_rotation - 360)) / (statesBuffer[place].m_relativeTime - statesBuffer[place + 1].m_relativeTime);
+                        newState.m_angularVelocity = (((RigidbodyState)m_statesBuffer[place]).m_rotation - (((RigidbodyState)m_statesBuffer[place + 1]).m_rotation - 360)) / (m_statesBuffer[place].m_relativeTime - m_statesBuffer[place + 1].m_relativeTime);
                 }
             }
         }

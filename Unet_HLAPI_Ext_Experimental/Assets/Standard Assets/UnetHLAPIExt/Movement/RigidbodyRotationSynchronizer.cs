@@ -170,11 +170,11 @@ namespace BC_Solution.UnetNetwork
                 rotationSign = networkReader.ReadByte();
 
             //If calcul are needed for velocity
-            if (place != -1 && place < currentStatesIndex - 1)
+            if (place != -1 && place < m_currentStatesIndex - 1)
             {
                 if (angularVelocitySynchronizationMode == SYNCHRONISATION_MODE.CALCUL)
                 {
-                    Quaternion diffRotation = (Quaternion.Euler(((RigidbodyState)statesBuffer[place]).m_rotation) * Quaternion.Inverse(Quaternion.Euler(((RigidbodyState)statesBuffer[place + 1]).m_rotation)));
+                    Quaternion diffRotation = (Quaternion.Euler(((RigidbodyState)m_statesBuffer[place]).m_rotation) * Quaternion.Inverse(Quaternion.Euler(((RigidbodyState)m_statesBuffer[place + 1]).m_rotation)));
                     float rotationAngle;
                     Vector3 rotationAxis;
                     diffRotation.ToAngleAxis(out rotationAngle, out rotationAxis);
@@ -183,7 +183,7 @@ namespace BC_Solution.UnetNetwork
                     rotationAxis.y = Mathf.Abs(rotationAxis.y) * ((1 << 1) & rotationSign) != 0 ? 1 : -1;
                     rotationAxis.z = Mathf.Abs(rotationAxis.z) * ((1 << 2) & rotationSign) != 0 ? 1 : -1;
 
-                    newState.m_angularVelocity = rotationAxis * rotationAngle * Mathf.Deg2Rad / (statesBuffer[place].m_relativeTime - statesBuffer[place + 1].m_relativeTime);
+                    newState.m_angularVelocity = rotationAxis * rotationAngle * Mathf.Deg2Rad / (m_statesBuffer[place].m_relativeTime - m_statesBuffer[place + 1].m_relativeTime);
                 }
             }
         }

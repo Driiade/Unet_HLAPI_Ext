@@ -93,11 +93,11 @@ namespace BC_Solution.UnetNetwork
 
         public override void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation)
         {
-            extrapolationAngularVelocity = (Quaternion.Euler(((TransformRotationState)statesBuffer[0]).m_rotation) * Quaternion.Inverse(Quaternion.Euler(((TransformRotationState)statesBuffer[1]).m_rotation)));
+            extrapolationAngularVelocity = (Quaternion.Euler(((TransformRotationState)m_statesBuffer[0]).m_rotation) * Quaternion.Inverse(Quaternion.Euler(((TransformRotationState)m_statesBuffer[1]).m_rotation)));
             Vector3 axis;
             float angle;
             extrapolationAngularVelocity.ToAngleAxis(out angle, out axis);
-            angle /= ((statesBuffer[0].m_relativeTime - statesBuffer[1].m_relativeTime));
+            angle /= ((m_statesBuffer[0].m_relativeTime - m_statesBuffer[1].m_relativeTime));
             extrapolationAngularVelocity = Quaternion.AngleAxis(angle, axis);
         }
 

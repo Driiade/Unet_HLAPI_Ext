@@ -87,7 +87,7 @@ namespace BC_Solution.UnetNetwork
         {
             Vector3 acceleration = Vector3.zero;
 
-             acceleration = (((RigidbodyPositionState)extrapolatingState).m_velocity - ((RigidbodyPositionState)statesBuffer[1]).m_velocity) / ((extrapolatingState.m_relativeTime - statesBuffer[1].m_relativeTime));
+             acceleration = (((RigidbodyPositionState)extrapolatingState).m_velocity - ((RigidbodyPositionState)m_statesBuffer[1]).m_velocity) / ((extrapolatingState.m_relativeTime - m_statesBuffer[1].m_relativeTime));
              acceleration += this.m_rigidbody.useGravity ? (Physics.gravity) * timeSinceInterpolation : Vector3.zero;
       
             this.m_rigidbody.velocity = ((RigidbodyPositionState)extrapolatingState).m_velocity + acceleration*timeSinceInterpolation;
@@ -95,8 +95,8 @@ namespace BC_Solution.UnetNetwork
 
         public override void OnEndExtrapolation(State rhs)
         {
-            this.m_rigidbody.MovePosition(Vector3.Lerp(this.m_rigidbody.position, ((RigidbodyPositionState)statesBuffer[0]).m_position, Time.deltaTime / interpolationErrorTime));
-            this.m_rigidbody.velocity = Vector3.Lerp(this.m_rigidbody.velocity, ((RigidbodyPositionState)statesBuffer[0]).m_velocity, Time.deltaTime / interpolationErrorTime);
+            this.m_rigidbody.MovePosition(Vector3.Lerp(this.m_rigidbody.position, ((RigidbodyPositionState)m_statesBuffer[0]).m_position, Time.deltaTime / interpolationErrorTime));
+            this.m_rigidbody.velocity = Vector3.Lerp(this.m_rigidbody.velocity, ((RigidbodyPositionState)m_statesBuffer[0]).m_velocity, Time.deltaTime / interpolationErrorTime);
         }
 
         public override void OnErrorCorrection()
@@ -128,8 +128,8 @@ namespace BC_Solution.UnetNetwork
                     case INTERPOLATION_MODE.LINEAR:
                         GetVector3(positionSynchronizationMode, ref val, Vector3.Lerp(((RigidbodyPositionState)lhs).m_position, ((RigidbodyPositionState)rhs).m_position, t)); break;
                     case INTERPOLATION_MODE.CATMULL_ROM:
-                        GetVector3(positionSynchronizationMode, ref val, Math.CatmullRomInterpolation(((RigidbodyPositionState)statesBuffer[lhsIndex + 1]).m_position, ((RigidbodyPositionState)lhs).m_position, ((RigidbodyPositionState)rhs).m_position, ((RigidbodyPositionState)statesBuffer[lhsIndex - 2]).m_position,
-                                                                         statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, statesBuffer[lhsIndex - 2].m_relativeTime, (1f - t) * lhs.m_relativeTime + t * rhs.m_relativeTime));
+                        GetVector3(positionSynchronizationMode, ref val, Math.CatmullRomInterpolation(((RigidbodyPositionState)m_statesBuffer[lhsIndex + 1]).m_position, ((RigidbodyPositionState)lhs).m_position, ((RigidbodyPositionState)rhs).m_position, ((RigidbodyPositionState)m_statesBuffer[lhsIndex - 2]).m_position,
+                                                                         m_statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, m_statesBuffer[lhsIndex - 2].m_relativeTime, (1f - t) * lhs.m_relativeTime + t * rhs.m_relativeTime));
 #if DEVELOPMENT
                         Math.DrawCatmullRomInterpolation(((RigidbodyPositionState)statesBuffer[lhsIndex + 1]).m_position, ((RigidbodyPositionState)lhs).m_position, ((RigidbodyPositionState)rhs).m_position, ((RigidbodyPositionState)statesBuffer[lhsIndex - 2]).m_position,
                                                                          statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, statesBuffer[lhsIndex - 2].m_relativeTime);
@@ -188,10 +188,10 @@ namespace BC_Solution.UnetNetwork
             int place = AddState(newState);
 
             //If calcul are needed for velocity
-            if (place != -1 && place < currentStatesIndex - 1)
+            if (place != -1 && place < m_currentStatesIndex - 1)
             {
                 if (velocitySynchronizationMode == SYNCHRONISATION_MODE.CALCUL)
-                    newState.m_velocity = (((RigidbodyPositionState)statesBuffer[place]).m_position - ((RigidbodyPositionState)statesBuffer[place + 1]).m_position) / ((statesBuffer[place].m_relativeTime - statesBuffer[place + 1].m_relativeTime));
+                    newState.m_velocity = (((RigidbodyPositionState)m_statesBuffer[place]).m_position - ((RigidbodyPositionState)m_statesBuffer[place + 1]).m_position) / ((m_statesBuffer[place].m_relativeTime - m_statesBuffer[place + 1].m_relativeTime));
 
             }
         }

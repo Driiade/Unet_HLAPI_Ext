@@ -43,13 +43,9 @@ namespace BC_Solution.UnetNetwork
         [Space(10)]
         public float lagAverage = 0.15f;
 
-        /// <summary>
-        /// Used when real Update is needed for interpolation
-        /// </summary>
-        public float lastInterpolationUpdateTimer = -1;
 
-        bool m_sentEndInterpolation = false;
-        NetworkingWriter writer = new NetworkingWriter();
+        NetworkingWriter m_reliableWriter = new NetworkingWriter();
+        NetworkingWriter m_unreliableWriter = new NetworkingWriter();
 
         override protected void Awake()
         {
@@ -71,9 +67,13 @@ namespace BC_Solution.UnetNetwork
             if (!isLocalConnection)
                 return;
 
-            writer.SeekZero(true);
+            m_reliableWriter.SeekZero(true);
+            m_unreliableWriter.SeekZero(true);
 
-            int updateMask = 0;
+            int reliableUpdateMask = 0;
+            int unreliableUpdateMask = 0;
+
+            bool hasToSendByReliableChannel = false; //Will be true if one component stop interpolation
 
             if (movementSynchronizers.Length != 0)
             {
@@ -82,52 +82,54 @@ namespace BC_Solution.UnetNetwork
                     MovementSynchronizer movementSynchronizer = movementSynchronizers[i];
 
                     if  //Real need of synchronization 
-                    (Time.realtimeSinceStartup > this.lastInterpolationUpdateTimer && movementSynchronizer.NeedToUpdate())
+                    (Time.realtimeSinceStartup > movementSynchronizer.m_lastInterpolationUpdateTimer && movementSynchronizer.NeedToUpdate())
                     {
-                        updateMask = updateMask | (1 << i);
+                        unreliableUpdateMask = unreliableUpdateMask | (1 << i);
+                        movementSynchronizer.m_lastInterpolationUpdateTimer = Time.realtimeSinceStartup + 1f / this.updateRate;
                     }
                     else if //Had to synchronize the lastest position
-                        (Time.realtimeSinceStartup > this.lastInterpolationUpdateTimer && !this.m_sentEndInterpolation)
+                        (Time.realtimeSinceStartup > movementSynchronizer.m_lastInterpolationUpdateTimer && !movementSynchronizer.m_sentEndInterpolation)
                     {
-                        updateMask = updateMask | (1 << i);
+                        reliableUpdateMask = reliableUpdateMask | (1 << i);
+                        movementSynchronizer.m_sentEndInterpolation = true;
+                        hasToSendByReliableChannel = true;
                     }
                 }
             }
 
-            if (updateMask != 0)
+            if (reliableUpdateMask != 0)
             {
-                if (movementSynchronizers.Length > 1)
+                WriteMovementSycnhronizers(movementSynchronizers, reliableUpdateMask, m_reliableWriter);
+                SendMovementsInformations(m_reliableWriter.ToArray(), hasToSendByReliableChannel);
+            }
+
+            if (unreliableUpdateMask != 0)
+            {
+                WriteMovementSycnhronizers(movementSynchronizers, unreliableUpdateMask, m_unreliableWriter);
+                SendMovementsInformations(m_unreliableWriter.ToArray(), hasToSendByReliableChannel);
+            }
+        }
+
+        void WriteMovementSycnhronizers(MovementSynchronizer[] movementSynchronizers, int updateMask, NetworkingWriter writer)
+        {
+            if (movementSynchronizers.Length > 1)
+            {
+                if (movementSynchronizers.Length <= 4)
+                    writer.Write((byte)updateMask);
+                else if (movementSynchronizers.Length <= 8)
+                    writer.Write((short)updateMask);
+                else
+                    writer.Write(updateMask);
+            }
+
+            for (int i = 0; i < movementSynchronizers.Length; i++)
+            {
+                MovementSynchronizer movementSynchronizer = movementSynchronizers[i];
+
+                if ((updateMask & (1 << i)) != 0)
                 {
-                    if (movementSynchronizers.Length <= 4)
-                        writer.Write((byte)updateMask);
-                    else if (movementSynchronizers.Length <= 8)
-                        writer.Write((short)updateMask);
-                    else
-                        writer.Write(updateMask);
+                    movementSynchronizer.GetCurrentState(writer);
                 }
-
-                for (int i = 0; i < movementSynchronizers.Length; i++)
-                {
-                    MovementSynchronizer movementSynchronizer = movementSynchronizers[i];
-
-                    if ((updateMask & (1 << i)) != 0)
-                    {
-                        if (movementSynchronizer.NeedToUpdate())    //Other client interpolating
-                        {
-                            this.lastInterpolationUpdateTimer = Time.realtimeSinceStartup + 1f / this.updateRate;
-                            this.m_sentEndInterpolation = false;
-                        }
-                        else //Other clients extrapolating
-                        {
-                            this.lastInterpolationUpdateTimer = Time.realtimeSinceStartup + 1f / this.updateRate; //It's like an interpolation
-                            this.m_sentEndInterpolation = true;
-                        }
-
-                        movementSynchronizer.GetCurrentState(writer);
-                    }
-                }
-
-                SendMovementsInformations(writer.ToArray(), m_sentEndInterpolation);
             }
         }
 
@@ -153,15 +155,15 @@ namespace BC_Solution.UnetNetwork
 
         public override void OnServerAddListener(NetworkingConnection conn)
         {
-            ServerSync(conn, NetworkingChannel.DefaultReliable);
+            ServerSync(conn, NetworkingChannel.DefaultReliable, m_reliableWriter);
         }
 
         public override void OnServerSyncNetId(NetworkingConnection conn)
         {
-            ServerSync(conn, NetworkingChannel.DefaultReliableSequenced);
+            ServerSync(conn, NetworkingChannel.DefaultReliableSequenced, m_reliableWriter);
         }
 
-        public void ServerSync(NetworkingConnection conn, int channel)
+        public void ServerSync(NetworkingConnection conn, int channel, NetworkingWriter writer)
         {
             writer.SeekZero(true);
             int updateMask = 0;

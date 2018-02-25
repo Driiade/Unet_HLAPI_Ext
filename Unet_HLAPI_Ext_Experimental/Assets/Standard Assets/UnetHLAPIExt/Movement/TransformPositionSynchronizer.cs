@@ -77,7 +77,7 @@ namespace BC_Solution.UnetNetwork
 
         public override void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation)
         {
-            extrapolationVelocity = (((TransformPositionState)statesBuffer[0]).m_position - ((TransformPositionState)statesBuffer[1]).m_position) / ((statesBuffer[0].m_relativeTime - statesBuffer[1].m_relativeTime));
+            extrapolationVelocity = (((TransformPositionState)m_statesBuffer[0]).m_position - ((TransformPositionState)m_statesBuffer[1]).m_position) / ((m_statesBuffer[0].m_relativeTime - m_statesBuffer[1].m_relativeTime));
 
             this.m_transform.position += extrapolationVelocity * Time.deltaTime;
         }
@@ -110,8 +110,8 @@ namespace BC_Solution.UnetNetwork
                     case INTERPOLATION_MODE.LINEAR:
                         GetVector3(positionSynchronizationMode, ref val, Vector3.Lerp(((TransformPositionState)lhs).m_position, ((TransformPositionState)rhs).m_position, t)); break;
                     case INTERPOLATION_MODE.CATMULL_ROM:
-                        GetVector3(positionSynchronizationMode, ref val, Math.CatmullRomInterpolation(((TransformPositionState)statesBuffer[lhsIndex + 1]).m_position, ((TransformPositionState)lhs).m_position, ((TransformPositionState)rhs).m_position, ((TransformPositionState)statesBuffer[lhsIndex - 2]).m_position,
-                                                                         statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, statesBuffer[lhsIndex - 2].m_relativeTime, (1f - t) * lhs.m_relativeTime + t * rhs.m_relativeTime));
+                        GetVector3(positionSynchronizationMode, ref val, Math.CatmullRomInterpolation(((TransformPositionState)m_statesBuffer[lhsIndex + 1]).m_position, ((TransformPositionState)lhs).m_position, ((TransformPositionState)rhs).m_position, ((TransformPositionState)m_statesBuffer[lhsIndex - 2]).m_position,
+                                                                         m_statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, m_statesBuffer[lhsIndex - 2].m_relativeTime, (1f - t) * lhs.m_relativeTime + t * rhs.m_relativeTime));
 #if EQUILIBREGAMES_DEBUG
                             ExtendedMath.DrawCatmullRomInterpolation(statesBuffer[lhsIndex + 1].position, lhs.position, rhs.position, statesBuffer[lhsIndex - 2].position,
                                                                              statesBuffer[lhsIndex + 1].timestamp, lhs.timestamp, rhs.timestamp, statesBuffer[lhsIndex - 2].timestamp);

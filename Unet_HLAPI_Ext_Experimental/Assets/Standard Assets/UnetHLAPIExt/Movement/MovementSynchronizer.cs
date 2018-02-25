@@ -45,8 +45,8 @@ namespace BC_Solution.UnetNetwork
         int maxBufferSize = 60;
         public bool useAdaptativeSynchronizationBackTime = true;
 
-        protected State[] statesBuffer;
-        protected int currentStatesIndex = -1;
+        protected State[] m_statesBuffer;
+        protected int m_currentStatesIndex = -1;
 
 
         [Space(20)]
@@ -57,17 +57,20 @@ namespace BC_Solution.UnetNetwork
         public float interpolationErrorTime = 0.1f;
 
 
-        private NetworkMovementSynchronization networkMovementSynchronization;
+        internal float m_lastInterpolationUpdateTimer = -1;
+        internal bool m_sentEndInterpolation = false;
 
-        protected float extrapolationTimer = -1;
+        private NetworkMovementSynchronization m_networkMovementSynchronization;
 
-        private bool isActive = true;
+        protected float m_extrapolationTimer = -1;
+
+        private bool m_isActive = true;
         public bool IsActive
         {
-            get { return isActive; }
+            get { return m_isActive; }
             set
             {
-                if(value != isActive)
+                if(value != m_isActive)
                 {
                     if (value)
                         OnActive();
@@ -75,7 +78,7 @@ namespace BC_Solution.UnetNetwork
                         OnInactive();
                 }
 
-                isActive = value;
+                m_isActive = value;
             }
         }
 
@@ -94,14 +97,14 @@ namespace BC_Solution.UnetNetwork
 
         public virtual bool NeedToUpdate()
         {
-            return isActive;
+            return m_isActive;
         }
 
 
         internal void Init(NetworkMovementSynchronization movSynchronization)
         {
-            statesBuffer = new State[maxBufferSize];
-            this.networkMovementSynchronization = movSynchronization;
+            m_statesBuffer = new State[maxBufferSize];
+            this.m_networkMovementSynchronization = movSynchronization;
         }
 
         public bool m_isExtrapolating { get; private set; }
@@ -112,7 +115,7 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         protected internal void ManualUpdate()
         {
-           if (currentStatesIndex < 0 || networkingIdentity.isLocalConnection)
+           if (m_currentStatesIndex < 0 || networkingIdentity.isLocalConnection)
                 return;
 
             State lhs;
@@ -128,24 +131,24 @@ namespace BC_Solution.UnetNetwork
             //Extrapolation
             if (useExtrapolation && (lhs == null || rhs == null))
             {
-                if (currentStatesIndex > 0)
+                if (m_currentStatesIndex > 0)
                 {
-                    if (Time.realtimeSinceStartup > extrapolationTimer)
+                    if (Time.realtimeSinceStartup > m_extrapolationTimer)
                     {
                         m_isExtrapolating = false;
                         m_isInterpolating = true;
-                        OnEndExtrapolation(statesBuffer[0]);
+                        OnEndExtrapolation(m_statesBuffer[0]);
                     }
-                    else if (extrapolatingState == null || extrapolatingState != statesBuffer[0])    // we are not yet extrapolating
+                    else if (extrapolatingState == null || extrapolatingState != m_statesBuffer[0])    // we are not yet extrapolating
                     {
                         m_isExtrapolating = true;
                         m_isInterpolating = false;
-                        OnBeginExtrapolation(extrapolatingState, Time.realtimeSinceStartup - statesBuffer[0].m_relativeTime);
+                        OnBeginExtrapolation(extrapolatingState, Time.realtimeSinceStartup - m_statesBuffer[0].m_relativeTime);
 
                         if (extrapolatingState == null)
-                            extrapolationTimer = Time.realtimeSinceStartup + extrapolationTime;
+                            m_extrapolationTimer = Time.realtimeSinceStartup + extrapolationTime;
 
-                        extrapolatingState = statesBuffer[0];
+                        extrapolatingState = m_statesBuffer[0];
                     }
                     else
                     {
@@ -161,7 +164,7 @@ namespace BC_Solution.UnetNetwork
                 OnInterpolation(rhs, lhs, lhsIndex, t);
 
                 extrapolatingState = null;
-                extrapolationTimer = -1;
+                m_extrapolationTimer = -1;
             }
 
             OnErrorCorrection();
@@ -183,7 +186,7 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         public virtual void ResetStatesBuffer()
         {
-            currentStatesIndex = -1;
+            m_currentStatesIndex = -1;
         }
 
         public int AddState(State s)
@@ -191,30 +194,30 @@ namespace BC_Solution.UnetNetwork
             int place = -1;
 
             //If no States are present, put in first slot.
-            if (currentStatesIndex < 0)
+            if (m_currentStatesIndex < 0)
             {
-                statesBuffer[0] = s;
+                m_statesBuffer[0] = s;
                 place = 0;
-                currentStatesIndex = Mathf.Min(currentStatesIndex + 1, maxBufferSize - 1);
+                m_currentStatesIndex = Mathf.Min(m_currentStatesIndex + 1, maxBufferSize - 1);
             }
             else
             {
                 //First find proper place in buffer. If no place is found, state can be dropped (newState is too old)
-                for (int i = 0; i <= currentStatesIndex; i++)
+                for (int i = 0; i <= m_currentStatesIndex; i++)
                 {
                     //If the state in slot i is older than our new state, we found our slot.  
-                    if (statesBuffer[i].m_relativeTime < s.m_relativeTime)
+                    if (m_statesBuffer[i].m_relativeTime < s.m_relativeTime)
                     {
                         // Shift the buffer sideways, to make room in slot i. possibly deleting last state
                         for (int k = maxBufferSize - 1; k > i; k--)
                         {
-                            statesBuffer[k] = statesBuffer[k - 1];
+                            m_statesBuffer[k] = m_statesBuffer[k - 1];
                         }
                         //insert state
-                        statesBuffer[i] = s;
+                        m_statesBuffer[i] = s;
                         place = i;
 
-                        currentStatesIndex = Mathf.Min(currentStatesIndex + 1, maxBufferSize - 1);
+                        m_currentStatesIndex = Mathf.Min(m_currentStatesIndex + 1, maxBufferSize - 1);
                         //We are done, exit loop
                         break;
                     }
@@ -234,14 +237,14 @@ namespace BC_Solution.UnetNetwork
             lhsIndex = 0;
 
             float currentTime = Time.realtimeSinceStartup;
-            firstStateDelay = currentTime - statesBuffer[0].m_relativeTime;
+            firstStateDelay = currentTime - m_statesBuffer[0].m_relativeTime;
 
             float synchronisationBackTime;
 
             if (!useAdaptativeSynchronizationBackTime)
-                synchronisationBackTime = networkMovementSynchronization.m_nonAdaptativeBacktime;
+                synchronisationBackTime = m_networkMovementSynchronization.m_nonAdaptativeBacktime;
             else
-                synchronisationBackTime =  networkMovementSynchronization.m_adaptativeSynchronizationBackTime;
+                synchronisationBackTime =  m_networkMovementSynchronization.m_adaptativeSynchronizationBackTime;
 
            // Debug.Log("First delay : " + firstStateDelay);
           // Debug.Log("lastStateDelay : " + ((NetworkingSystem.Instance.ServerTimestamp - statesBuffer[currentStatesIndex-1].timestamp) / 1000f));
@@ -251,21 +254,21 @@ namespace BC_Solution.UnetNetwork
             if (firstStateDelay < synchronisationBackTime)
             {
                 // Go through buffer and find correct state to play back
-                for (int i = 0; i < currentStatesIndex; i++)
+                for (int i = 0; i < m_currentStatesIndex; i++)
                 {
                     // Search the best playback state (closest to 100 ms old (default time))
-                    lhs = statesBuffer[i];
+                    lhs = m_statesBuffer[i];
 
                     float lhsDelayMS;
 
                     lhsDelayMS = currentTime - lhs.m_relativeTime;
 
                     //We find a state to synchronise or it's the last state
-                    if (lhsDelayMS >= synchronisationBackTime || i == currentStatesIndex - 1)
+                    if (lhsDelayMS >= synchronisationBackTime || i == m_currentStatesIndex - 1)
                     {
                         // The state one slot newer (<100ms (default time)) than the best playback state
                         //The goal is to linearly lerp all the time we can !
-                        rhs = statesBuffer[Mathf.Max(i - 1, 0)];
+                        rhs = m_statesBuffer[Mathf.Max(i - 1, 0)];
 
                         float rhsDelayMS;
 
@@ -558,8 +561,8 @@ namespace BC_Solution.UnetNetwork
             switch (baseMode)
             {
                 case INTERPOLATION_MODE.CATMULL_ROM:
-                    if (currentStatesIndex < 3 || currentLhsIndex == 0 || currentLhsIndex + 1 > currentStatesIndex || currentLhsIndex - 2 < 0 
-                        || (statesBuffer[currentLhsIndex].m_relativeTime - statesBuffer[currentLhsIndex + 1].m_relativeTime) > 0.1f // superior to 100ms the catmull-Rom interpolation can be very wrong.
+                    if (m_currentStatesIndex < 3 || currentLhsIndex == 0 || currentLhsIndex + 1 > m_currentStatesIndex || currentLhsIndex - 2 < 0 
+                        || (m_statesBuffer[currentLhsIndex].m_relativeTime - m_statesBuffer[currentLhsIndex + 1].m_relativeTime) > 0.1f // superior to 100ms the catmull-Rom interpolation can be very wrong.
                         || (currentPosition - lastPosition).sqrMagnitude < 0.01) // 0.01 position threshold.
                     {
                         return INTERPOLATION_MODE.LINEAR;
