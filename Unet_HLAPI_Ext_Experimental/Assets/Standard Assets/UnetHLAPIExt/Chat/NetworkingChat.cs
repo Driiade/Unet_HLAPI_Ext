@@ -31,6 +31,7 @@ namespace BC_Solution.UnetNetwork
         [SerializeField]
         Text text;
 
+#if CLIENT
         private void Awake()
         {
             NetworkingSystem.RegisterConnectionHandler(NetworkingMessageType.ChatMessage, ConnectionReceiveMessage);
@@ -41,12 +42,15 @@ namespace BC_Solution.UnetNetwork
         {
             NetworkingSystem.UnRegisterConnectionHandler(NetworkingMessageType.ChatMessage, ConnectionReceiveMessage);
         }
+#endif
 
 
         public void Send(string message)
         {
+#if CLIENT
             if (NetworkingSystem.Instance.ConnectionIsActive())
                 NetworkingSystem.Instance.connections[0].Send(NetworkingMessageType.ChatMessage, new StringMessage(message));
+#endif
         }
 
         public void ConnectionReceiveMessage(NetworkingMessage netMsg)

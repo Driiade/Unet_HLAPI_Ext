@@ -35,10 +35,11 @@ namespace BC_Solution.UnetNetwork
         public const ushort Command = 2;
         public const ushort Rpc = 3;
         public const ushort AutoRpc = 4;
-        public const ushort ObjectSpawn = 5;
-        public const ushort SceneObjectNetId = 6;
-        public const ushort ReplicatedPrefabScene = 7;
-        public const ushort ObjectSpawnFinish = 8;
+        public const ushort SendToOwner = 5;
+        public const ushort ObjectSpawn = 6;
+        public const ushort SceneObjectNetId = 7;
+        public const ushort ReplicatedPrefabScene = 8;
+        public const ushort ObjectSpawnFinish = 9;
         //public const ushort Owner = 4;
 
         public const ushort SyncEvent = 9;

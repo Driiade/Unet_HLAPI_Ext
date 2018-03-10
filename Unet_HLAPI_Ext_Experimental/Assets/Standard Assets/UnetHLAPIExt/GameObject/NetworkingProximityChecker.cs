@@ -9,9 +9,13 @@ namespace BC_Solution.UnetNetwork
     /// Modify networking listener.
     /// Only work on server
     /// </summary>
-    public class NetworkingProximityChecker : NetworkingBehaviour
+    public class NetworkingProximityChecker : MonoBehaviour
     {
+#if SERVER
         public enum MODE { _2D, _3D }
+
+        [SerializeField]
+        NetworkingIdentity networkingIdentity;
 
         [SerializeField]
         Transform m_checkTransform;
@@ -24,9 +28,9 @@ namespace BC_Solution.UnetNetwork
 
         Collider2D[] colliders2D;
         Collider[] colliders;
-        protected override void Awake()
+
+        protected void Awake()
         {
-            base.Awake();
             colliders2D = new Collider2D[m_maxNearConnection];
             colliders = new Collider[m_maxNearConnection];
         }
@@ -34,7 +38,7 @@ namespace BC_Solution.UnetNetwork
         private float m_timer = -1;
         private void Update()
         {
-            if (!isServer)
+            if (!networkingIdentity.isServer)
                 return;
 
             if (Time.time > m_timer)
@@ -51,32 +55,42 @@ namespace BC_Solution.UnetNetwork
 
         public void Check2D()
         {
-            networkingIdentity.m_serverConnectionListeners.Clear();
-
-            int count = Physics2D.OverlapCircleNonAlloc(m_checkTransform.position, m_range, colliders2D);
-
-            for (int i = 0; i < count; i++)
+            foreach (NetworkingBehaviour networkingBehaviour in networkingIdentity.NetworkingBehaviours)
             {
-                NetworkingIdentity netIdentity = colliders2D[i].GetComponentInParent<NetworkingIdentity>();
-                if (netIdentity && netIdentity.m_serverConnection != null && !networkingIdentity.m_serverConnectionListeners.Contains(netIdentity.m_serverConnection))
+                networkingBehaviour.m_serverConnectionListeners.Clear();
+
+                int count = Physics2D.OverlapCircleNonAlloc(m_checkTransform.position, m_range, colliders2D);
+
+                for (int i = 0; i < count; i++)
                 {
-                    networkingIdentity.m_serverConnectionListeners.Add(netIdentity.m_serverConnection);
+                    NetworkingIdentity netIdentity = colliders2D[i].GetComponentInParent<NetworkingIdentity>();
+                    if (netIdentity 
+                        && netIdentity.m_serverConnection != null                    
+                        && networkingIdentity.m_serverAwareConnections.Contains(netIdentity.m_serverConnection))
+                    {
+                        networkingBehaviour.m_serverConnectionListeners.Add(netIdentity.m_serverConnection);
+                    }
                 }
             }
         }
 
         public void Check3D()
         {
-            networkingIdentity.m_serverConnectionListeners.Clear();
-
-            int count = Physics.OverlapSphereNonAlloc(m_checkTransform.position, m_range, colliders);
-
-            for (int i = 0; i < count; i++)
+            foreach (NetworkingBehaviour networkingBehaviour in networkingIdentity.NetworkingBehaviours)
             {
-                NetworkingIdentity netIdentity = colliders[i].GetComponentInParent<NetworkingIdentity>();
-                if (netIdentity && netIdentity.m_serverConnection != null && !networkingIdentity.m_serverConnectionListeners.Contains(netIdentity.m_serverConnection))
+                networkingBehaviour.m_serverConnectionListeners.Clear();
+
+                int count = Physics.OverlapSphereNonAlloc(m_checkTransform.position, m_range, colliders);
+
+                for (int i = 0; i < count; i++)
                 {
-                    networkingIdentity.m_serverConnectionListeners.Add(netIdentity.m_serverConnection);
+                    NetworkingIdentity netIdentity = colliders[i].GetComponentInParent<NetworkingIdentity>();
+                    if (netIdentity 
+                        && netIdentity.m_serverConnection != null
+                        && networkingIdentity.m_serverAwareConnections.Contains(netIdentity.m_serverConnection))
+                    {
+                        networkingBehaviour.m_serverConnectionListeners.Add(netIdentity.m_serverConnection);
+                    }
                 }
             }
 
@@ -87,5 +101,6 @@ namespace BC_Solution.UnetNetwork
             Gizmos.color = Color.magenta;
             Gizmos.DrawWireSphere(m_checkTransform.position, m_range);
         }
+#endif
     }
 }

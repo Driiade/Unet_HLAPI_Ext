@@ -55,9 +55,19 @@ namespace BC_Solution.UnetNetwork
             m_memoryStream = new MemoryStream(buffer);
         }
 
+        //Return the entire array of the memoryStream
         public byte[] ToArray()
         {
             return m_memoryStream.ToArray();
+        }
+
+        /// <summary>
+        /// Only return the rest of the unused memoryStream
+        /// </summary>
+        /// <returns></returns>
+        public byte[] Flush()
+        {
+            return ReadBytes((int)(m_memoryStream.Length - m_memoryStream.Position));
         }
 
         public void SeekZero()
@@ -339,10 +349,6 @@ namespace BC_Solution.UnetNetwork
 
         public byte[] ReadBytes(int count)
         {
-            if (count < 0)
-            {
-                throw new IndexOutOfRangeException("NetworkReader ReadBytes " + count);
-            }
             byte[] value = new byte[count];
             int read = m_memoryStream.Read(value, 0, count);
             if (read != count)
@@ -360,6 +366,7 @@ namespace BC_Solution.UnetNetwork
 
             return ReadBytes(sz);
         }
+
 
         public Vector2 ReadVector2()
         {
@@ -450,45 +457,98 @@ namespace BC_Solution.UnetNetwork
              return hash;
          } */
 
-       /* public Transform ReadTransform()      USELESS JUST READ<T>
-        {
-            ushort netId = ReadNetworkId();
-            if (netId.IsEmpty())
-            {
-                return null;
-            }
-            GameObject go = ClientScene.FindLocalObject(netId);
-            if (go == null)
-            {
-                if (LogFilter.logDebug) { Debug.Log("ReadTransform netId:" + netId); }
-                return null;
-            }
-
-            return go.transform;
-        }*/
-
-        public GameObject ReadGameObject(NetworkingConnection networkingConnection)
-        {
-            /* ushort netId = ReadUInt16();
-             NetworkingIdentity netIdentity = NetworkingGameObjectSystem.Instance.FindLocalNetworkIdentity(networkingConnection, netId);
-
-             if (netIdentity == null)
+        /* public Transform ReadTransform()      USELESS JUST READ<T>
+         {
+             ushort netId = ReadNetworkId();
+             if (netId.IsEmpty())
              {
-                 if (LogFilter.logDebug) { Debug.Log("ReadGameObject netId:" + netId + "go: null"); }
+                 return null;
+             }
+             GameObject go = ClientScene.FindLocalObject(netId);
+             if (go == null)
+             {
+                 if (LogFilter.logDebug) { Debug.Log("ReadTransform netId:" + netId); }
+                 return null;
              }
 
-             return netIdentity.gameObject;*/
-            Debug.LogError("Not implemented");
-            return null;
+             return go.transform;
+         }*/
+
+
+        /// <summary>
+        /// Retrieve the networkingIdentity base on netId
+        /// </summary>
+        /// <param name="clientConnection">the client connection (if any)</param>
+        /// <param name="serverConnection">the server connection (if any)</param>
+        /// <returns></returns>
+        public GameObject ReadGameObject(NetworkingConnection clientConnection, NetworkingConnection serverConnection)
+        {
+            ushort netId = ReadUInt16();
+            NetworkingIdentity netIdentity = null;
+
+#if SERVER && CLIENT
+            netIdentity = NetworkingIdentity.s_networkingIdentities.Find((x) =>
+            {
+                return (x.m_connection == clientConnection || x.m_serverConnection == serverConnection) && x.netId == netId;
+
+            });
+#endif
+#if SERVER
+            netIdentity = NetworkingIdentity.s_networkingIdentities.Find((x) =>
+            {
+                return (x.m_serverConnection == serverConnection) && x.netId == netId;
+
+            });
+#endif
+#if CLIENT
+            netIdentity = NetworkingIdentity.s_networkingIdentities.Find((x) =>
+            {
+                return (x.m_connection == clientConnection) && x.netId == netId;
+
+            });
+#endif
+
+            if (netIdentity == null)
+            {
+                Debug.LogWarning("ReadGameObject netId:" + netId + " go: null");
+                Debug.LogWarning("Make sure gameobject exist or on the same server than the caller");
+                return null;
+            }
+            else
+                return netIdentity.gameObject;
         }
 
-        public T Read<T>(NetworkingConnection networkingConnection)
+        /// <summary>
+        /// Retrieve the first occurence of a component, based on the networkingIdentity netId
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="clientConnection">the client connection (if any)</param>
+        /// <param name="serverConnection">the server connection (if any)</param>
+        /// <returns></returns>
+        public T Read<T>(NetworkingConnection clientConnection, NetworkingConnection serverConnection) where T : Component
         {
-            GameObject go = ReadGameObject(networkingConnection);
+            GameObject go = ReadGameObject(clientConnection, serverConnection);
             if (go != null)
                 return go.GetComponent<T>();
 
-            return default(T);
+            return null;
+        }
+
+
+        /// <summary>
+        /// Retrieve the first occurence of a component, based on the networkingIdentity netId
+        /// </summary>
+        /// <param name="clientConnection"></param>
+        /// <param name="serverConnection"></param>
+        /// <param name="componentType"></param>
+        /// <returns></returns>
+        public Component ReadComponent(NetworkingConnection clientConnection, NetworkingConnection serverConnection, Type componentType)
+        {
+            GameObject go = ReadGameObject(clientConnection, serverConnection);
+            if (go != null)
+                return go.GetComponent(componentType);
+
+            return null;
         }
 
         public override string ToString()

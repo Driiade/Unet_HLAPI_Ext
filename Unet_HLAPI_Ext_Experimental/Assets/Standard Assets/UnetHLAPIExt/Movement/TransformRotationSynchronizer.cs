@@ -37,7 +37,7 @@ namespace BC_Solution.UnetNetwork
             {
                 this.m_relativeTime = relativeTime;
 
-                if(local)
+                if (local)
                 {
                     m_rotation = t.localRotation.eulerAngles;
                 }
@@ -63,14 +63,6 @@ namespace BC_Solution.UnetNetwork
         public COMPRESS_MODE compressionRotationMode = COMPRESS_MODE.NONE;
         public Vector3 minRotationValue;
         public Vector3 maxRotationValue;
-
-#if UNITY_EDITOR
-        [Space(10)]
-        [SerializeField]
-        Vector3 precisionAfterCompression;
-        [SerializeField]
-        Vector3 returnedValueOnCurrentRotation;
-# endif
 
 
         private Quaternion lastRotation = Quaternion.identity;
@@ -226,8 +218,13 @@ namespace BC_Solution.UnetNetwork
         }
 
 #if UNITY_EDITOR
-        private void OnValidate()
+
+        public override void OnInspectorGUI()
         {
+
+            Vector3 precisionAfterCompression = Vector3.zero;
+            Vector3 returnedValueOnCurrentRotation = Vector3.zero;
+
             switch (compressionRotationMode)
             {
                 case COMPRESS_MODE.USHORT:
@@ -242,6 +239,11 @@ namespace BC_Solution.UnetNetwork
                     returnedValueOnCurrentRotation.z = this.m_transform.rotation.eulerAngles.z;
                     break;
             }
+
+
+            GUILayout.Space(10);
+            GUILayout.Label("Precision : \n" + "(" + precisionAfterCompression.x + ", " + precisionAfterCompression.y + ", " + precisionAfterCompression.z + ")");
+            GUILayout.Label("Returned value after compression : \n" + "(" + returnedValueOnCurrentRotation.x + ", " + returnedValueOnCurrentRotation.y + ", " + returnedValueOnCurrentRotation.z + ")");
         }
 #endif
     }

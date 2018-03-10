@@ -18,7 +18,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. 
 */
-
+#if SERVER //class only available on server mode (server or host)
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -39,12 +39,12 @@ namespace BC_Solution.UnetNetwork {
         /// <summary>
         /// Called on server when a client connect
         /// </summary>
-        public static Action<NetworkingServer, NetworkingMessage> OnServerConnect;
+        public static Action<NetworkingServer, NetworkingConnection> OnServerConnect;
 
         /// <summary>
         /// Called on server when a client disconnect
         /// </summary>
-        public static Action<NetworkingServer, NetworkingMessage> OnServerDisconnect;
+        public static Action<NetworkingServer, NetworkingConnection> OnServerDisconnect;
 
         /// <summary>
         /// Called on server when a client become ready on server
@@ -124,11 +124,11 @@ namespace BC_Solution.UnetNetwork {
         {
             m_connectionsReadOnly = new ReadOnlyCollection<NetworkingConnection>(m_connections);
 
-            this.RegisterHandler(NetworkingMessageType.Connect, BaseOnServerConnect);
+           // this.RegisterHandler(NetworkingMessageType.Connect, BaseOnServerConnect);
            // this.RegisterHandler(NetworkingMessageType.AddPlayer, BaseOnServerAddPlayer);
-            this.RegisterHandler(NetworkingMessageType.Disconnect, BaseOnServerDisconnect);
+            //this.RegisterHandler(NetworkingMessageType.Disconnect, BaseOnServerDisconnect);
            // this.RegisterHandler(NetworkingMessageType.Ready, BaseOnClientReadyOnServer);
-            this.RegisterHandler(NetworkingMessageType.Error, BaseOnServerError);
+            //this.RegisterHandler(NetworkingMessageType.Error, BaseOnServerError);
         }
 
 
@@ -462,7 +462,7 @@ namespace BC_Solution.UnetNetwork {
             conn.m_server = this;
             m_connections[connectionId] = conn;
 
-            OnConnected(conn);
+            InternalOnServerConnect(conn);
         }
 
         void HandleDisconnect(int connectionId, byte error)
@@ -493,7 +493,7 @@ namespace BC_Solution.UnetNetwork {
             m_connections[connectionId] = null;
             conn.Disconnect();
 
-            OnDisconnected(conn);
+            InternalOnServerDisconnect(conn);
             if (LogFilter.logDebug) { Debug.Log("Server lost client:" + connectionId); }
         }
 
@@ -634,15 +634,6 @@ namespace BC_Solution.UnetNetwork {
             Debug.LogError("OnDisconnectError error:" + error);
         }
 
-        public virtual void OnConnected(NetworkingConnection conn)
-        {
-            conn.InvokeHandler(NetworkingMessageType.Connect, null, NetworkingChannel.DefaultReliable);
-        }
-
-        public virtual void OnDisconnected(NetworkingConnection conn)
-        {
-            conn.InvokeHandler(NetworkingMessageType.Disconnect, null, NetworkingChannel.DefaultReliable);
-        }
 
         public virtual void OnData(NetworkingConnection conn, int receivedSize, int channelId)
         {
@@ -653,12 +644,12 @@ namespace BC_Solution.UnetNetwork {
 
         #region Server handlers
 
-        void BaseOnServerConnect(NetworkingMessage netMsg)
+        void InternalOnServerConnect(NetworkingConnection conn)
         {
             Debug.Log("Server connect");
 
             if (OnServerConnect != null)
-                OnServerConnect(this,netMsg);
+                OnServerConnect(this, conn);
 
            // this.SendToAll(NetworkingMessageType.ClientConnectFromServerMessage, new EmptyMessage());
         }
@@ -676,19 +667,19 @@ namespace BC_Solution.UnetNetwork {
         } */
 
 
-        void BaseOnServerError(NetworkingMessage netMsg)
+        void InternalOnServerError(NetworkingMessage netMsg)
         {
            // NetworkServer.DestroyPlayersForConnection(this,netMsg.conn);
         }
 
-        void BaseOnServerDisconnect(NetworkingMessage netMsg)
+        void InternalOnServerDisconnect(NetworkingConnection conn)
         {
             Debug.Log("Server disconnect");
 
            // NetworkServer.DestroyPlayersForConnection(netMsg.conn);
 
             if (OnServerDisconnect != null)
-                OnServerDisconnect(this, netMsg);
+                OnServerDisconnect(this, conn);
         }
 
 
@@ -718,3 +709,4 @@ namespace BC_Solution.UnetNetwork {
         #endregion
     }
 }
+#endif

@@ -31,28 +31,56 @@ namespace BC_Solution.UnetNetwork
     [AddComponentMenu("")]
     public class NetworkingBehaviour : MonoBehaviour
     {
-        uint m_syncVarDirtyBits;
-        float m_LastSendTime;
+        [SerializeField] internal bool automaticAddListener = true;
+
+        //uint m_syncVarDirtyBits;
+        //float m_LastSendTime;
 
         // this prevents recursion when SyncVar hook functions are called.
         bool m_SyncVarGuard;
 
+#if CLIENT
         public bool localPlayerAuthority { get { return m_networkingIdentity.localPlayerAuthority; } }
+#endif
+#if SERVER
         public bool isServer { get { return m_networkingIdentity.isServer; } }
+#endif
+
+#if CLIENT
         public bool isClient { get { return m_networkingIdentity.isClient; } }
+#endif
         public bool hasAuthority { get { return m_networkingIdentity.hasAuthority; } }
 
-        public bool isLocalConnection { get { return m_networkingIdentity.isLocalConnection; } }
+#if CLIENT
+        public bool isLocalClient { get { return m_networkingIdentity.isLocalClient; } }
+#endif
 
-        public List<NetworkingConnection> serverConnectionListeners { get { return m_networkingIdentity.m_serverConnectionListeners; } }
+        /// <summary>
+        /// Connection on server which listen for RPC/Command
+        /// If you want to add / remove a NetworkingConnection and fire event : 
+        /// Call Add / Remove ServerConnectionListener
+        /// </summary>
+        public List<NetworkingConnection> m_serverConnectionListeners = new List<NetworkingConnection>();
 
+#if SERVER
         public NetworkingConnection serverConnection { get { return m_networkingIdentity.m_serverConnection; } }
+#endif
+
+#if CLIENT
         public NetworkingConnection connection { get { return m_networkingIdentity.m_connection; } }
+#endif
+
+#if SERVER
         public NetworkingServer server { get { return m_networkingIdentity.m_server; } }
+#endif
+
+#if SERVER
+        public List<NetworkingConnection> serverAwareConnections { get { return m_networkingIdentity.m_serverAwareConnections; } }
+#endif
 
         //public short playerControllerId { get { return m_networkingIdentity.playerControllerId; } }
-        protected uint syncVarDirtyBits { get { return m_syncVarDirtyBits; } }
-        protected bool syncVarHookGuard { get { return m_SyncVarGuard; } set { m_SyncVarGuard = value; } }
+        //protected uint syncVarDirtyBits { get { return m_syncVarDirtyBits; } }
+        //protected bool syncVarHookGuard { get { return m_SyncVarGuard; } set { m_SyncVarGuard = value; } }
 
         [SerializeField]
         internal byte m_netId;
@@ -65,22 +93,25 @@ namespace BC_Solution.UnetNetwork
         private MethodInfo[] networkedMethods;
         private NetworkingWriter writer = new NetworkingWriter();
 
-        protected virtual void Awake()
+        internal void Init(NetworkingIdentity networkingIdentity)
         {
-            m_networkingIdentity = this.GetComponentInParent<NetworkingIdentity>();
+            m_networkingIdentity = networkingIdentity;
             networkedMethods = GetNetworkedMethods();
         }
 
+#if CLIENT
         public void SendToServer(string methodName, int channelId,params object[] parameters)
         {
             writer.SeekZero(true);
             writer.StartMessage();
             writer.Write(NetworkingMessageType.Command);
+
             SerializeCall(writer, methodName, parameters);
             writer.FinishMessage();
 
             connection.Send(writer, channelId);
         }
+#endif
 
         /// <summary>
         /// Send to all connection which listen
@@ -96,12 +127,13 @@ namespace BC_Solution.UnetNetwork
             SerializeCall(writer, methodName, parameters);
             writer.FinishMessage();
 
-            foreach(NetworkingConnection connection in m_networkingIdentity.m_serverConnectionListeners)
+            foreach(NetworkingConnection connection in this.m_serverConnectionListeners)
             {
                 connection.Send(writer, channelId);
             }
         }
 
+#if SERVER
         public void SendToConnection(NetworkingConnection conn,string methodName, int channelId, params object[] parameters)
         {
             writer.SeekZero(true);
@@ -112,7 +144,44 @@ namespace BC_Solution.UnetNetwork
 
             server.SendTo(conn.m_connectionId, writer, channelId);
         }
+#endif
 
+        /// <summary>
+        /// Can be called on client or server
+        /// Call this with a reliable sequenced channel (to be sure NetworkingIdentity is set on the other side)
+        /// </summary>
+        /// <param name="networkingIdentity"></param>
+        /// <param name="methodName"></param>
+        /// <param name="channelID"></param>
+        /// <param name="parameters"></param>
+        public void SendToOwner(NetworkingIdentity networkingIdentity, string methodName, int channelId, params object[] parameters)
+        {
+#if SERVER
+            if(networkingIdentity.m_serverConnection != null) //On Server
+            {
+                SendToConnection(networkingIdentity.m_serverConnection, methodName, channelId, parameters);
+              return;
+            }
+#endif
+#if CLIENT
+            if (connection != null)
+            {
+                writer.SeekZero(true);
+                writer.StartMessage();
+                writer.Write(NetworkingMessageType.SendToOwner);
+                writer.Write(networkingIdentity.netId);
+                SerializeCall(writer, methodName, parameters);
+                writer.FinishMessage();
+
+                connection.Send(writer, channelId);
+            return;
+            }
+#endif
+
+            Debug.LogWarning(this + " is not client or server or has no owner");
+        }
+
+#if CLIENT
         public void AutoSendToConnections(string methodName, int channelId, params object[] parameters)
         {
             writer.SeekZero(true);
@@ -123,18 +192,33 @@ namespace BC_Solution.UnetNetwork
 
             connection.Send(writer, channelId);
         }
+#endif
 
         void SerializeCall(NetworkingWriter writer, string methodName, object[] parameters)
         {
             writer.Write(this.networkingIdentity.netId);
             writer.Write(this.m_netId);
-            writer.Write(GetNetworkMethodIndex(methodName, networkedMethods));
+
+            byte methodIndex = GetNetworkMethodIndex(methodName, networkedMethods);
+            writer.Write(methodIndex);
+
+            ParameterInfo[] methodParams = networkedMethods[methodIndex].GetParameters();
+
             //Debug.Log(methodName + " : " + GetNetworkMethodIndex(methodName, networkedMethods));
             for (int i = 0; i < parameters.Length; i++)
             {
                 object param = parameters[i];
 
-                if (param is int)
+                if (param.GetType() != methodParams[i].ParameterType)
+                {
+                    throw new System.Exception("Parameter mismatch : called with : " + param.GetType() + " expected : " + methodParams[i].ParameterType);
+                }
+
+                if (param is byte)
+                {
+                    writer.Write((byte)param);
+                }
+                else if (param is int)
                 {
                     writer.Write((int)param);
                 }
@@ -148,7 +232,7 @@ namespace BC_Solution.UnetNetwork
                 }
                 else if (param is byte[])
                 {
-                    writer.WriteBytesAndSize(((byte[])param), ((byte[])param).Length);
+                    writer.WriteBytesFull(((byte[])param));
                 }
                 else if (param is bool)
                 {
@@ -162,6 +246,14 @@ namespace BC_Solution.UnetNetwork
                 {
                     writer.Write((Vector2)param);
                 }
+                else if (param is GameObject)
+                {
+                    writer.Write((GameObject)param);
+                }
+                else if(param.GetType().IsSubclassOf(typeof(UnityEngine.Component)))
+                {
+                    writer.Write((UnityEngine.Component)param);
+                }
                 else
                     throw new System.Exception("Serialization is impossible : " + param.GetType());
             }
@@ -170,7 +262,6 @@ namespace BC_Solution.UnetNetwork
         internal void HandleMethodCall(NetworkingReader reader)
         {
             byte methodIndex = reader.ReadByte();
-
             MethodInfo method = networkedMethods[methodIndex];
             ParameterInfo[] parameterInfos = method.GetParameters();
             object[] parameters = new object[parameterInfos.Length];
@@ -178,7 +269,12 @@ namespace BC_Solution.UnetNetwork
             for (int i = 0; i < parameterInfos.Length; i++)
             {
                 ParameterInfo info = parameterInfos[i];
-                if (info.ParameterType == typeof(int))
+
+                if(info.ParameterType == typeof(byte))
+                {
+                    parameters[i] = reader.ReadByte();
+                }
+                else   if (info.ParameterType == typeof(int))
                 {
                     parameters[i] = reader.ReadInt32();
                 }
@@ -206,6 +302,26 @@ namespace BC_Solution.UnetNetwork
                 {
                     parameters[i] = reader.ReadVector2();
                 }
+                else if (info.ParameterType == typeof(GameObject))
+                {
+#if SERVER && CLIENT
+                    parameters[i] = reader.ReadGameObject(this.connection, this.serverConnection);
+#elif SERVER
+                    parameters[i] = reader.ReadGameObject(null, this.serverConnection);
+#elif CLIENT
+                    parameters[i] = reader.ReadGameObject(this.connection, null);
+#endif
+                }
+                else if (info.ParameterType.IsSubclassOf(typeof(UnityEngine.Component)))
+                {
+#if SERVER && CLIENT
+                    parameters[i] = reader.ReadComponent(this.connection, this.serverConnection, info.ParameterType);
+#elif SERVER
+                    parameters[i] = reader.ReadComponent(null, this.serverConnection, info.ParameterType);
+#elif CLIENT
+                    parameters[i] = reader.ReadComponent(this.connection, null, info.ParameterType);
+#endif
+                }
                 else
                     throw new System.Exception("UnSerialization is impossible : " + info.ParameterType.GetType());
             }
@@ -213,6 +329,19 @@ namespace BC_Solution.UnetNetwork
             method.Invoke(this, parameters);
         }
 
+
+
+#if SERVER
+        internal virtual void ServerHandleAutoRpc(NetworkingReader reader, int channelId)
+        {
+            this.m_networkingIdentity.ServerSendAutoRpc(reader, channelId, this.m_netId);
+        }
+
+        internal virtual void ServerHandleSendToOwner(NetworkingConnection owner, NetworkingReader reader, int channelId)
+        {
+            this.networkingIdentity.ServerSendToOwner(owner, reader, channelId, this.m_netId);
+        }
+#endif
 
         MethodInfo[] GetNetworkedMethods()
         {
@@ -233,6 +362,37 @@ namespace BC_Solution.UnetNetwork
             return networkedMethods.ToArray();
         }
 
+#if SERVER
+        /// <summary>
+        /// Can't be called on client only
+        /// </summary>
+        /// <param name="conn"></param>
+        public void AddServerConnectionListener(NetworkingConnection conn)
+        {
+            if (!m_serverConnectionListeners.Contains(conn) && serverAwareConnections.Contains(conn))
+            {
+                m_serverConnectionListeners.Add(conn);
+                this.OnServerAddListener(conn);
+            }
+            else
+                Debug.LogWarning("Server connection listener already contain : " + conn + " Or conneciton is not aware of this gameObject : " + gameObject);
+        }
+
+
+        /// <summary>
+        /// Can't be called on client only
+        /// </summary>
+        /// <param name="conn"></param>
+        public void RemoveServerConnectionListener(NetworkingConnection conn)
+        {
+            if (m_serverConnectionListeners.Contains(conn))
+            {
+                m_serverConnectionListeners.Remove(conn);
+                this.OnServerRemoveListener(conn);
+            }
+        }
+#endif
+
         byte GetNetworkMethodIndex(string methodName, MethodInfo[] methodInfo)
         {
             for (int i = 0; i < methodInfo.Length; i++)
@@ -245,21 +405,77 @@ namespace BC_Solution.UnetNetwork
             throw new System.Exception("Method not found : " + methodName + " on " + this.gameObject + "//" + this);
         }
 
+        public void AddAllAwareConnectionToListen()
+        {
+#if SERVER
+            if (isServer)
+            {
+                ServerAddAllAwareConnectionToListen();
+                return;
+            }
+#endif
+
+#if CLIENT
+            if (isClient)
+            {
+                SendToServer("ServerAddAllAwareConnectionToListen", NetworkingChannel.DefaultReliableSequenced);
+                return;
+            }
+#endif
+        }
 
 
-     
+        public void RemoveAllAwareConnectionToListen()
+        {
+#if SERVER
+            if (isServer)
+               {
+            ServerRemoveAllAwareConnectionToListen();
+            return;
+            }
+#endif
+#if CLIENT
+            if (isClient)
+            {
+                SendToServer("ServerRemoveAllAwareConnectionToListen", NetworkingChannel.DefaultReliableSequenced);
+                return;
+            }
+#endif
+        }
+
+        [NetworkedFunction]
+        public void ServerAddAllAwareConnectionToListen()
+        {
+#if SERVER
+            foreach (NetworkingConnection conn in serverAwareConnections)
+            {
+                AddServerConnectionListener(conn);
+            }
+#endif
+        }
+
+        [NetworkedFunction]
+        public void ServerRemoveAllAwareConnectionToListen()
+        {
+#if SERVER
+            foreach (NetworkingConnection conn in serverAwareConnections)
+            {
+                RemoveServerConnectionListener(conn);
+            }
+#endif
+        }
 
         // these are masks, not bit numbers, ie. 0x004 not 2
-       /* public void SetDirtyBit(uint dirtyBit)
-        {
-            m_SyncVarDirtyBits |= dirtyBit;
-        }*/
+        /* public void SetDirtyBit(uint dirtyBit)
+         {
+             m_SyncVarDirtyBits |= dirtyBit;
+         }*/
 
-        public void ClearAllDirtyBits()
-        {
-            m_LastSendTime = Time.time;
-            m_syncVarDirtyBits = 0;
-        } 
+        /* public void ClearAllDirtyBits()
+         {
+             m_LastSendTime = Time.time;
+             m_syncVarDirtyBits = 0;
+         } */
 
         internal int GetDirtyChannel()
         {
@@ -290,15 +506,11 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public virtual void PreStartClient()
-        {
-        }
-
         public virtual void OnNetworkDestroy()
         {
         }
 
+#if SERVER
         /// <summary>
         /// Called when the gameObject is attached to a server
         /// </summary>
@@ -306,13 +518,16 @@ namespace BC_Solution.UnetNetwork
         public virtual void OnStartServer(NetworkingServer networkingServer)
         {
         }
+#endif
 
+#if CLIENT
         /// <summary>
         /// Called when the isLocalConnection is checked
         /// </summary>
         public virtual void OnStartLocalConnection()
         {
         }
+#endif
 
         /// <summary>
         /// Called when status of m_hasAutority change to true
@@ -328,12 +543,23 @@ namespace BC_Solution.UnetNetwork
         {
         }
 
+#if SERVER
         /// <summary>
         /// Called on server when a new connection is added
         /// Can be called if connection don't know the gameObject.
         /// </summary>
         /// <param name="conn"></param>
         public virtual void OnServerConnect(NetworkingConnection conn)
+        {
+
+        }
+
+
+        /// <summary>
+        /// Called on server when a new connection is acknowledge of the gameObject
+        /// </summary>
+        /// <param name="conn"></param>
+        public virtual void OnServerAware(NetworkingConnection conn)
         {
 
         }
@@ -348,6 +574,17 @@ namespace BC_Solution.UnetNetwork
 
         }
 
+
+        /// <summary>
+        /// Called on server when server add a listener on a networkingIdentity
+        /// This networkingBehaviour will be known by connection
+        /// </summary>
+        /// <param name="conn"></param>
+        public virtual void OnServerRemoveListener(NetworkingConnection conn)
+        {
+
+        }
+
         /// <summary>
         /// Called on the server when it is syncing the netId of an object with a connection
         /// </summary>
@@ -357,14 +594,10 @@ namespace BC_Solution.UnetNetwork
 
         }
 
+#endif
         public virtual int GetNetworkChannel()
         {
             return NetworkingChannel.DefaultReliableSequenced;
         }
-
-      /*  public virtual float GetNetworkSendInterval()
-        {
-            return k_DefaultSendInterval;
-        } */
     }
 }

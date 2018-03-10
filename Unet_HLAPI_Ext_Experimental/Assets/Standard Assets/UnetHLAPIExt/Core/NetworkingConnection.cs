@@ -42,23 +42,13 @@ namespace BC_Solution.UnetNetwork
         /// <summary>
         /// Called on client when the local connection disconnect
         /// </summary>
-        public static Action<NetworkingConnection, NetworkingMessage> OnConnectionDisconnect;
+        public static Action<NetworkingConnection> OnConnectionDisconnect;
 
         /// <summary>
         /// Called on client when the local connection connect
         /// </summary>
         public static Action<NetworkingConnection> OnConnectionConnect;
 
-        /// <summary>
-        /// Called on client when the local connection become ready
-        /// </summary>
-       // public static Action<NetworkingConnection, NetworkingMessage> OnConnectionReady;
-
-
-        /// <summary>
-        /// Called on client when the local connection become not ready
-        /// </summary>
-       // public static Action<NetworkingConnection, NetworkingMessage> OnClientNotReady;
 
         /// <summary>
         /// Called on client when the local connection stop
@@ -66,21 +56,6 @@ namespace BC_Solution.UnetNetwork
         public static Action<NetworkingConnection> OnStopConnection;
 
         #endregion
-
-        #region From server to every client
-        /// <summary>
-        /// Called on every client when a connection connect
-        /// </summary>
-       // public static Action<NetworkingConnection, NetworkingMessage> OnClientConnectFromServer;
-
-        /// <summary>
-        /// Called on every client when a connection become ready on the server
-        /// </summary>
-      //  public static Action<NetworkingConnection, NetworkingMessage> OnClientReadyFromServer;
-        #endregion
-
-
-
 
         public enum ConnectState
         {
@@ -103,10 +78,6 @@ namespace BC_Solution.UnetNetwork
         NetworkingChannelBuffer[] m_channels;
         List<PlayerController> m_PlayerControllers = new List<PlayerController>();
 
-        // HashSet<NetworkIdentity> m_visibilityList = new HashSet<NetworkIdentity>();
-        //internal HashSet<NetworkIdentity> visibilityList { get { return m_visibilityList; } }
-
-
         NetworkingWriter m_writer = new NetworkingWriter();
 
         public Dictionary<ushort, Action<NetworkingMessage>> m_messageHandlers = new Dictionary<ushort, Action<NetworkingMessage>>();
@@ -122,11 +93,6 @@ namespace BC_Solution.UnetNetwork
         public int m_hostId = -1;
         public int m_connectionId = -1;
 
-        /// <summary>
-        /// Specify if this connection is a host
-        /// </summary>
-        public bool m_isHost;
-        //public bool isReady;
 
         public float lastMessageTime;
         public List<PlayerController> playerControllers { get { return m_PlayerControllers; } }
@@ -144,24 +110,14 @@ namespace BC_Solution.UnetNetwork
         public string m_serverAddress { get; private set; }
         public int m_serverPort { get; private set; }
 
+#if SERVER
         /// <summary>
         /// Only available on server
         /// </summary>
         public NetworkingServer m_server;
-
+#endif 
         public NetworkingConnection()
         {
-            this.RegisterHandler(NetworkingMessageType.Connect, InternalOnConnectionConnect);
-            this.RegisterHandler(NetworkingMessageType.Disconnect, InternalOnConnectionDisconnect);
-            //this.RegisterHandler(NetworkingMessageType.AddPlayer, InternalOnConnectionAddPlayer);
-            //this.RegisterHandler(NetworkingMessageType.Scene, BaseOnClientChangeScene);
-
-            // this.RegisterHandler(NetworkingMessageType.Ready, InternalOnConnectionReady);
-            // this.RegisterHandler(NetworkingMessageType.NotReady, InternalOnConnectionNotReady);
-
-            //this.RegisterHandler(NetworkingMessageType.ClientConnectFromServerMessage, InternalOnConnectionConnectFromServer);
-            //this.RegisterHandler(NetworkingMessageType.ClientReadyFromServerMessage, InternalOnConnectionReadyFromServer);
-
             m_msgBuffer = new byte[NetworkingMessage.MaxMessageSize];
         }
 
@@ -169,15 +125,6 @@ namespace BC_Solution.UnetNetwork
         {
             m_serverAddress = serverAddress;
             m_serverPort = serverPort;
-
-            this.RegisterHandler(NetworkingMessageType.Connect, InternalOnConnectionConnect);
-            this.RegisterHandler(NetworkingMessageType.Disconnect, InternalOnConnectionDisconnect);
-            //this.RegisterHandler(NetworkingMessageType.AddPlayer, InternalOnConnectionAddPlayer);
-            //this.RegisterHandler(NetworkingMessageType.Scene, BaseOnClientChangeScene);
-            //this.RegisterHandler(NetworkingMessageType.NotReady, InternalOnConnectionNotReady);
-
-            // this.RegisterHandler(NetworkingMessageType.ClientConnectFromServerMessage, InternalOnConnectionConnectFromServer); //Bad design ?
-            //this.RegisterHandler(NetworkingMessageType.ClientReadyFromServerMessage, InternalOnConnectionReadyFromServer);
 
             m_msgBuffer = new byte[NetworkingMessage.MaxMessageSize];
         }
@@ -248,9 +195,6 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        // Track whether Dispose has been called.
-        //bool m_Disposed;
-
         ~NetworkingConnection()
         {
             Dispose(false);
@@ -269,21 +213,6 @@ namespace BC_Solution.UnetNetwork
         {
             // Check to see if Dispose has already been called.
             m_channels = null;
-
-            /*if (m_clientOwnedObjects != null)
-            {
-                foreach (var netId in m_clientOwnedObjects)
-                {
-                    NetworkingIdentity netIdentity = NetworkingIdentity.FindLocalNetworkIdentity(this, netId);  //NetworkServer.FindLocalObject(netId);
-                    if (netIdentity != null)
-                    {
-                        netIdentity.ClearClientOwner();
-                    }
-                }
-            }
-            m_clientOwnedObjects = null;*/
-
-            // m_Disposed = true;
         }
 
 
@@ -364,7 +293,7 @@ namespace BC_Solution.UnetNetwork
                         }
 
                         m_currentState = ConnectState.Connected;
-                        InvokeHandler(NetworkingMessageType.Connect, null, 0);
+                        InternalOnConnectionConnect();
                         break;
 
                     case NetworkEventType.DataEvent:
@@ -396,7 +325,7 @@ namespace BC_Solution.UnetNetwork
                             }
                         }
                         //ClientScene.HandleClientDisconnect(m_Connection);
-                        InvokeHandler(NetworkingMessageType.Disconnect, null, 0);
+                        InternalOnConnectionDisconnect();
                         return; //we are disconnected
 
                     case NetworkEventType.Nothing:
@@ -511,12 +440,6 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-      /*  public void SetReady()
-        {
-            isReady = true;
-            this.Send(NetworkingMessageType.Ready, new EmptyMessage());
-        } */
-
         //What the use case ? Disabled for the moment
        /* public void Connect(EndPoint secureTunnelEndPoint)
         {
@@ -593,19 +516,11 @@ namespace BC_Solution.UnetNetwork
         public void Disconnect()
         {
             m_currentState = ConnectState.Disconnected;
-           // isReady = false;
-           // ClientScene.HandleClientDisconnect(this); NOPE
             byte error;
             NetworkTransport.Disconnect(m_hostId, m_connectionId, out error);
             this.Dispose();
-            //RemoveObservers();
         }
 
-        /*  internal void SetHandlers(Action<NetworkingMessage> handlers)
-          {
-              m_MessageHandlers = handlers;
-              m_MessageHandlersDict = handlers.GetHandlers();
-          } */
 
         static bool IsValidIpV6(string address)
         {
@@ -633,6 +548,8 @@ namespace BC_Solution.UnetNetwork
             {
                 //if (LogFilter.logWarn) { Debug.LogWarning("NetworkConnection InvokeHandler no handler for " + msgType); }
                 //Debug.Log(reader.Length);
+
+#if SERVER
                 if (m_server != null) //By design, if you have no handler but you are server, just send back information to all client.
                 {
                     NetworkingWriter writer = new NetworkingWriter();
@@ -645,32 +562,17 @@ namespace BC_Solution.UnetNetwork
                     return true;
                 }
                 else
-                {
+                { 
+                #endif
                     //NOTE: this throws away the rest of the buffer. Need moar error codes
                     if (LogFilter.logError) { Debug.LogError("Unknown message ID " + msgType + " connId:" + m_connectionId + " channelID : " + channelId); }
 
                     return false;
+ #if SERVER 
                 }
+#endif
             }
         }
-
-      /*  public bool InvokeHandler(ushort msgType, NetworkingMessage netMsg)
-        {
-            Action<NetworkingMessage> msgDelegate;
-            m_messageHandlers.TryGetValue(msgType, out msgDelegate);
-
-            if (msgDelegate == null)
-            {
-                if (LogFilter.logWarn) { Debug.LogWarning("NetworkConnection InvokeHandler no handler for " + netMsg.m_type); }
-                return false;
-            }
-
-            netMsg.m_type = msgType;
-            msgDelegate(m_messageInfo);
-
-            return true;
- 
-        }*/
 
         internal void HandleFragment(NetworkingReader reader, int channelId)
         {
@@ -718,49 +620,6 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        internal void SetPlayerController(PlayerController player)
-        {
-            while (player.playerControllerId >= m_PlayerControllers.Count)
-            {
-                m_PlayerControllers.Add(new PlayerController());
-            }
-
-            m_PlayerControllers[player.playerControllerId] = player;
-        }
-
-        internal void RemovePlayerController(short playerControllerId)
-        {
-            int count = m_PlayerControllers.Count;
-            while (count >= 0)
-            {
-                if (playerControllerId == count && playerControllerId == m_PlayerControllers[count].playerControllerId)
-                {
-                    m_PlayerControllers[count] = new PlayerController();
-                    return;
-                }
-                count -= 1;
-            }
-            if (LogFilter.logError) { Debug.LogError("RemovePlayer player at playerControllerId " + playerControllerId + " not found"); }
-        }
-
-        // Get player controller from connection's list
-        internal bool GetPlayerController(short playerControllerId, out PlayerController playerController)
-        {
-            playerController = null;
-            if (playerControllers.Count > 0)
-            {
-                for (int i = 0; i < playerControllers.Count; i++)
-                {
-                    if (playerControllers[i].IsValid && playerControllers[i].playerControllerId == playerControllerId)
-                    {
-                        playerController = playerControllers[i];
-                        return true;
-                    }
-                }
-                return false;
-            }
-            return false;
-        }
 
         public void FlushChannels()
         {
@@ -774,17 +633,6 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        /*public void SetMaxDelay(float seconds)
-        {
-            if (m_channels == null)
-            {
-                return;
-            }
-            for (int channelId = 0; channelId < m_channels.Length; channelId++)
-            {
-                m_channels[channelId].maxDelay = seconds;
-            }
-        }*/
 
         /// <summary>
         /// Send with the default reliable sequence channel (0)
@@ -874,10 +722,7 @@ namespace BC_Solution.UnetNetwork
 #endif
         }
 
-        protected void HandleBytes(
-            byte[] buffer,
-            int receivedSize,
-            int channelId)
+        protected void HandleBytes(byte[] buffer, int receivedSize, int channelId)
         {
             // build the stream form the buffer passed in
             NetworkingReader reader = new NetworkingReader(buffer);
@@ -885,10 +730,7 @@ namespace BC_Solution.UnetNetwork
             HandleReader(reader, receivedSize, channelId);
         }
 
-        protected void HandleReader(
-            NetworkingReader reader,
-            int receivedSize,
-            int channelId)
+        protected void HandleReader( NetworkingReader reader, int receivedSize, int channelId)
         {
             //Debug.Log("Receive size : " + receivedSize);
 
@@ -920,63 +762,43 @@ namespace BC_Solution.UnetNetwork
                     Debug.Log("ConnectionRecv con:" + m_connectionId + " bytes:" + sz + " msgId:" + msgType + " " + msg);
                 }
 
-               // NetworkingMessage msg = new NetworkingMessage();
-               /* msg.m_type = msgType;
-                msg.reader = msgReader;
-                msg.conn = this;
-                msg.channelId = channelId;*/
                 InvokeHandler(msgType, msgReader, channelId);
 
-               // Action<NetworkingMessage> msgDelegate = null;
-                //m_messageHandlers.TryGetValue(msgType, out msgDelegate);
-
-              /*  if (msgDelegate != null)
-                {
-                    NetworkingMessage msg = new NetworkingMessage();
-                    msg.m_type = msgType;
-                    msg.reader = msgReader;
-                    msg.conn = this;
-                    msg.channelId = channelId;
-  
-                    msgDelegate(msg);
-                    lastMessageTime = Time.time;
-
 #if UNITY_EDITOR
-                   /* UnityEditor.NetworkDetailStats.IncrementStat(
-                        UnityEditor.NetworkDetailStats.NetworkDirection.Incoming,
-                        MsgType.HLAPIMsg, "msg", 1);
+                /* UnityEditor.NetworkDetailStats.IncrementStat(
+                     UnityEditor.NetworkDetailStats.NetworkDirection.Incoming,
+                     MsgType.HLAPIMsg, "msg", 1);
 
-                    if (msgType > MsgType.Highest)
-                    {
-                        UnityEditor.NetworkDetailStats.IncrementStat(
-                            UnityEditor.NetworkDetailStats.NetworkDirection.Incoming,
-                            MsgType.UserMessage, msgType.ToString() + ":" + msgType.GetType().Name, 1);
-                    } 
-#endif
+                 if (msgType > MsgType.Highest)
+                 {
+                     UnityEditor.NetworkDetailStats.IncrementStat(
+                         UnityEditor.NetworkDetailStats.NetworkDirection.Incoming,
+                         MsgType.UserMessage, msgType.ToString() + ":" + msgType.GetType().Name, 1);
+                 } 
 
-#if UNITY_EDITOR
-                    if (m_packetStats.ContainsKey(msgType))
-                    {
-                        PacketStat stat = m_packetStats[msgType];
-                        stat.count += 1;
-                        stat.bytes += sz;
-                    }
-                    else
-                    {
-                        PacketStat stat = new PacketStat();
-                        stat.msgType = msgType;
-                        stat.count += 1;
-                        stat.bytes += sz;
-                        m_packetStats[msgType] = stat;
-                    }
+
+                 if (m_packetStats.ContainsKey(msgType))
+                 {
+                     PacketStat stat = m_packetStats[msgType];
+                     stat.count += 1;
+                     stat.bytes += sz;
+                 }
+                 else
+                 {
+                     PacketStat stat = new PacketStat();
+                     stat.msgType = msgType;
+                     stat.count += 1;
+                     stat.bytes += sz;
+                     m_packetStats[msgType] = stat;
+                 }
+             }
+             else
+             {
+                 //NOTE: this throws away the rest of the buffer. Need moar error codes
+                 if (LogFilter.logError) { Debug.LogError("Unknown message ID " + msgType + " connId:" + m_connectionId); }
+                 break;
+             } */
 #endif
-                }
-                else
-                {
-                    //NOTE: this throws away the rest of the buffer. Need moar error codes
-                    if (LogFilter.logError) { Debug.LogError("Unknown message ID " + msgType + " connId:" + m_connectionId); }
-                    break;
-                } */
             }
         }
 
@@ -1015,33 +837,6 @@ namespace BC_Solution.UnetNetwork
             return string.Format("hostId: {0} connectionId: {1} channel count: {2}", m_hostId, m_connectionId, (m_channels != null ? m_channels.Length : 0));
         }
 
-      /*  internal void AddToVisList(NetworkIdentity uv)
-        {
-            m_visibilityList.Add(uv);
-
-            // spawn uv for this conn
-            NetworkServer.ShowForConnection(uv, this);
-        } */
-
-       /* internal void RemoveFromVisList(NetworkIdentity uv, bool isDestroyed)
-        {
-            m_visibilityList.Remove(uv);
-
-            if (!isDestroyed)
-            {
-                // hide uv for this conn
-                NetworkServer.HideForConnection(uv, this);
-            }
-        } */
-
-      /*  internal void RemoveObservers()
-        {
-            foreach (var uv in m_visibilityList)
-            {
-                uv.RemoveObserverInternal(this);
-            }
-            m_visibilityList.Clear();
-        } */
 
         public virtual void TransportReceive(byte[] bytes, int numBytes, int channelId)
         {
@@ -1054,15 +849,6 @@ namespace BC_Solution.UnetNetwork
             return NetworkTransport.Send(m_hostId, m_connectionId, channelId, bytes, numBytes, out error);
         }
 
-       /* internal void AddOwnedObject(NetworkingIdentity obj)
-        {
-            m_clientOwnedObjects.Add(obj.netId);
-        }
-
-        internal void RemoveOwnedObject(NetworkingIdentity obj)
-        {
-            m_clientOwnedObjects.Remove(obj.netId);
-        }*/
 
         internal static void OnFragment(NetworkingMessage netMsg)
         {
@@ -1118,89 +904,29 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        #region handlers
+#region handlers
 
-        void InternalOnConnectionConnect(NetworkingMessage netMsg)
+        void InternalOnConnectionConnect()
         {
             Debug.Log("Client connect");
-
-          /*  if (setReadyOnConnect)
-                ClientScene.Ready(netMsg.conn);
-
-            if (instantiatePlayerObjectOnClientConnect)
-            {
-                ClientScene.AddPlayer(0);
-            }*/
 
             if (OnConnectionConnect != null)
                 OnConnectionConnect(this);
         }
 
-       /* void InternalOnConnectionReady(NetworkingMessage netMsg)
+
+        void InternalOnConnectionDisconnect()
         {
-            Debug.Log("Local connection ready");
-
-            isReady = true;
-
-            if (OnConnectionReady != null)
-                OnConnectionReady(this, netMsg);
-        }*/
-
-      /*  void InternalOnConnectionAddPlayer(NetworkingMessage netMsg)
-        {
-
-        } */
-
-       /* void InternalOnConnectionNotReady(NetworkingMessage netMsg)
-        {
-            Debug.Log("Client set as not ready");
-
-           // MethodInfo inf = typeof(ClientScene).GetMethod("SetNotReady", BindingFlags.Static | BindingFlags.NonPublic);
-           // inf.Invoke(null, null);
-
-            if (OnClientNotReady != null)
-                OnClientNotReady(this, netMsg);
-        } */
-
-        void InternalOnConnectionDisconnect(NetworkingMessage netMsg)
-        {
-            //ClientScene.DestroyAllClientObjects();
-            //NetworkClient.ShutdownAll();
-            //client = null;
-
             Debug.Log("Connection disconnect");
 
             if (OnConnectionDisconnect != null)
-                OnConnectionDisconnect(this,netMsg);
+                OnConnectionDisconnect(this);
 
-            //byte error;
-            //NetworkTransport.Disconnect(m_hostId, m_connectionId, out error);
             NetworkTransport.RemoveHost(m_hostId);
             this.Dispose();
             m_hostId = -1;
-
-            //if (autoReconnectOnLocal)
-            // StartHost();
         }
 
-        #endregion
-
-
-
-       /* void InternalOnConnectionReadyFromServer(NetworkingMessage netMsg)
-        {
-            Debug.Log("Client ready from server");
-
-            if (OnClientReadyFromServer != null)
-                OnClientReadyFromServer(this, netMsg);
-        }
-
-        void InternalOnConnectionConnectFromServer(NetworkingMessage netMsg)
-        {
-            Debug.Log("Client connect from server");
-
-            if (OnClientConnectFromServer != null)
-                OnClientConnectFromServer(this, netMsg);
-        } */
+#endregion
     }
 }

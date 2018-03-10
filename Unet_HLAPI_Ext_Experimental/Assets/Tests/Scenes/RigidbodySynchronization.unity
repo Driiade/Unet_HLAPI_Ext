@@ -349,11 +349,6 @@ Prefab:
       propertyPath: m_RootOrder
       value: 8
       objectReference: {fileID: 0}
-    - target: {fileID: 114411088824737412, guid: d313bee6809531445a0186a4f8705868,
-        type: 2}
-      propertyPath: returnedValueOnCurrentPosition.x
-      value: 3.6102846
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: d313bee6809531445a0186a4f8705868, type: 2}
   m_IsPrefabParent: 0
@@ -1066,16 +1061,6 @@ Prefab:
       propertyPath: m_RootOrder
       value: 7
       objectReference: {fileID: 0}
-    - target: {fileID: 114155364404170798, guid: 62a041a6082f59648bf1f43dbe038b08,
-        type: 2}
-      propertyPath: sendingRate
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 114188726879029900, guid: 62a041a6082f59648bf1f43dbe038b08,
-        type: 2}
-      propertyPath: m_serverId
-      value: MainServerss
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
   m_IsPrefabParent: 0
@@ -1441,8 +1426,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da27995962c41e24f97305248d766c28, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  destroyNetworkObjectsOnDisconnection: 1
-  connectOnStart: 0
   autoReconnectOnLocal: 0
   setReadyOnConnect: 1
   serverAdress: localhost
@@ -1453,7 +1436,6 @@ MonoBehaviour:
   disconnectionTimeOut: 5000
   packetSize: 1470
   fragmentSize: 500
-  maxDelayForSendingData: 0.01
   maxSentMessageQueueSize: 150
   sendDelay: 5
 --- !u!4 &1807647483
@@ -1480,7 +1462,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6761844c71930ef468216fa98f43cf34, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkingSystem: {fileID: 1807647482}
   showGUI: 1
   offsetX: 0
   offsetY: 0

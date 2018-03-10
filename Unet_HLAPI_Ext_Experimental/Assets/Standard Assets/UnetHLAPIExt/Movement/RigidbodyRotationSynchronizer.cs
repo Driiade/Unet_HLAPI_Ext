@@ -59,13 +59,6 @@ namespace BC_Solution.UnetNetwork
         public Vector3 minRotationValue;
         public Vector3 maxRotationValue;
 
-#if UNITY_EDITOR
-        [Space(10)]
-        [SerializeField]
-        Vector3 precisionAfterCompression;
-        [SerializeField]
-        Vector3 returnedValueOnCurrentRotation;
-# endif
 
         [Space(5)]
         public COMPRESS_MODE compressionAngularVelocityMode = COMPRESS_MODE.NONE;
@@ -206,8 +199,12 @@ namespace BC_Solution.UnetNetwork
         }
 
 #if UNITY_EDITOR
-        private void OnValidate()
+        public override void OnInspectorGUI()
         {
+
+        Vector3 precisionAfterCompression = Vector3.zero;
+        Vector3 returnedValueOnCurrentRotation = Vector3.zero;
+
             switch (compressionRotationMode)
             {
                 case COMPRESS_MODE.USHORT:
@@ -222,6 +219,11 @@ namespace BC_Solution.UnetNetwork
                     returnedValueOnCurrentRotation.z = this.m_rigidbody.rotation.eulerAngles.z;
                     break;
             }
+
+
+            GUILayout.Space(10);
+            GUILayout.Label("Precision : \n" + "(" + precisionAfterCompression.x + ", " + precisionAfterCompression.y + ", " + precisionAfterCompression.z + ")");
+            GUILayout.Label("Returned value after compression : \n" + "(" + returnedValueOnCurrentRotation.x + ", " + returnedValueOnCurrentRotation.y + ", " + returnedValueOnCurrentRotation.z + ")");
         }
 #endif
     }

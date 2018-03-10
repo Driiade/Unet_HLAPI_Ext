@@ -69,14 +69,6 @@ namespace BC_Solution.UnetNetwork
         public Vector2 minVelocityValue;
         public Vector2 maxVelocityValue;
 
-#if UNITY_EDITOR
-        [Space(10)]
-        [SerializeField]
-        Vector2 precisionAfterCompression;
-        [SerializeField]
-        Vector2 returnedValueOnCurrentPosition;
-#endif
-
 
         private Vector2 lastPosition = Vector3.zero;
         private Vector2 positionError = Vector3.zero;
@@ -134,8 +126,8 @@ namespace BC_Solution.UnetNetwork
                         GetVector2(positionSynchronizationMode, ref val, Math.CatmullRomInterpolation(((Rigidbody2DPositionState)m_statesBuffer[lhsIndex + 1]).m_position, ((Rigidbody2DPositionState)lhs).m_position, ((Rigidbody2DPositionState)rhs).m_position, ((Rigidbody2DPositionState)m_statesBuffer[lhsIndex - 2]).m_position,
                                                                          m_statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, m_statesBuffer[lhsIndex - 2].m_relativeTime, (1f - t) * lhs.m_relativeTime + t * rhs.m_relativeTime));
 #if DEVELOPMENT
-                            Math.DrawCatmullRomInterpolation(((Rigidbody2DPositionState)statesBuffer[lhsIndex + 1]).m_position, ((Rigidbody2DPositionState)lhs).m_position, ((Rigidbody2DPositionState)rhs).m_position, ((Rigidbody2DPositionState)statesBuffer[lhsIndex - 2]).m_position,
-                                                                             statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, statesBuffer[lhsIndex - 2].m_relativeTime);
+                            Math.DrawCatmullRomInterpolation(((Rigidbody2DPositionState)m_statesBuffer[lhsIndex + 1]).m_position, ((Rigidbody2DPositionState)lhs).m_position, ((Rigidbody2DPositionState)rhs).m_position, ((Rigidbody2DPositionState)m_statesBuffer[lhsIndex - 2]).m_position,
+                                                                             m_statesBuffer[lhsIndex + 1].m_relativeTime, lhs.m_relativeTime, rhs.m_relativeTime, m_statesBuffer[lhsIndex - 2].m_relativeTime);
 #endif
                         break;
                 }
@@ -211,8 +203,12 @@ namespace BC_Solution.UnetNetwork
         }
 
 #if UNITY_EDITOR
-        private void OnValidate()
+        public override void OnInspectorGUI()
         {
+
+             Vector2 precisionAfterCompression = Vector2.zero;
+             Vector2 returnedValueOnCurrentPosition = Vector2.zero;
+
             switch (compressionPositionMode)
             {
                 case COMPRESS_MODE.USHORT:
@@ -225,6 +221,9 @@ namespace BC_Solution.UnetNetwork
                     returnedValueOnCurrentPosition.y = this.m_rigidbody2D.position.y;
                     break;
             }
+            GUILayout.Space(10);
+            GUILayout.Label("Precision : \n" + "(" + precisionAfterCompression.x + ", " + precisionAfterCompression.y + ")");
+            GUILayout.Label("Returned value after compression : \n" + "(" + returnedValueOnCurrentPosition.x + ", " + returnedValueOnCurrentPosition.y + ")");
         }
 #endif
     }

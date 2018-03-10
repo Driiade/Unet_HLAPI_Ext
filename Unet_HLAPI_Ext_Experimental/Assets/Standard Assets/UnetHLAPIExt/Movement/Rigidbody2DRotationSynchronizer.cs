@@ -59,13 +59,6 @@ namespace BC_Solution.UnetNetwork
         public float minRotationValue;
         public float maxRotationValue;
 
-#if UNITY_EDITOR
-        [Space(10)]
-        [SerializeField]
-        float precisionAfterCompression;
-        [SerializeField]
-        float returnedValueOnCurrentRotation;
-# endif
 
         [Space(5)]
         public COMPRESS_MODE compressionAngularVelocityMode = COMPRESS_MODE.NONE;
@@ -273,8 +266,11 @@ namespace BC_Solution.UnetNetwork
         }
 
 #if UNITY_EDITOR
-        private void OnValidate()
+        public override void OnInspectorGUI()
         {
+            float precisionAfterCompression = 0;
+            float returnedValueOnCurrentRotation = 0;
+
             switch (compressionRotationMode)
             {
                 case COMPRESS_MODE.USHORT:
@@ -285,6 +281,10 @@ namespace BC_Solution.UnetNetwork
                     returnedValueOnCurrentRotation = this.m_rigidbody2D.rotation;
                     break;
             }
+
+            GUILayout.Space(10);
+            GUILayout.Label("Precision : "  + precisionAfterCompression);
+            GUILayout.Label("Returned value after compression : " + returnedValueOnCurrentRotation);
         }
 #endif
     }

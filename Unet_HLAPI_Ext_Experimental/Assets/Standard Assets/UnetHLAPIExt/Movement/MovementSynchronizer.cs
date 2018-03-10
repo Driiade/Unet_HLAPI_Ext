@@ -60,7 +60,9 @@ namespace BC_Solution.UnetNetwork
         internal float m_lastInterpolationUpdateTimer = -1;
         internal bool m_sentEndInterpolation = false;
 
+#if CLIENT || SERVER
         private NetworkMovementSynchronization m_networkMovementSynchronization;
+#endif
 
         protected float m_extrapolationTimer = -1;
 
@@ -82,6 +84,11 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
+        /// <summary>
+        /// All new state with a timestamp < loackStateTimestamp will be ignored
+        /// </summary>
+        protected float m_lockStateTime = -1;
+
         protected State extrapolatingState;
 
         public abstract void GetCurrentState(NetworkingWriter networkWriter);
@@ -95,6 +102,10 @@ namespace BC_Solution.UnetNetwork
 
         public abstract void OnErrorCorrection();
 
+#if UNITY_EDITOR
+        public virtual void OnInspectorGUI() { }
+#endif
+
         public virtual bool NeedToUpdate()
         {
             return m_isActive;
@@ -104,7 +115,9 @@ namespace BC_Solution.UnetNetwork
         internal void Init(NetworkMovementSynchronization movSynchronization)
         {
             m_statesBuffer = new State[maxBufferSize];
+#if CLIENT || SERVER
             this.m_networkMovementSynchronization = movSynchronization;
+#endif
         }
 
         public bool m_isExtrapolating { get; private set; }
@@ -115,7 +128,10 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         protected internal void ManualUpdate()
         {
-           if (m_currentStatesIndex < 0 || networkingIdentity.isLocalConnection)
+           if (m_currentStatesIndex < 0)
+                return;
+
+            if (hasAuthority)
                 return;
 
             State lhs;
@@ -193,8 +209,12 @@ namespace BC_Solution.UnetNetwork
         {
             int place = -1;
 
+            if(s.m_relativeTime < m_lockStateTime)
+            {
+                //Locked, do nothing
+            }
             //If no States are present, put in first slot.
-            if (m_currentStatesIndex < 0)
+            else if (m_currentStatesIndex < 0)
             {
                 m_statesBuffer[0] = s;
                 place = 0;
@@ -206,7 +226,7 @@ namespace BC_Solution.UnetNetwork
                 for (int i = 0; i <= m_currentStatesIndex; i++)
                 {
                     //If the state in slot i is older than our new state, we found our slot.  
-                    if (m_statesBuffer[i].m_relativeTime < s.m_relativeTime)
+                    if (m_statesBuffer[i].m_relativeTime < s.m_relativeTime || m_statesBuffer[i] == null)
                     {
                         // Shift the buffer sideways, to make room in slot i. possibly deleting last state
                         for (int k = maxBufferSize - 1; k > i; k--)
@@ -219,6 +239,14 @@ namespace BC_Solution.UnetNetwork
 
                         m_currentStatesIndex = Mathf.Min(m_currentStatesIndex + 1, maxBufferSize - 1);
                         //We are done, exit loop
+                        break;
+                    }
+                    else if (m_statesBuffer[i].m_relativeTime == s.m_relativeTime)
+                    {
+                        //Replace state
+                        m_statesBuffer[i] = s;
+                        place = i;
+
                         break;
                     }
                 }
@@ -239,12 +267,14 @@ namespace BC_Solution.UnetNetwork
             float currentTime = Time.realtimeSinceStartup;
             firstStateDelay = currentTime - m_statesBuffer[0].m_relativeTime;
 
-            float synchronisationBackTime;
+            float synchronisationBackTime = 0;
 
+#if SERVER || CLIENT
             if (!useAdaptativeSynchronizationBackTime)
                 synchronisationBackTime = m_networkMovementSynchronization.m_nonAdaptativeBacktime;
             else
                 synchronisationBackTime =  m_networkMovementSynchronization.m_adaptativeSynchronizationBackTime;
+#endif
 
            // Debug.Log("First delay : " + firstStateDelay);
           // Debug.Log("lastStateDelay : " + ((NetworkingSystem.Instance.ServerTimestamp - statesBuffer[currentStatesIndex-1].timestamp) / 1000f));

@@ -24,9 +24,9 @@ using UnityEngine.Networking;
 
 namespace BC_Solution.UnetNetwork
 {
-    [NetworkSettings(sendInterval = 0)]
     public class NetworkMovementSynchronization : NetworkingBehaviour
     {
+#if CLIENT || SERVER
         public float m_adaptativeSynchronizationBackTime = 0.15f;
         public float m_maxSynchronizationBacktime = 0.3f;
         public float m_minSynchronisationBacktime = 0.1f;
@@ -41,19 +41,21 @@ namespace BC_Solution.UnetNetwork
         public MovementSynchronizer[] movementSynchronizers;
 
         [Space(10)]
-        public float lagAverage = 0.15f;
+        [SerializeField]
+        float lagAverage = 0.15f;
 
 
         NetworkingWriter m_reliableWriter = new NetworkingWriter();
         NetworkingWriter m_unreliableWriter = new NetworkingWriter();
 
-        override protected void Awake()
+        void Awake()
         {
-            base.Awake();
             for (int i = 0; i < movementSynchronizers.Length; i++)
             {
                 movementSynchronizers[i].Init(this);
             }
+
+            lagAverage = m_minSynchronisationBacktime / m_adaptationAmount;
         }
 
         void Update()
@@ -62,9 +64,10 @@ namespace BC_Solution.UnetNetwork
                 m.ManualUpdate();
         }
 
+
         void FixedUpdate()
         {
-            if (!isLocalConnection)
+            if (!hasAuthority)
                 return;
 
             m_reliableWriter.SeekZero(true);
@@ -134,36 +137,87 @@ namespace BC_Solution.UnetNetwork
         }
 
 
+#if SERVER || CLIENT
         void SendMovementsInformations(byte[] info, bool useReliableChannel)
         {
+#if SERVER
             if (isServer)
-                foreach (NetworkingConnection n in this.serverConnectionListeners)
+            {
+                foreach (NetworkingConnection n in this.m_serverConnectionListeners)
                 {
                     if (n == null)
                         continue;
 
-                    if (this.connection== null || this.connection.m_connectionId != n.m_connectionId)
+#if CLIENT
+                    if (this.connection == null || this.connection.m_connectionId != n.m_connectionId)
                     {
                         SendToConnection(n, "RpcGetMovementInformations", useReliableChannel ? NetworkingChannel.DefaultReliable : NetworkingChannel.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
                     }
+#else
+                    SendToConnection(n, "RpcGetMovementInformations", useReliableChannel ? NetworkingChannel.DefaultReliable : NetworkingChannel.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
+#endif
                 }
-            else if (isClient)
-                SendToServer("CmdSendMovementInformations", useReliableChannel ? NetworkingChannel.DefaultReliable : NetworkingChannel.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
-        }
+                return;
+            }
+#endif
+#if CLIENT
+           if (isClient)
+            {
+              SendToServer("CmdSendMovementInformations", useReliableChannel ? NetworkingChannel.DefaultReliable : NetworkingChannel.DefaultUnreliable, NetworkTransport.GetNetworkTimestamp(), info);
+              return;
+            }
+#endif
+                }
+#endif
 
-
-
-        public override void OnServerAddListener(NetworkingConnection conn)
+        public override void OnStartAuthority()
         {
-            ServerSync(conn, NetworkingChannel.DefaultReliable, m_reliableWriter);
+
+            if (movementSynchronizers.Length > 0)
+            {
+                SerializeAllMovementSynchronizers(m_reliableWriter);
+
+#if SERVER
+                if (isServer)
+                {
+                    SendToAllConnections("GetMovementSyncInformations", NetworkingChannel.DefaultReliableSequenced, m_reliableWriter.ToArray());
+                    return;
+                }
+#endif
+
+#if CLIENT
+                if (isClient)
+                {
+                    SendToServer("CmdGetMovementSyncInformations", NetworkingChannel.DefaultReliableSequenced, m_reliableWriter.ToArray());
+                    return;
+                }
+#endif
+            }
         }
+
+#if SERVER
 
         public override void OnServerSyncNetId(NetworkingConnection conn)
         {
-            ServerSync(conn, NetworkingChannel.DefaultReliableSequenced, m_reliableWriter);
+            if (movementSynchronizers.Length > 0)
+            {
+                SerializeAllMovementSynchronizers(m_reliableWriter);
+                SendToConnection(conn, "GetMovementSyncInformations", NetworkingChannel.DefaultReliableSequenced, m_reliableWriter.ToArray());
+            }
         }
 
-        public void ServerSync(NetworkingConnection conn, int channel, NetworkingWriter writer)
+        public override void OnServerAddListener(NetworkingConnection conn)
+        {
+            if (movementSynchronizers.Length > 0)
+            {
+                SerializeAllMovementSynchronizers(m_reliableWriter);
+                SendToConnection(conn, "GetMovementSyncInformations", NetworkingChannel.DefaultReliableSequenced, m_reliableWriter.ToArray());
+            }
+        }
+#endif
+
+
+        void SerializeAllMovementSynchronizers(NetworkingWriter writer)
         {
             writer.SeekZero(true);
             int updateMask = 0;
@@ -172,29 +226,32 @@ namespace BC_Solution.UnetNetwork
                 updateMask = updateMask | (1 << i);
             }
 
-            if (updateMask != 0)
+            if (movementSynchronizers.Length <= 4)
+                writer.Write((byte)updateMask);
+            else if (movementSynchronizers.Length <= 8)
+                writer.Write((short)updateMask);
+            else
+                writer.Write(updateMask);
+
+            for (int i = 0; i < movementSynchronizers.Length; i++)
             {
-                if (movementSynchronizers.Length <= 4)
-                    writer.Write((byte)updateMask);
-                else if (movementSynchronizers.Length <= 8)
-                    writer.Write((short)updateMask);
-                else
-                    writer.Write(updateMask);
-
-                for (int i = 0; i < movementSynchronizers.Length; i++)
-                {
-                    movementSynchronizers[i].GetCurrentState(writer);
-                }
-
-                SendToConnection(conn, "RpcGetMovementSyncInformations", channel, writer.ToArray());
+                movementSynchronizers[i].GetCurrentState(writer);
             }
         }
 
+        [NetworkedFunction]
+        void CmdGetMovementSyncInformations(byte[] info)
+        {
+#if SERVER
+            GetMovementSyncInformations(info);
+            SendToAllConnections("GetMovementSyncInformations", NetworkingChannel.DefaultReliableSequenced, info);
+#endif
+        }
 
         [NetworkedFunction]
-        void RpcGetMovementSyncInformations(byte[] info)
+        void GetMovementSyncInformations(byte[] info)
         {
-            if (hasAuthority || isServer)
+            if (hasAuthority)
                 return;
 
             NetworkingReader reader = new NetworkingReader(info);
@@ -225,20 +282,28 @@ namespace BC_Solution.UnetNetwork
         [NetworkedFunction]
         void RpcGetMovementInformations(int timestamp, byte[] info)
         {
-            if (hasAuthority || isServer)
+#if CLIENT
+            if (hasAuthority)
                 return;
+#if SERVER
+            if(isServer)
+                return;
+#endif
 
             LocalGetMovementInformations(timestamp, info, this.connection);
+#endif
         }
 
         [NetworkedFunction]
-        void CmdSendMovementInformations(int timeStamp, byte[] info)
+        void CmdSendMovementInformations(int timestamp, byte[] info)
         {
+#if SERVER
             byte error;
-            LocalGetMovementInformations(timeStamp, info, this.serverConnection);
+            LocalGetMovementInformations(timestamp, info, this.serverConnection);
 
-            timeStamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.serverConnection.m_hostId, this.serverConnection.m_connectionId, timeStamp, out error);
-            SendToAllConnections("RpcGetMovementInformations", NetworkingChannel.DefaultUnreliable, timeStamp, info);
+            timestamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.serverConnection.m_hostId, this.serverConnection.m_connectionId, timestamp, out error);
+            SendToAllConnections("RpcGetMovementInformations", NetworkingChannel.DefaultUnreliable, timestamp, info);
+#endif
         }
 
         /// <summary>
@@ -254,7 +319,7 @@ namespace BC_Solution.UnetNetwork
             byte error;
             relativeTime = Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(conn.m_hostId, conn.m_connectionId, timestamp, out error) / 1000f;
 
-            lagAverage = 0.99f * lagAverage + 0.01f * (Time.realtimeSinceStartup - relativeTime);
+            lagAverage = Mathf.Lerp(lagAverage, (Time.realtimeSinceStartup - relativeTime), 0.001f);
 
             m_adaptativeSynchronizationBackTime = Mathf.Max(m_minSynchronisationBacktime, Mathf.Min(m_maxSynchronizationBacktime, lagAverage * (m_adaptationAmount)));
 
@@ -277,10 +342,11 @@ namespace BC_Solution.UnetNetwork
                 {
                     if ((updateMask & (1 << i)) != 0 || movementSynchronizers.Length == 1)
                     {
-                        movementSynchronizers[i].ReceiveCurrentState(relativeTime, reader);
+                         movementSynchronizers[i].ReceiveCurrentState(relativeTime, reader);
                     }
                 }
             }
         }
+#endif
     }
 }

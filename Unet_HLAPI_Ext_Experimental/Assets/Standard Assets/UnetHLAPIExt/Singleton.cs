@@ -24,7 +24,7 @@ using System;
 using UnityEngine.SceneManagement;
 
 
-namespace BC_Solution.UnetNetwork
+namespace BC_Solution
 {
     /// <summary>
     /// Be aware this will not prevent a non singleton constructor
@@ -47,6 +47,12 @@ namespace BC_Solution.UnetNetwork
 
         protected virtual void Awake()
         {
+            if(_instance != null)
+            {
+                Destroy(this.gameObject);
+                return;
+            }
+
             _instance = this as T;
         }
     }

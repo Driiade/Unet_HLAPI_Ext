@@ -52,8 +52,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e09113a3a782c54fbd0051d433efff3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  automaticAddListener: 1
   m_netId: 0
-  sendingRate: 0.5
+  sendingRate: 5
 --- !u!114 &114188726879029900
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -68,7 +69,10 @@ MonoBehaviour:
   m_type: 2
   m_sceneId: 0
   m_assetId: 2
-  m_ServerOnly: 0
+  m_serverId: MainServer
   m_localPlayerAuthority: 0
+  m_autoSetNetworkBehaviourNetId: 1
+  m_serverAutoSendToOwner: 1
+  m_serverAutoRpc: 1
   m_networkingBehaviours:
   - {fileID: 114155364404170798}

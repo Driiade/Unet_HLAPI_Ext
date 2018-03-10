@@ -46,13 +46,26 @@ namespace BC_Solution.UnetNetwork
 
         [SerializeField] internal ushort m_sceneId;
         [SerializeField] internal ushort m_assetId;
+
+#if SERVER
         [SerializeField, Tooltip("The server that manages this networkingIdentity on scene, only used for SINGLE_SCENE_OBJECT and REPLICATED PREFAB_SCENE_PREFAB")] internal string m_serverId = "MainServer";
-        [SerializeField] bool m_ServerOnly;
+#endif
+
         [SerializeField] bool m_localPlayerAuthority;
-        [SerializeField] bool autoSetNetworkBehaviourNetId = true;
+        [SerializeField] bool m_autoSetNetworkBehaviourNetId = true;
+
+#if SERVER
+        [Tooltip("if the networking Behaviour is not present on server and a send to owner is called, will automatically redirect the call to owner")]
+        public bool m_serverAutoSendToOwner = true;
+
+        [Tooltip("if the networking Behaviour is not present on server and a autoRpc is called, will automatically redirect the call every aware connection")]
+        public bool m_serverAutoRpc = true;
+#endif
+
+        public bool localPlayerAuthority { get { return m_localPlayerAuthority; } set { m_localPlayerAuthority = value; } }
+
         // runtime data
         bool m_hasAuthority;
-
 
         internal ushort m_netId; //Gain space with ushort
 
@@ -60,22 +73,38 @@ namespace BC_Solution.UnetNetwork
         [SerializeField]
         NetworkingBehaviour[] m_networkingBehaviours;
 
-        /// <summary>
-        /// Connection on server which listen for RPC/Command
-        /// </summary>
-        public List<NetworkingConnection> m_serverConnectionListeners = new List<NetworkingConnection>();
+        public NetworkingBehaviour[] NetworkingBehaviours { get { return m_networkingBehaviours; } }
 
+        NetworkingWriter writer = new NetworkingWriter();
+
+#if SERVER
         internal NetworkingConnection m_serverConnection;
+#endif
+#if CLIENT
         internal NetworkingConnection m_connection;
+#endif
+
+#if SERVER
         internal NetworkingServer m_server;
+#endif
 
+#if CLIENT
         internal bool m_isClient;
-        internal bool m_isServer;
-        bool m_isLocalConnection;
+        bool m_isLocalClient;
+#endif
 
-        // properties
+#if SERVER
+        internal bool m_isServer;
+#endif
+
+#if CLIENT
         public bool isClient { get { return m_isClient; } }
+
+#endif
+
+#if SERVER
         public bool isServer{ get { return m_isServer; } }
+#endif
 
         public bool hasAuthority {
             get { return m_hasAuthority; }
@@ -91,31 +120,42 @@ namespace BC_Solution.UnetNetwork
                 }
             } }
 
-        public bool isLocalConnection { get { return m_isLocalConnection; }
+#if CLIENT
+        public bool isLocalClient { get { return m_isLocalClient; }
             set
             {
-                if (value == m_isLocalConnection)
+                if (value == m_isLocalClient)
                     return;
 
-                m_isLocalConnection = value;
+                m_isLocalClient = value;
 
-                if (m_isLocalConnection)
+                if (m_isLocalClient)
                     OnStartLocalConnection();
             }
         }
+#endif
 
         public ushort netId { get { return m_netId; } }
         public ushort sceneId { get { return m_sceneId; } }
         public ushort assetID { get { return m_assetId; } }
+
+#if CLIENT
         public NetworkingConnection connection {get { return m_connection; } }
+#endif
 
-        public bool serverOnly { get { return m_ServerOnly; } set { m_ServerOnly = value; } }
-        public bool localPlayerAuthority { get { return m_localPlayerAuthority; } set { m_localPlayerAuthority = value; } }
-
+#if SERVER
+        /// <summary>
+        /// Reference connection aware of the gameObject
+        /// </summary>
+        internal List<NetworkingConnection> m_serverAwareConnections = new List<NetworkingConnection>();
+#endif
 
         private void Awake()
         {
             s_networkingIdentities.Add(this);
+
+            foreach (NetworkingBehaviour networkingBehaviour in m_networkingBehaviours)
+                networkingBehaviour.Init(this);
         }
 
 
@@ -137,30 +177,106 @@ namespace BC_Solution.UnetNetwork
                     return;
                 }
             }
+
+            Debug.LogError("NetworkingBehaviour not found : " + networkBehaviourNetId + " on : " + this.gameObject);
         }
 
 
-        // only used in SetLocalObject
-       /* internal void UpdateClientServer(bool isClientFlag, bool isServerFlag)
+#if SERVER
+        internal void ServerHandleAutoRpc(NetworkingReader reader, int channelId)
         {
-            m_isClient |= isClientFlag;
-            m_isServer |= isServerFlag;
-        }*/
+            byte networkBehaviourNetId = reader.ReadByte();
+
+            foreach (NetworkingBehaviour n in m_networkingBehaviours)
+            {
+                if (n.m_netId == networkBehaviourNetId)
+                {
+                    n.ServerHandleAutoRpc(reader, channelId);
+                    return;
+                }
+            }
+
+            if (m_serverAutoRpc)
+            {
+                ServerSendAutoRpc(reader, channelId, networkBehaviourNetId);
+            }
+            else
+                throw new Exception("NetworkingBehaviour of id : " + networkBehaviourNetId + " not find on server");
+        }
+
+
+        internal void ServerHandleSendToOwner(NetworkingConnection owner, NetworkingReader reader, int channelId)
+        {
+            byte networkBehaviourNetId = reader.ReadByte();
+
+            foreach (NetworkingBehaviour n in m_networkingBehaviours)
+            {
+                if (n.m_netId == networkBehaviourNetId)
+                {
+                    n.ServerHandleSendToOwner(owner, reader, channelId);
+                    return;
+                }
+            }
+
+            if (m_serverAutoRpc)
+            {
+                ServerSendToOwner(owner, reader, channelId, networkBehaviourNetId);
+            }
+            else
+                throw new Exception("NetworkingBehaviour of id : " + networkBehaviourNetId + " not find on server");
+        }
+
+        internal void ServerSendToOwner(NetworkingConnection owner, NetworkingReader reader, int channelId, byte networkingBehaviourId)
+        {
+            byte[] callInfo = reader.Flush(); //only information relative to serialization call
+            writer.SeekZero(true);
+            writer.StartMessage();
+
+            writer.Write(NetworkingMessageType.Rpc);
+            writer.Write(this.netId);
+            writer.Write(networkingBehaviourId);
+
+            writer.Write(callInfo);
+            writer.FinishMessage();
+
+            owner.Send(writer, channelId);
+        }
+
+        internal void ServerSendAutoRpc(NetworkingReader reader, int channelId, byte networkingBehaviourId)
+        {
+            byte[] callInfo = reader.Flush(); //only information relative to serialization call
+            writer.SeekZero(true);
+            writer.StartMessage();
+
+            writer.Write(NetworkingMessageType.Rpc);
+            writer.Write(this.netId);
+            writer.Write(networkingBehaviourId);
+
+            writer.Write(callInfo);
+            writer.FinishMessage();
+
+            foreach (NetworkingConnection conn in m_serverAwareConnections)
+            {
+                conn.Send(writer, channelId);
+            }
+        }
+#endif
+
+        // only used in SetLocalObject
+        /* internal void UpdateClientServer(bool isClientFlag, bool isServerFlag)
+         {
+             m_isClient |= isClientFlag;
+             m_isServer |= isServerFlag;
+         }*/
 
 
 
 #if UNITY_EDITOR
         void OnValidate()
         {
-            if (m_ServerOnly && m_localPlayerAuthority)
-            {
-                if (LogFilter.logWarn) { Debug.LogWarning("Disabling Local Player Authority for " + gameObject + " because it is server-only."); }
-                m_localPlayerAuthority = false;
-            }
+            m_networkingBehaviours = GetComponentsInChildren<NetworkingBehaviour>(true);
 
-            m_networkingBehaviours = GetComponentsInChildren<NetworkingBehaviour>();
-
-            if (autoSetNetworkBehaviourNetId)
+            if (m_autoSetNetworkBehaviourNetId)
             {
                 for (int i = 0; i < m_networkingBehaviours.Length; i++)
                 {
@@ -170,12 +286,15 @@ namespace BC_Solution.UnetNetwork
         }
 #endif
 
+#if SERVER
         internal void OnStartServer(NetworkingServer networkingServer)
         {
             foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
                 b.OnStartServer(networkingServer);
         }
+#endif
 
+#if CLIENT
         internal void OnStartLocalConnection()
         {
             foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
@@ -190,6 +309,7 @@ namespace BC_Solution.UnetNetwork
                 }
             }
         }
+#endif
 
         internal void OnStartAuthority()
         {
@@ -221,6 +341,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
+#if SERVER
         internal void OnServerConnect(NetworkingConnection conn)
         {
             foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
@@ -228,21 +349,6 @@ namespace BC_Solution.UnetNetwork
                 try
                 {
                     b.OnServerConnect(conn);
-                }
-                catch (System.Exception e)
-                {
-                    Debug.LogError(e);
-                }
-            }
-        }
-
-        internal void OnServerAddListener(NetworkingConnection conn)
-        {
-            foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
-            {
-                try
-                {
-                    b.OnServerAddListener(conn);
                 }
                 catch (System.Exception e)
                 {
@@ -266,40 +372,22 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
+        internal void OnServerAware(NetworkingConnection conn)
+        {
+            foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
+            {
+                try
+                {
+                    b.OnServerAware(conn);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError(e);
+                }
+            }
+        }
+#endif
 
-        /* internal void OnSetLocalVisibility(bool vis)
-         {
-             for (int i = 0; i < m_networkingBehaviours.Length; i++)
-             {
-                 NetworkingBehaviour comp = m_networkingBehaviours[i];
-                 try
-                 {
-                     comp.OnSetLocalVisibility(vis);
-                 }
-                 catch (Exception e)
-                 {
-                     Debug.LogError("Exception in OnSetLocalVisibility:" + e.Message + " " + e.StackTrace);
-                 }
-             }
-         }*/
-
-        /*  internal bool OnCheckObserver(NetworkingConnection conn) //Disable for the moment
-          {
-              for (int i = 0; i < m_networkingBehaviours.Length; i++)
-              {
-                  NetworkingBehaviour comp = m_networkingBehaviours[i];
-                  try
-                  {
-                      if (!comp.OnCheckObserver(conn))
-                          return false;
-                  }
-                  catch (Exception e)
-                  {
-                      Debug.LogError("Exception in OnCheckObserver:" + e.Message + " " + e.StackTrace);
-                  }
-              }
-              return true;
-          } */
 
         // vis2k: readstring bug prevention: https://issuetracker.unity3d.com/issues/unet-networkwriter-dot-write-causing-readstring-slash-readbytes-out-of-range-errors-in-clients
         // -> OnSerialize writes length,componentData,length,componentData,...
@@ -356,304 +444,6 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-
-        //NOT AVAILABLE FOR THE MOMENT
-        // helper function for Handle** functions
-        /* bool GetInvokeComponent(int cmdHash, Type invokeClass, out NetworkingBehaviour invokeComponent)
-         {
-             // dont use GetComponent(), already have a list - avoids an allocation
-             NetworkingBehaviour foundComp = null;
-             for (int i = 0; i < m_networkingBehaviours.Length; i++)
-             {
-                 var comp = m_networkingBehaviours[i];
-                 if (comp.GetType() == invokeClass || comp.GetType().IsSubclassOf(invokeClass))
-                 {
-                     // found matching class
-                     foundComp = comp;
-                     break;
-                 }
-             }
-             if (foundComp == null)
-             {
-                 string errorCmdName = NetworkingBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logError) { Debug.LogError("Found no behaviour for incoming [" + errorCmdName + "] on " + gameObject + ",  the server and client should have the same NetworkBehaviour instances [netId=" + netId + "]."); }
-                 invokeComponent = null;
-                 return false;
-             }
-             invokeComponent = foundComp;
-             return true;
-         }
-
-         // happens on client
-         internal void HandleSyncEvent(int cmdHash, NetworkingReader reader)
-         {
-             // this doesn't use NetworkBehaviour.InvokeSyncEvent function (anymore). this method of calling is faster.
-             // The hash is only looked up once, insted of twice(!) per NetworkBehaviour on the object.
-
-             if (gameObject == null)
-             {
-                 string errorCmdName = NetworkingBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logWarn) { Debug.LogWarning("SyncEvent [" + errorCmdName + "] received for deleted object [netId=" + netId + "]"); }
-                 return;
-             }
-
-             // find the matching SyncEvent function and networkBehaviour class
-             NetworkBehaviour.CmdDelegate invokeFunction;
-             Type invokeClass;
-             bool invokeFound = NetworkBehaviour.GetInvokerForHashSyncEvent(cmdHash, out invokeClass, out invokeFunction);
-             if (!invokeFound)
-             {
-                 // We don't get a valid lookup of the command name when it doesn't exist...
-                 string errorCmdName = NetworkBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logError) { Debug.LogError("Found no receiver for incoming [" + errorCmdName + "] on " + gameObject + ",  the server and client should have the same NetworkBehaviour instances [netId=" + netId + "]."); }
-                 return;
-             }
-
-             // find the right component to invoke the function on
-             NetworkBehaviour invokeComponent;
-             if (!GetInvokeComponent(cmdHash, invokeClass, out invokeComponent))
-             {
-                 string errorCmdName = NetworkBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logWarn) { Debug.LogWarning("SyncEvent [" + errorCmdName + "] handler not found [netId=" + netId + "]"); }
-                 return;
-             }
-
-             invokeFunction(invokeComponent, reader);
-
- #if UNITY_EDITOR
-             UnityEditor.NetworkDetailStats.IncrementStat(
-                 UnityEditor.NetworkDetailStats.NetworkDirection.Incoming,
-                 MsgType.SyncEvent, NetworkBehaviour.GetCmdHashEventName(cmdHash), 1);
- #endif
-         }
-
-         // happens on client
-         internal void HandleSyncList(int cmdHash, NetworkReader reader)
-         {
-             // this doesn't use NetworkBehaviour.InvokSyncList function (anymore). this method of calling is faster.
-             // The hash is only looked up once, insted of twice(!) per NetworkBehaviour on the object.
-
-             if (gameObject == null)
-             {
-                 string errorCmdName = NetworkBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logWarn) { Debug.LogWarning("SyncList [" + errorCmdName + "] received for deleted object [netId=" + netId + "]"); }
-                 return;
-             }
-
-             // find the matching SyncList function and networkBehaviour class
-             NetworkBehaviour.CmdDelegate invokeFunction;
-             Type invokeClass;
-             bool invokeFound = NetworkBehaviour.GetInvokerForHashSyncList(cmdHash, out invokeClass, out invokeFunction);
-             if (!invokeFound)
-             {
-                 // We don't get a valid lookup of the command name when it doesn't exist...
-                 string errorCmdName = NetworkBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logError) { Debug.LogError("Found no receiver for incoming [" + errorCmdName + "] on " + gameObject + ",  the server and client should have the same NetworkBehaviour instances [netId=" + netId + "]."); }
-                 return;
-             }
-
-             // find the right component to invoke the function on
-             NetworkBehaviour invokeComponent;
-             if (!GetInvokeComponent(cmdHash, invokeClass, out invokeComponent))
-             {
-                 string errorCmdName = NetworkBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logWarn) { Debug.LogWarning("SyncList [" + errorCmdName + "] handler not found [netId=" + netId + "]"); }
-                 return;
-             }
-
-             invokeFunction(invokeComponent, reader);
-
- #if UNITY_EDITOR
-             UnityEditor.NetworkDetailStats.IncrementStat(
-                 UnityEditor.NetworkDetailStats.NetworkDirection.Incoming,
-                 MsgType.SyncList, NetworkBehaviour.GetCmdHashListName(cmdHash), 1);
- #endif
-         }
-
-         // happens on server
-         internal void HandleCommand(int cmdHash, NetworkReader reader)
-         {
-             // this doesn't use NetworkBehaviour.InvokeCommand function (anymore). this method of calling is faster.
-             // The hash is only looked up once, insted of twice(!) per NetworkBehaviour on the object.
-
-             if (gameObject == null)
-             {
-                 string errorCmdName = NetworkBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logWarn) { Debug.LogWarning("Command [" + errorCmdName + "] received for deleted object [netId=" + netId + "]"); }
-                 return;
-             }
-
-             // find the matching Command function and networkBehaviour class
-             NetworkBehaviour.CmdDelegate invokeFunction;
-             Type invokeClass;
-             bool invokeFound = NetworkBehaviour.GetInvokerForHashCommand(cmdHash, out invokeClass, out invokeFunction);
-             if (!invokeFound)
-             {
-                 // We don't get a valid lookup of the command name when it doesn't exist...
-                 string errorCmdName = NetworkBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logError) { Debug.LogError("Found no receiver for incoming [" + errorCmdName + "] on " + gameObject + ",  the server and client should have the same NetworkBehaviour instances [netId=" + netId + "]."); }
-                 return;
-             }
-
-             // find the right component to invoke the function on
-             NetworkBehaviour invokeComponent;
-             if (!GetInvokeComponent(cmdHash, invokeClass, out invokeComponent))
-             {
-                 string errorCmdName = NetworkBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logWarn) { Debug.LogWarning("Command [" + errorCmdName + "] handler not found [netId=" + netId + "]"); }
-                 return;
-             }
-
-             invokeFunction(invokeComponent, reader);
-
- #if UNITY_EDITOR
-             UnityEditor.NetworkDetailStats.IncrementStat(
-                 UnityEditor.NetworkDetailStats.NetworkDirection.Incoming,
-                 MsgType.Command, NetworkBehaviour.GetCmdHashCmdName(cmdHash), 1);
- #endif
-         }
-
-         // happens on client
-         internal void HandleRPC(int cmdHash, NetworkReader reader)
-         {
-             // this doesn't use NetworkBehaviour.InvokeClientRpc function (anymore). this method of calling is faster.
-             // The hash is only looked up once, insted of twice(!) per NetworkBehaviour on the object.
-
-             if (gameObject == null)
-             {
-                 string errorCmdName = NetworkBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logWarn) { Debug.LogWarning("ClientRpc [" + errorCmdName + "] received for deleted object [netId=" + netId + "]"); }
-                 return;
-             }
-
-             // find the matching ClientRpc function and networkBehaviour class
-             NetworkBehaviour.CmdDelegate invokeFunction;
-             Type invokeClass;
-             bool invokeFound = NetworkBehaviour.GetInvokerForHashClientRpc(cmdHash, out invokeClass, out invokeFunction);
-             if (!invokeFound)
-             {
-                 // We don't get a valid lookup of the command name when it doesn't exist...
-                 string errorCmdName = NetworkBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logError) { Debug.LogError("Found no receiver for incoming [" + errorCmdName + "] on " + gameObject + ",  the server and client should have the same NetworkBehaviour instances [netId=" + netId + "]."); }
-                 return;
-             }
-
-             // find the right component to invoke the function on
-             NetworkBehaviour invokeComponent;
-             if (!GetInvokeComponent(cmdHash, invokeClass, out invokeComponent))
-             {
-                 string errorCmdName = NetworkBehaviour.GetCmdHashHandlerName(cmdHash);
-                 if (LogFilter.logWarn) { Debug.LogWarning("ClientRpc [" + errorCmdName + "] handler not found [netId=" + netId + "]"); }
-                 return;
-             }
-
-             invokeFunction(invokeComponent, reader);
-
- #if UNITY_EDITOR
-             UnityEditor.NetworkDetailStats.IncrementStat(
-                 UnityEditor.NetworkDetailStats.NetworkDirection.Incoming,
-                 MsgType.Rpc, NetworkBehaviour.GetCmdHashRpcName(cmdHash), 1);
- #endif
-         }*/
-
-        // invoked by unity runtime immediately after the regular "Update()" function.
-        //Ok how i do this ? tss
-       /* void Update()
-        {
-            // check if any behaviours are ready to send
-            uint dirtyChannelBits = 0;
-            for (int i = 0; i < m_networkingBehaviours.Length; i++)
-            {
-                NetworkingBehaviour comp = m_networkingBehaviours[i];
-                int channelId = comp.GetDirtyChannel();
-                if (channelId != -1)
-                {
-                    dirtyChannelBits |= (uint)(1 << channelId);
-                }
-            }
-            if (dirtyChannelBits == 0)
-                return;
-
-            for (int channelId = 0; channelId < m_connection.m_server.numChannels; channelId++)
-            {
-                if ((dirtyChannelBits & (uint)(1 << channelId)) != 0)
-                {
-                    s_updateWriter.StartMessage();
-                    s_updateWriter.Write(NetworkingMessageType.UpdateVars);
-                    s_updateWriter.Write(netId);
-
-                    bool wroteData = false;
-                    short oldPos;
-                    for (int i = 0; i < m_networkingBehaviours.Length; i++)
-                    {
-                        oldPos = s_updateWriter.Position;
-                        NetworkingBehaviour comp = m_networkingBehaviours[i];
-                        if (comp.GetDirtyChannel() != channelId)
-                        {
-                            // component could write more than one dirty-bits, so call the serialize func
-                            //comp.OnSerialize(s_UpdateWriter, false);
-                            OnSerializeSafely(comp, s_updateWriter, false);
-                            continue;
-                        }
-
-                        //if (comp.OnSerialize(s_UpdateWriter, false))
-                        if (OnSerializeSafely(comp, s_updateWriter, false))
-                        {
-                            comp.ClearAllDirtyBits();
-
-#if UNITY_EDITOR
-                            /*  UnityEditor.NetworkDetailStats.IncrementStat(
-                                  UnityEditor.NetworkDetailStats.NetworkDirection.Outgoing,
-                                  MsgType.UpdateVars, comp.GetType().Name, 1);
-#endif
-
-                            wroteData = true;
-                        }
-                        if (s_updateWriter.Position - oldPos > m_connection.m_server.packetSize)
-                        {
-                            if (LogFilter.logWarn) { Debug.LogWarning("Large state update of " + (s_updateWriter.Position - oldPos) + " bytes for netId:" + netId + " from script:" + comp); }
-                        }
-                    }
-
-                    if (!wroteData)
-                    {
-                        // nothing to send.. this could be a script with no OnSerialize function setting dirty bits
-                        continue;
-                    }
-
-                    s_updateWriter.FinishMessage();
-                    //m_networkingServer.SendWriterToReady(gameObject, s_updateWriter, channelId);
-
-                    //Only send to ready
-                    try
-                    {
-                        bool success = true;
-                        int count = this.observers.Count;
-                        for (int i = 0; i < count; i++)
-                        {
-                            var conn = this.observers[i];
-                            if (!conn.isReady)
-                                continue;
-
-                            if (!conn.Send(s_updateWriter.AsArraySegment().Array, s_updateWriter.AsArraySegment().Count, channelId))
-                            {
-                                success = false;
-                            }
-                        }
-                        if (!success)
-                        {
-                            if (LogFilter.logWarn) { Debug.LogWarning("SendBytesToReady failed for " + this.gameObject); }
-                        }
-                    }
-                    catch (NullReferenceException)
-                    {
-                        // observers may be null if object has not been spawned
-                        if (LogFilter.logWarn) { Debug.LogWarning("SendBytesToReady object " + this.gameObject + " has not been spawned"); }
-                    }
-                }
-            }
-        }*/
-
         internal void OnUpdateVars(NetworkingReader reader, bool initialState)
         {
             //Totally not logic to do that
@@ -689,7 +479,6 @@ namespace BC_Solution.UnetNetwork
         }
 
       
-
         internal void OnNetworkDestroy()
         {
             foreach(NetworkingBehaviour b in this.m_networkingBehaviours)
@@ -710,14 +499,23 @@ namespace BC_Solution.UnetNetwork
 
         internal void Reset()
         {
-            m_isLocalConnection = false;
-            m_isServer = false;
-            m_isClient = false;
             m_hasAuthority = false;
-            m_serverConnection = null;
             m_netId = 0;
-            m_serverConnectionListeners.Clear();
+
+#if CLIENT
+            m_isLocalClient = false;
+            m_isClient = false;
             m_connection = null;
+#endif
+
+#if SERVER
+            m_serverConnection = null;
+            m_isServer = false;
+            foreach (NetworkingBehaviour networkingBehaviour in m_networkingBehaviours)
+            {
+                networkingBehaviour.m_serverConnectionListeners.Clear();
+            }
+#endif
         }
     };
 }

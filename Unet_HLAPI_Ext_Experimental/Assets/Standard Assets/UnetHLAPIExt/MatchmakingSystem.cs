@@ -66,14 +66,14 @@ namespace BC_Solution.UnetNetwork
         [SerializeField]
         int m_broadcastSubVersion = 1;
 
+#if SERVER
         [SerializeField]
         int m_broadcastInterval = 1000;
+#endif
 
         [SerializeField]
         float timeToRemoveALanMatchFromList = 2f;
 
-        [SerializeField]
-        bool startAsHost = false;
 
         /// <summary>
         /// Called when a match is joined
@@ -88,7 +88,7 @@ namespace BC_Solution.UnetNetwork
         /// <summary>
         /// Called when a match is locked
         /// </summary>
-        public static NetworkMatch.BasicResponseDelegate OnMatchLocked;
+        public static NetworkMatch.BasicResponseDelegate OnHideServers;
 
 
         public static Action<string, string> OnReceivedBroadcast;
@@ -131,19 +131,6 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        static bool isOnLanMatch = false;
-        static public bool IsOnLanMatch
-        {
-            get { return isOnLanMatch; }
-        }
-
-        static bool isOnOnlineMatch = false;
-        static public bool IsOnOnlineMatch
-        {
-            get { return isOnOnlineMatch; }
-        }
-
-
         static bool isOnAutomatch = false;
         static public bool MatchIsAnAutomatch
         {
@@ -164,7 +151,7 @@ namespace BC_Solution.UnetNetwork
         Coroutine listMatchCoroutine = null;
 
 
-        #region LAN
+#region LAN
 
         public class LanMatchInfo
         {
@@ -191,8 +178,8 @@ namespace BC_Solution.UnetNetwork
 
         byte[] m_msgOutBuffer;
         byte[] m_msgInBuffer;
-        string m_broadcastData = "";
-        #endregion
+
+#endregion
 
         protected override void Awake()
         {
@@ -204,33 +191,37 @@ namespace BC_Solution.UnetNetwork
 
             matchMaker.baseUri = new System.Uri(matchAdress);
 
-            NetworkingServer.OnStopServer += LockMatchOnStopServer;
             NetworkingConnection.OnConnectionConnect += StopRelaunchingMatchmaking;
-
             NetworkingConnection.OnConnectionDisconnect += Reset;
             NetworkingSystem.OnStopAllConnections += Reset;
+
+#if SERVER
             NetworkingServer.OnStopServer += Reset;
+            NetworkingServer.OnStopServer += OnStopServer;
+#endif
         }
 
 
         public void OnDestroy()
         {
-            NetworkingServer.OnStopServer -= LockMatchOnStopServer;
             NetworkingConnection.OnConnectionConnect -= StopRelaunchingMatchmaking;
-
             NetworkingConnection.OnConnectionDisconnect -= Reset;
             NetworkingSystem.OnStopAllConnections -= Reset;
+
+#if SERVER
+            NetworkingServer.OnStopServer -= OnStopServer;
             NetworkingServer.OnStopServer -= Reset;
+#endif
         }
 
-
+#if CLIENT
         /// <summary>
         /// Connect to the match
         /// </summary>
         /// <param name="matchInfo"></param>
         public void ConnectToOnlineMatch(MatchInfoSnapshot matchInfo, string password = "", NetworkMatch.DataResponseDelegate<MatchInfo> callback = null)
         {
-            callback += BaseOnOnlineMatchJoined;
+            callback += InternalOnOnlineMatchJoined;
 
             currentMatch = matchInfo;
 
@@ -244,56 +235,68 @@ namespace BC_Solution.UnetNetwork
 
         public void ConnectToLANMatch(string serverAdress, int serverPort)
         {
-            isOnLanMatch = true;
-
             NetworkingSystem.Instance.StartConnection(serverAdress, serverPort);
 
             if (OnMatchJoined != null)
                 OnMatchJoined(true, "", null);
         }
+#endif
 
-
+#if SERVER
         /// <summary>
         /// Create a match
         /// </summary>
         /// <param name="name"></param>
         /// <param name="password"></param>
         /// <param name="visible"></param>
-        public void CreatOnlineMatch(string name, string password, bool visible = true)
+        public void CreatMainOnlineMatch(string name, string password, bool visible = true)
         {
-            if (NetworkingSystem.Instance.mainServer != null)
-                NetworkingSystem.Instance.StopServer(NetworkingSystem.Instance.mainServer);
-
             isWaitingResponse = true;
-            matchMaker.CreateMatch(name, NetworkingSystem.Instance.maxPlayer, visible, password, "", "", 0, version, BaseOnOnlineMatchCreated);
+            matchMaker.CreateMatch(name, NetworkingSystem.Instance.maxPlayer, visible, password, "", "", 0, version, InternalOnMainOnlineMatchCreated);
         }
+#endif
 
+#if SERVER
         /// <summary>
         /// Create a LAN main server/host
         /// </summary>
         /// <param name="name"></param>
         /// <param name="serverAdress"></param>
         /// <param name="serverPort"></param>
-        public bool CreateLANMatch(string name,string serverAdress, int serverPort)
+        public bool CreateMainLANServer(string name,string serverAdress, int serverPort)
         {
-            if (NetworkingSystem.Instance.mainServer != null)
+            NetworkingServer server;
+            server = NetworkingSystem.Instance.StartMainServer(serverAdress,serverPort);
+
+
+            if (!ShowServerOnLan(server))
+            {
+                Debug.LogError("Error on Start Broadcast Discovery");
+                m_LANHostId = -1;
+
                 NetworkingSystem.Instance.StopServer(NetworkingSystem.Instance.mainServer);
 
-            NetworkingServer server;
-            NetworkingConnection connection;
-
-            if (startAsHost)
-                NetworkingSystem.Instance.StartHost(out server, out connection);
+                return false;
+            }
             else
-                server = NetworkingSystem.Instance.StartMainServer(serverAdress,serverPort);
+            {
+                if (OnMatchCreated != null)
+                    OnMatchCreated(true, "", null);
+            }
 
-            m_broadcastData = "NetworkManager:" + serverAdress + ":" + serverPort + ": MatchInfo :" + name;
+            return true;
+        }
+#endif
+
+#if SERVER
+        public bool ShowServerOnLan(NetworkingServer server)
+        {
+            string m_broadcastData = "NetworkManager:" + server.m_serverAddress + ":" + server.m_serverPort + ": MatchInfo :" + name;
 
             m_msgOutBuffer = StringToBytes(m_broadcastData);
 
             m_LANTopology = new HostTopology(NetworkingSystem.Instance.Configuration(), (int)NetworkingSystem.Instance.maxPlayer);
             m_LANHostId = NetworkTransport.AddHost(m_LANTopology, 0);
-
 
             if (m_LANHostId == -1)
             {
@@ -302,35 +305,48 @@ namespace BC_Solution.UnetNetwork
             }
 
             byte err;
+
             if (!NetworkTransport.StartBroadcastDiscovery(m_LANHostId, m_broadcastPort, m_broadcastKey, m_broadcastVersion, m_broadcastSubVersion, m_msgOutBuffer, m_msgOutBuffer.Length, m_broadcastInterval, out err))
             {
-                Debug.LogError("Error on Start Broadcast Discovery");
-                m_LANHostId = -1;
-
-                if (startAsHost)
-                    NetworkingSystem.Instance.StopHost();
-                else
-                    NetworkingSystem.Instance.StopServer(NetworkingSystem.Instance.mainServer);
-
-                if (m_LANHostId != -1)
-                {
-                    NetworkTransport.RemoveHost(m_LANHostId);
-                }
-
+                NetworkTransport.RemoveHost(m_LANHostId);
                 return false;
             }
-            else
-            {
-                isOnLanMatch = true;
 
-                if (OnMatchCreated != null)
-                    OnMatchCreated(true, "", null);
-            }
 
             return true;
         }
+#endif
 
 
+        public void HideServers()
+        {
+            if (currentMatchNetworkId != (ulong)NetworkID.Invalid)
+            {
+                matchMaker.SetMatchAttributes((NetworkID)currentMatchNetworkId, false, version, OnHideServers);
+                currentMatchNetworkId = (ulong)NetworkID.Invalid;
+            }
+            else if (m_LANHostId != -1)
+            {
+                NetworkTransport.StopBroadcastDiscovery();
+                NetworkTransport.RemoveHost(m_LANHostId);
+
+                if (OnHideServers != null)
+                    OnHideServers(true, "");
+            }
+        }
+
+#if SERVER
+        /// <summary>
+        /// For the moment we can have only one broadcast, so server param is useless
+        /// TODO : 1 broadcast for 1 server
+        /// </summary>
+        /// <param name="server"></param>
+        /// <returns></returns>
+        public bool IsShowingOnLAN(NetworkingServer server)
+        {
+            return NetworkTransport.IsBroadcastDiscoveryRunning();
+        }
+#endif
 
         /// <summary>
         /// Start to list match. Launch a coroutine for that.
@@ -431,7 +447,7 @@ namespace BC_Solution.UnetNetwork
 
                         string serverBroadcastInfo = BytesToString(m_msgInBuffer);
 
-                        BaseOnReceivedBroadcast(senderAddr, serverBroadcastInfo);
+                        InternalOnReceivedBroadcast(senderAddr, serverBroadcastInfo);
 
                         string[] serverInfos = serverBroadcastInfo.Split(':');
 
@@ -488,10 +504,6 @@ namespace BC_Solution.UnetNetwork
         /// <param name="destroyObjects"></param>
         public void AutomaticMatchmaking()
         {
-            //It will bug if we stop networking later (Unity bug ?)
-            if (NetworkingSystem.Instance.mainServer != null)
-                NetworkingSystem.Instance.StopServer(NetworkingSystem.Instance.mainServer);
-
             currentMatch = null;
             isWaitingResponse = true;
             isOnAutomatch = true;
@@ -546,21 +558,24 @@ namespace BC_Solution.UnetNetwork
                     currentMatch = i;
             }
 
+#if SERVER
             if (currentMatch == null)
             {
                 isOnAutomatch = true;
                 Debug.Log("Create");
-                CreatOnlineMatch("AutoMatch_" + System.DateTime.Now + "_" + version, "", true);
+                CreatMainOnlineMatch("AutoMatch_" + System.DateTime.Now + "_" + version, "", true);
                 return;
             }
-            else
-            {
-                ConnectToOnlineMatch(currentMatch, "", BaseOnOnlineAutoMatchJoined);
-            }
+#endif
+
+#if CLIENT
+            ConnectToOnlineMatch(currentMatch, "", InternalOnOnlineAutoMatchJoined);
+            return;
+#endif
         }
 
-
-        private void BaseOnOnlineMatchCreated(bool success, string extendedInfo, MatchInfo matchInfo)
+#if SERVER
+        private void InternalOnMainOnlineMatchCreated(bool success, string extendedInfo, MatchInfo matchInfo)
         {
             isWaitingResponse = false;
 
@@ -569,15 +584,7 @@ namespace BC_Solution.UnetNetwork
                 Debug.Log("Match created");
                 currentMatchNetworkId = (ulong)matchInfo.networkId;
 
-                NetworkingServer server;
-                NetworkingConnection connection;
-
-                if (startAsHost)
-                    NetworkingSystem.Instance.StartHost(matchInfo, out server, out connection);
-                else
-                    server = NetworkingSystem.Instance.StartMainServer(matchInfo);
-
-                isOnOnlineMatch = true;
+                NetworkingSystem.Instance.StartMainServer(matchInfo);
 
                 if (OnMatchCreated != null)
                     OnMatchCreated(success, extendedInfo, matchInfo);
@@ -586,9 +593,10 @@ namespace BC_Solution.UnetNetwork
                 Debug.Log(extendedInfo);
 
         }
+#endif
 
 
-        private void BaseOnOnlineMatchJoined(bool success, string extendedInfo, MatchInfo matchInfo)
+        private void InternalOnOnlineMatchJoined(bool success, string extendedInfo, MatchInfo matchInfo)
         {
             isWaitingResponse = false;
 
@@ -596,8 +604,6 @@ namespace BC_Solution.UnetNetwork
             {
                 Debug.Log("Match joined");
                 currentMatchNetworkId = (ulong)matchInfo.networkId;
-
-                isOnOnlineMatch = true;
             }
             else
                 isOnAutomatch = false;
@@ -606,78 +612,34 @@ namespace BC_Solution.UnetNetwork
                 OnMatchJoined(success, extendedInfo, matchInfo);
         }
 
-        private void BaseOnOnlineAutoMatchJoined(bool success, string extendedInfo, MatchInfo matchInfo)
+        private void InternalOnOnlineAutoMatchJoined(bool success, string extendedInfo, MatchInfo matchInfo)
         {
             if (success)
             {
                 isOnAutomatch = false;
-                isOnOnlineMatch = true;
-                BaseOnOnlineMatchJoined(success, extendedInfo, matchInfo);
+                InternalOnOnlineMatchJoined(success, extendedInfo, matchInfo);
             }
             StartCoroutine(RelaunchAutomatchmaking());
         }
 
 
-        /// <summary>
-        /// Lock the match so it will be no more joinable
-        /// </summary>
-        /// <param name="b"></param>
-        public void LockOnlineMatch(bool b)
-        {
-            Debug.Log("Match locked");
-            matchMaker.SetMatchAttributes((NetworkID)currentMatchNetworkId, !b, version, OnLockMatch);
-        }
-
-        public void LockLANMatch(bool b)
-        {
-            if (!b && !NetworkTransport.IsBroadcastDiscoveryRunning())
-            {
-                byte err;
-
-                m_LANTopology = new HostTopology(NetworkingSystem.Instance.Configuration(), (int)NetworkingSystem.Instance.maxPlayer);
-                m_LANHostId = NetworkTransport.AddHost(m_LANTopology, 0);
-                NetworkTransport.StartBroadcastDiscovery(NetworkServer.serverHostId, m_broadcastPort, m_broadcastKey, m_broadcastVersion, m_broadcastSubVersion, m_msgOutBuffer, m_msgOutBuffer.Length, m_broadcastInterval, out err);
-            }
-            else if (b && NetworkTransport.IsBroadcastDiscoveryRunning())
-            {
-                NetworkTransport.StopBroadcastDiscovery();
-
-
-                if (OnMatchLocked != null)
-                    OnMatchLocked(true, "");
-            }
-        }
-
-        public void LockMatch(bool b)
-        {
-            if (isOnLanMatch)
-                LockLANMatch(b);
-
-            if (isOnOnlineMatch)
-                LockOnlineMatch(b);
-        }
-
+#if SERVER
         /// <summary>
         /// Automatically lock a match when server disconnect
         /// </summary>
         /// <param name="netMsg"></param>
-        void LockMatchOnStopServer(NetworkingServer server)
+        void OnStopServer(NetworkingServer server)
         {
-            if (currentMatchNetworkId != (ulong)NetworkID.Invalid && isOnOnlineMatch)
-            {
-                LockOnlineMatch(true);
-                currentMatchNetworkId = (ulong)NetworkID.Invalid;
-            }
-
-            if (isOnLanMatch)
-                LockLANMatch(true);
+            HideServers();
         }
 
-        void Reset(NetworkingConnection conn)
+        void Reset(NetworkingServer server)
         {
             Reset();
         }
-        void Reset(NetworkingServer server)
+#endif
+
+        void Reset(NetworkingConnection conn)
         {
             Reset();
         }
@@ -689,21 +651,14 @@ namespace BC_Solution.UnetNetwork
 
         void Reset()
         {
-            isOnLanMatch = false;
-            isOnOnlineMatch = false;
-            isOnAutomatch = false;
+            if (m_LANHostId != -1)
+                NetworkTransport.RemoveHost(m_LANHostId);
 
             m_LANHostId = -1;
         }
 
-        void OnLockMatch(bool success, string extendedInfo)
-        {
-            if (OnMatchLocked != null)
-                OnMatchLocked(success, extendedInfo);
-        }
 
-
-        void BaseOnReceivedBroadcast(string fromAddress, string data)
+        void InternalOnReceivedBroadcast(string fromAddress, string data)
         {
             if (OnReceivedBroadcast != null)
                 OnReceivedBroadcast(fromAddress, data);

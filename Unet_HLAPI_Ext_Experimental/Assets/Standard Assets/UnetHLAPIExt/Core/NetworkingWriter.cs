@@ -493,7 +493,7 @@ namespace BC_Solution.UnetNetwork
 
         public void Write(GameObject value)
         {
-            NetworkingIdentity uv = value.GetComponent<NetworkingIdentity>();
+            NetworkingIdentity uv = value.GetComponentInParent<NetworkingIdentity>();
             if (uv != null)
             {
                 Write(uv.netId);            
@@ -507,6 +507,11 @@ namespace BC_Solution.UnetNetwork
         public void Write(NetworkingMessage msg)
         {
             msg.Serialize(this);
+        }
+
+        public void Seek(int position)
+        {
+            m_memoryStream.Seek(position, SeekOrigin.Begin);
         }
 
         public void SeekZero(bool reset)

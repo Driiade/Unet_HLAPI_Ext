@@ -62,13 +62,6 @@ namespace BC_Solution.UnetNetwork
         public Vector3 minPositionValue;
         public Vector3 maxPositionValue;
 
-#if UNITY_EDITOR
-        [Space(10)]
-        [SerializeField]
-        Vector3 precisionAfterCompression;
-        [SerializeField]
-        Vector3 returnedValueOnCurrentPosition;
-# endif
 
         public override void OnEndExtrapolation(State rhs)
         {
@@ -136,6 +129,7 @@ namespace BC_Solution.UnetNetwork
         {
             base.ResetStatesBuffer();
             lastPosition = this.m_transform.position;
+            positionError = Vector3.zero;
         }
 
         public override bool NeedToUpdate()
@@ -174,49 +168,80 @@ namespace BC_Solution.UnetNetwork
 
         public void Teleport(Vector3 position)
         {
-            LocalTeleport(position);
-
+            LocalTeleport(position, Time.realtimeSinceStartup);
+#if SERVER
             if (isServer)
             {
+                int timestamp = NetworkTransport.GetNetworkTimestamp();
                 foreach (NetworkingConnection conn in this.server.connections)
                 {
-                    if(conn != null && conn == this.connection)
-                        SendToConnection(conn,"RpcTeleport", NetworkingChannel.DefaultReliable, position);
+#if CLIENT
+                    if (conn != null && conn != this.connection)
+                        SendToConnection(conn, "RpcTeleport", NetworkingChannel.DefaultReliableSequenced, position, timestamp);
+#else
+                    if (conn != null)
+                        SendToConnection(conn, "RpcTeleport", NetworkingChannel.DefaultReliableSequenced, position, timestamp);
+#endif
                 }
+                return;
             }
-            else if (isClient)
-                SendToServer("CmdTeleport", NetworkingChannel.DefaultReliable, position);
+#endif
 
+#if CLIENT
+            if (isClient)
+            {
+                int timestamp = NetworkTransport.GetNetworkTimestamp();
+                SendToServer("CmdTeleport", NetworkingChannel.DefaultReliableSequenced, position, timestamp);
+                return;
+            }
+#endif
         }
 
         [NetworkedFunction]
-        void CmdTeleport(Vector3 position)
+        void CmdTeleport(Vector3 position, int timestamp)
         {
-            LocalTeleport(position);
+#if SERVER
+            byte error;
+            LocalTeleport(position, Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(this.serverConnection.m_hostId, this.serverConnection.m_connectionId, timestamp, out error) / 1000f);
 
+            timestamp = NetworkTransport.GetNetworkTimestamp() - NetworkTransport.GetRemoteDelayTimeMS(this.serverConnection.m_hostId, this.serverConnection.m_connectionId, timestamp, out error);
             foreach (NetworkingConnection conn in this.server.connections)
             {
-                if (conn != null && conn == this.connection)
-                    SendToConnection(conn, "RpcTeleport", NetworkingChannel.DefaultReliable, position);
+#if CLIENT
+                if (conn != null && conn != this.connection)
+                    SendToConnection(conn, "RpcTeleport", NetworkingChannel.DefaultReliableSequenced, position, timestamp);
+#else
+                if (conn != null)
+                    SendToConnection(conn, "RpcTeleport", NetworkingChannel.DefaultReliableSequenced, position, timestamp);
+#endif
             }
+#endif
         }
 
         [NetworkedFunction]
-        void RpcTeleport(Vector3 position)
+        void RpcTeleport(Vector3 position, int timestamp)
         {
-            if(!isServer)
-                LocalTeleport(position);
+#if CLIENT
+            byte error;
+            LocalTeleport(position, Time.realtimeSinceStartup - NetworkTransport.GetRemoteDelayTimeMS(this.connection.m_hostId, this.connection.m_connectionId, timestamp, out error) / 1000f);
+#endif
         }
 
-        public void LocalTeleport(Vector3 position)
+        public void LocalTeleport(Vector3 position, float locktime)
         {
             m_transform.position = position;
+            m_lockStateTime = locktime;
+
             this.ResetStatesBuffer();
         }
 
 #if UNITY_EDITOR
-        private void OnValidate()
+        public override void OnInspectorGUI()
         {
+
+            Vector3 precisionAfterCompression = Vector3.zero;
+            Vector3 returnedValueOnCurrentPosition = Vector3.zero;
+
             switch (compressionMode)
             {
                 case COMPRESS_MODE.USHORT:
@@ -231,6 +256,10 @@ namespace BC_Solution.UnetNetwork
                     returnedValueOnCurrentPosition.z = this.m_transform.position.z;
                     break;
             }
+
+            GUILayout.Space(10);
+            GUILayout.Label("Precision : \n" +  "(" + precisionAfterCompression.x + ", " + precisionAfterCompression.y + ", " + precisionAfterCompression.z + ")");
+            GUILayout.Label("Returned value after compression : \n" + "(" + returnedValueOnCurrentPosition.x + ", " + returnedValueOnCurrentPosition.y + ", " + returnedValueOnCurrentPosition.z + ")");
         }
 #endif
     }
