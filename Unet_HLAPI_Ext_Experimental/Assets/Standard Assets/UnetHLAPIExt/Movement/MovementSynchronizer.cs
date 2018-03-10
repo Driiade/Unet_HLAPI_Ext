@@ -50,7 +50,7 @@ namespace BC_Solution.UnetNetwork
 
 
         [Space(20)]
-        public bool useExtrapolation = false;
+        public bool useExtrapolation = true;
         public float extrapolationTime = 0.25f;
 
         [Space(20)]
