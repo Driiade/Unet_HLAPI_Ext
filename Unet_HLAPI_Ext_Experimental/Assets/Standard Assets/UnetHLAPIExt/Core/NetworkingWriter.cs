@@ -456,25 +456,6 @@ namespace BC_Solution.UnetNetwork
             Write(value.m33);
         }
 
-      /*  public void Write(NetworkHash128 value)
-        {
-            Write(value.i0);
-            Write(value.i1);
-            Write(value.i2);
-            Write(value.i3);
-            Write(value.i4);
-            Write(value.i5);
-            Write(value.i6);
-            Write(value.i7);
-            Write(value.i8);
-            Write(value.i9);
-            Write(value.i10);
-            Write(value.i11);
-            Write(value.i12);
-            Write(value.i13);
-            Write(value.i14);
-            Write(value.i15);
-        }*/
 
         public void Write(NetworkingIdentity value)
         {
@@ -486,10 +467,67 @@ namespace BC_Solution.UnetNetwork
             Write(value.netId);
         }
 
-        public void Write<T>(T value) where T : Component
+        public void WriteComponent<T>(T value) where T : Component
         {
             Write(value.gameObject);
         }
+
+        public void Write<T>(T value)
+        {
+            System.Type type = value.GetType();
+
+            if (type == typeof(byte))
+            {
+                Write((byte)(object)value);
+            }
+            else if (type == typeof(int))
+            {
+                Write((int)(object)value);
+            }
+            else if (type == typeof(string))
+            {
+                Write((string)(object)value);
+            }
+            else if (type == typeof(ushort))
+            {
+                Write((ushort)(object)value);
+            }
+            else if (type == typeof(byte[]))
+            {
+                WriteBytesFull(((byte[])(object)value));
+            }
+            else if (type == typeof(bool))
+            {
+                Write((bool)(object)value);
+            }
+            else if (type == typeof(Vector3))
+            {
+                Write((Vector3)(object)value);
+            }
+            else if (type == typeof(Vector2))
+            {
+                Write((Vector2)(object)value);
+            }
+            else if (type == typeof(GameObject))
+            {
+                Write((GameObject)(object)value);
+            }
+            else if (type.IsSubclassOf(typeof(UnityEngine.Component)))
+            {
+                WriteComponent((UnityEngine.Component)(object)value);
+            }
+            else if (type.IsEnum)
+            {
+                Write((int)((object)value));
+            }
+            else if(type.GetInterface("ISerializable") != null)
+            {
+                ((ISerializable)value).OnSerialize(this);
+            }
+            else
+                throw new System.Exception("Serialization is impossible : " + type);
+        }
+
 
         public void Write(GameObject value)
         {

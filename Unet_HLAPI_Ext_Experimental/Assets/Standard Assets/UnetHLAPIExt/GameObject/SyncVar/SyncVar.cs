@@ -19,44 +19,54 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. 
 */
 
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
 
 namespace BC_Solution.UnetNetwork
 {
-    public class NetworkingChat : NetworkingBehaviour
+    /// <summary>
+    /// use this class to sync a variable with Unet Network
+    /// </summary>
+    public class SyncVar<T> : IDirtable, ISerializable
     {
-        [SerializeField]
-        Text text;
+        protected T value;
+        internal bool isDirty;
 
-        [NetworkedVariable]
-        SyncVarWithAction<string> message1 = new SyncVarWithAction<string>("blabla");
-       // SyncVar<string> message2 = new SyncVar<string>("test");
-
-
-        private void Awake()
+        public SyncVar(T val)
         {
-            message1.callback += SetText;
+            value = val;
         }
 
-        public void Send(string message)
+        public bool IsDirty()
         {
-#if SERVER
-            if (isServer)
+            return isDirty;
+        }
+
+        public virtual T Value
+        {
+            get
             {
-                this.message1.Value = message;
-               // this.message2.Value = message + " 2";
+                return value;
             }
-#endif
+            set
+            {
+                if (!value.Equals(this.value))
+                {
+                    isDirty = true;
+                    this.value = value;
+                }
+            }
         }
 
-        private void SetText(string message)
+        public virtual void OnSerialize(NetworkingWriter writer)
         {
-            Debug.Log(message);
-            text.text = message;
-           // Debug.Log(message2.Value);
+            //UnityEngine.Debug.Log(value);
+            writer.Write(value);
+            isDirty = false;
+        }
+
+        public virtual void OnDeserialize(NetworkingReader reader, NetworkingConnection connection, NetworkingConnection serverConnection)
+        {
+            Value = reader.Read<T>(connection, serverConnection);
+            //UnityEngine.Debug.Log(value);
         }
     }
 }

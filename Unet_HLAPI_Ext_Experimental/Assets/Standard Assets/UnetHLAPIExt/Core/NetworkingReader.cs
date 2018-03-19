@@ -525,7 +525,7 @@ namespace BC_Solution.UnetNetwork
         /// <param name="clientConnection">the client connection (if any)</param>
         /// <param name="serverConnection">the server connection (if any)</param>
         /// <returns></returns>
-        public T Read<T>(NetworkingConnection clientConnection, NetworkingConnection serverConnection) where T : Component
+        public T ReadComponent<T>(NetworkingConnection clientConnection, NetworkingConnection serverConnection) where T : Component
         {
             GameObject go = ReadGameObject(clientConnection, serverConnection);
             if (go != null)
@@ -534,6 +534,100 @@ namespace BC_Solution.UnetNetwork
             return null;
         }
 
+        /// <summary>
+        /// generic read (check type )
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T Read<T>(NetworkingConnection clientConnection, NetworkingConnection serverConnection)
+        {
+            return (T)Read(typeof(T), clientConnection, serverConnection);
+        }
+
+        /// <summary>
+        /// generic read (check type )
+        /// </summary>
+        /// <returns></returns>
+        public object Read(Type type, NetworkingConnection clientConnection, NetworkingConnection serverConnection)
+        {
+            if (type == typeof(byte))
+            {
+                return ReadByte();
+            }
+            else if (type == typeof(int))
+            {
+                return ReadInt32();
+            }
+            else if (type == typeof(string))
+            {
+                return ReadString();
+            }
+            else if (type == typeof(ushort))
+            {
+                return ReadUInt16();
+            }
+            else if (type == typeof(byte[]))
+            {
+                return ReadBytesAndSize();
+            }
+            else if (type == typeof(bool))
+            {
+                return ReadBoolean();
+            }
+            else if (type == typeof(Vector3))
+            {
+                return ReadVector3();
+            }
+            else if (type == typeof(Vector2))
+            {
+                return ReadVector2();
+            }
+            else if (type == typeof(GameObject))
+            {
+#if SERVER && CLIENT
+                return ReadGameObject(clientConnection, serverConnection);
+#elif SERVER
+                    return ReadGameObject(null, serverConnection);
+#elif CLIENT
+                    return ReadGameObject(clientConnection, null);
+#endif
+            }
+            else if (type.IsSubclassOf(typeof(UnityEngine.Component)))
+            {
+#if SERVER && CLIENT
+
+                return ReadComponent(clientConnection, serverConnection, type);
+#elif SERVER
+                    return ReadComponent(null, serverConnection, type);
+#elif CLIENT
+                    return ReadComponent(clientConnection, null, type);
+#endif
+            }
+            else if (type.IsEnum)
+            {
+                return ReadInt32();
+            }
+            else if (type.GetInterface("ISerializable") != null)
+            {
+                object newObj = System.Activator.CreateInstance(type);
+
+                if (newObj == null)
+                    throw new System.Exception("Creation of instance impossible : " + type.GetType());
+
+#if SERVER && CLIENT
+                ((ISerializable)newObj).OnDeserialize(this, clientConnection, serverConnection);
+#elif SERVER
+                ((ISerializable)newObj).OnDeserialize(this, null, serverConnection);
+#elif CLIENT
+                ((ISerializable)newObj).OnDeserialize(this, clientConnection, null);
+#endif
+
+                return newObj;
+            }
+            else
+                throw new System.Exception("UnSerialization is impossible : " + type.GetType());
+
+        }
 
         /// <summary>
         /// Retrieve the first occurence of a component, based on the networkingIdentity netId

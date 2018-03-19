@@ -8,6 +8,7 @@ namespace BC_Solution.UnetNetwork
     {
         public ushort m_sceneId;
         public ushort m_netId;
+        public byte[] m_networkingBehaviourSyncVars;
 
         public SceneObjectNetIdMessage()
         {
@@ -15,10 +16,11 @@ namespace BC_Solution.UnetNetwork
             m_netId = 0;
         }
 
-        public SceneObjectNetIdMessage(ushort netId, ushort sceneId)
+        public SceneObjectNetIdMessage(ushort netId, ushort sceneId, byte[] networkingBehaviourSyncVars)
         {
             m_netId = netId;
             m_sceneId = sceneId;
+            m_networkingBehaviourSyncVars = networkingBehaviourSyncVars;
         }
 
         public override void Deserialize(NetworkingReader reader)
@@ -26,6 +28,7 @@ namespace BC_Solution.UnetNetwork
             base.Deserialize(reader);
             m_netId = reader.ReadUInt16();
             m_sceneId = reader.ReadUInt16();
+            m_networkingBehaviourSyncVars = reader.ReadBytesAndSize();
         }
 
         public override void Serialize(NetworkingWriter writer)
@@ -33,6 +36,7 @@ namespace BC_Solution.UnetNetwork
             base.Serialize(writer);
             writer.Write(m_netId);
             writer.Write(m_sceneId);
+            writer.WriteBytesFull(m_networkingBehaviourSyncVars);
         }
     }
 }

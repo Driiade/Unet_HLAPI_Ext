@@ -394,9 +394,7 @@ MonoBehaviour:
   m_assetId: 0
   m_serverId: MainServer
   m_localPlayerAuthority: 1
-  m_autoSetNetworkBehaviourNetId: 1
-  m_serverAutoSendToOwner: 1
-  m_serverAutoRpc: 1
+  autoSetNetworkBehaviourNetId: 1
   m_networkingBehaviours:
   - {fileID: 114989741402422030}
   - {fileID: 114932352318098096}
@@ -473,7 +471,7 @@ MonoBehaviour:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1231402685847870}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4ff324c1c6c28864a875ae7b54f6e37e, type: 3}
   m_Name: 

@@ -31,7 +31,8 @@ namespace BC_Solution.UnetNetwork
     [AddComponentMenu("")]
     public class NetworkingBehaviour : MonoBehaviour
     {
-        [SerializeField] internal bool automaticAddListener = true;
+        [SerializeField]
+        internal bool automaticAddListener = true;
 
         //uint m_syncVarDirtyBits;
         //float m_LastSendTime;
@@ -85,19 +86,153 @@ namespace BC_Solution.UnetNetwork
         [SerializeField]
         internal byte m_netId;
 
-       // const float k_DefaultSendInterval = 0.1f;
+        // const float k_DefaultSendInterval = 0.1f;
 
         private NetworkingIdentity m_networkingIdentity;
         public NetworkingIdentity networkingIdentity { get { return m_networkingIdentity; } }
 
         private MethodInfo[] networkedMethods;
+        private FieldInfo[] syncVars;
+
         private NetworkingWriter writer = new NetworkingWriter();
 
         internal void Init(NetworkingIdentity networkingIdentity)
         {
             m_networkingIdentity = networkingIdentity;
             networkedMethods = GetNetworkedMethods();
+            syncVars = GetSyncVars();
         }
+
+        internal void CheckSyncVars()
+        {
+            int dirtyMask = GetSyncVarDirtyMask();
+
+            if (dirtyMask != 0)
+            {
+                writer.SeekZero(true);
+                writer.StartMessage();
+                writer.Write(NetworkingMessageType.UpdateVars);
+
+                writer.Write(this.networkingIdentity.netId);
+                writer.Write(this.m_netId);
+
+                SerializeSyncVars(writer, dirtyMask);
+                writer.FinishMessage();
+
+
+#if SERVER && CLIENT
+                if (isServer) //Server can sync var except to the owner of the object
+                {
+                    foreach (NetworkingConnection connection in this.m_serverConnectionListeners)
+                    {
+                        if (connection != this.serverConnection)
+                        {
+                            connection.Send(writer, NetworkingChannel.DefaultReliableSequenced);
+                        }
+                    }
+                }
+                else if (isLocalClient) //only local client can sync var
+                {
+                    connection.Send(writer, NetworkingChannel.DefaultReliableSequenced);
+                }
+#elif SERVER
+                if (isServer)
+                {
+                    foreach (NetworkingConnection connection in this.m_serverConnectionListeners)
+                    {
+                        connection.Send(writer, NetworkingChannel.DefaultReliableSequenced);
+                    }
+                }
+#elif CLIENT
+                if (isLocalClient)
+                {
+                    connection.Send(writer, NetworkingChannel.DefaultReliableSequenced);
+                }
+#endif
+
+            }
+        }
+
+        internal int GetSyncVarDirtyMask()
+        {
+            int dirtyMask = 0;
+
+            //Check for dirty value
+            for (int i = 0; i < syncVars.Length; i++)
+            {
+                if (((IDirtable)((syncVars[i]).GetValue(this))).IsDirty())
+                {
+                    dirtyMask = ((1 << i)) | dirtyMask;
+                }
+            }
+
+            return dirtyMask;
+        }
+
+        internal byte[] SerializeSyncVars(NetworkingWriter writer, int dirtyMask)
+        {
+            if (syncVars.Length > sizeof(int)*8)
+                throw new System.Exception("Too many syncVars in the networkingBehaviour : " + this);
+
+            if (syncVars.Length <= sizeof(byte)*8)
+            {
+                writer.Write((byte)dirtyMask);
+            }
+            else if (syncVars.Length <= sizeof(short)*8)
+            {
+                writer.Write((short)dirtyMask);
+            }
+            else if (syncVars.Length <= sizeof(int)*8)
+            {
+                writer.Write(dirtyMask);
+            }
+
+            if (dirtyMask != 0)
+            {
+                for (int i = 0; i < syncVars.Length; i++)
+                {
+                    if( ((1<< i) & dirtyMask) != 0)
+                    {
+                        writer.Write((syncVars[i]).GetValue(this));
+                    }
+                }
+            }
+
+            return writer.ToArray();
+        }
+
+        internal void UnSerializeSyncVars(NetworkingReader reader)
+        {
+            int dirtyMask = 0;
+
+            if (syncVars.Length <= sizeof(byte)*8)
+            {
+                dirtyMask = reader.ReadByte();
+            }
+            else if (syncVars.Length <= sizeof(short)*8)
+            {
+                dirtyMask = reader.ReadInt16();
+            }
+            else if (syncVars.Length <= sizeof(int)*8)
+            {
+                dirtyMask = reader.ReadInt32();
+            }
+
+            for (int i = 0; i < syncVars.Length; i++)
+            {
+                if (((1 << i) & dirtyMask) != 0)
+                {
+#if CLIENT && SERVER
+                    ((ISerializable)((syncVars[i]).GetValue(this))).OnDeserialize(reader, this.connection, this.serverConnection);
+#elif CLIENT
+                    ((ISerializable)((syncVars[i]).GetValue(this))).OnDeserialize(reader, this.connection, null);
+#elif SERVER
+                    ((ISerializable)((syncVars[i]).GetValue(this))).OnDeserialize(reader, null, this.serverConnection);
+#endif
+                }
+            }
+        }
+
 
 #if CLIENT
         public void SendToServer(string methodName, int channelId,params object[] parameters)
@@ -127,7 +262,7 @@ namespace BC_Solution.UnetNetwork
             SerializeCall(writer, methodName, parameters);
             writer.FinishMessage();
 
-            foreach(NetworkingConnection connection in this.m_serverConnectionListeners)
+            foreach (NetworkingConnection connection in this.m_serverConnectionListeners)
             {
                 connection.Send(writer, channelId);
             }
@@ -214,48 +349,7 @@ namespace BC_Solution.UnetNetwork
                     throw new System.Exception("Parameter mismatch : called with : " + param.GetType() + " expected : " + methodParams[i].ParameterType);
                 }
 
-                if (param is byte)
-                {
-                    writer.Write((byte)param);
-                }
-                else if (param is int)
-                {
-                    writer.Write((int)param);
-                }
-                else if (param is string)
-                {
-                    writer.Write((string)param);
-                }
-                else if (param is ushort)
-                {
-                    writer.Write((ushort)param);
-                }
-                else if (param is byte[])
-                {
-                    writer.WriteBytesFull(((byte[])param));
-                }
-                else if (param is bool)
-                {
-                    writer.Write((bool)param);
-                }
-                else if (param is Vector3)
-                {
-                    writer.Write((Vector3)param);
-                }
-                else if (param is Vector2)
-                {
-                    writer.Write((Vector2)param);
-                }
-                else if (param is GameObject)
-                {
-                    writer.Write((GameObject)param);
-                }
-                else if(param.GetType().IsSubclassOf(typeof(UnityEngine.Component)))
-                {
-                    writer.Write((UnityEngine.Component)param);
-                }
-                else
-                    throw new System.Exception("Serialization is impossible : " + param.GetType());
+                writer.Write(param);
             }
         }
 
@@ -269,61 +363,13 @@ namespace BC_Solution.UnetNetwork
             for (int i = 0; i < parameterInfos.Length; i++)
             {
                 ParameterInfo info = parameterInfos[i];
-
-                if(info.ParameterType == typeof(byte))
-                {
-                    parameters[i] = reader.ReadByte();
-                }
-                else   if (info.ParameterType == typeof(int))
-                {
-                    parameters[i] = reader.ReadInt32();
-                }
-                  else if(info.ParameterType == typeof(string))
-                {
-                    parameters[i] = reader.ReadString();
-                }
-                else if (info.ParameterType == typeof(ushort))
-                {
-                    parameters[i] = reader.ReadUInt16();
-                }
-                else if (info.ParameterType == typeof(byte[]))
-                {
-                    parameters[i] = reader.ReadBytesAndSize();
-                }
-                else if (info.ParameterType == typeof(bool))
-                {
-                    parameters[i] = reader.ReadBoolean();
-                }
-                else if (info.ParameterType == typeof(Vector3))
-                {
-                    parameters[i] = reader.ReadVector3();
-                }
-                else if (info.ParameterType == typeof(Vector2))
-                {
-                    parameters[i] = reader.ReadVector2();
-                }
-                else if (info.ParameterType == typeof(GameObject))
-                {
 #if SERVER && CLIENT
-                    parameters[i] = reader.ReadGameObject(this.connection, this.serverConnection);
-#elif SERVER
-                    parameters[i] = reader.ReadGameObject(null, this.serverConnection);
+                parameters[i] = reader.Read(info.ParameterType, this.connection, this.serverConnection);
 #elif CLIENT
-                    parameters[i] = reader.ReadGameObject(this.connection, null);
-#endif
-                }
-                else if (info.ParameterType.IsSubclassOf(typeof(UnityEngine.Component)))
-                {
-#if SERVER && CLIENT
-                    parameters[i] = reader.ReadComponent(this.connection, this.serverConnection, info.ParameterType);
+                parameters[i] = reader.Read(info.ParameterType, this.connection, null);
 #elif SERVER
-                    parameters[i] = reader.ReadComponent(null, this.serverConnection, info.ParameterType);
-#elif CLIENT
-                    parameters[i] = reader.ReadComponent(this.connection, null, info.ParameterType);
+                parameters[i] = reader.Read(info.ParameterType, null, this.serverConnection);
 #endif
-                }
-                else
-                    throw new System.Exception("UnSerialization is impossible : " + info.ParameterType.GetType());
             }
 
             method.Invoke(this, parameters);
@@ -349,10 +395,10 @@ namespace BC_Solution.UnetNetwork
             List<MethodInfo> networkedMethods = new List<MethodInfo>();
             for (int i = 0; i < allMethods.Length; i++)
             {
-                object[] attributes = allMethods[i].GetCustomAttributes(typeof(NetworkedFunction),true);
+                object[] attributes = allMethods[i].GetCustomAttributes(typeof(NetworkedFunction), true);
                 for (int j = 0; j < attributes.Length; j++)
                 {
-                    if(attributes[j] is NetworkedFunction)
+                    if (attributes[j] is NetworkedFunction)
                     {
                         networkedMethods.Add(allMethods[i]);
                     }
@@ -360,6 +406,26 @@ namespace BC_Solution.UnetNetwork
             }
 
             return networkedMethods.ToArray();
+        }
+
+        FieldInfo[] GetSyncVars()
+        {
+            FieldInfo[] allVars = this.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            List<FieldInfo> syncVars = new List<FieldInfo>();
+            for (int i = 0; i < allVars.Length; i++)
+            {
+                //if (allVars[i].FieldType.IsGenericType)
+                // Debug.Log(allVars[i].FieldType + " : " + typeof(SyncVar<>) + " : " + allVars[i].FieldType.IsGenericType + " : " + allVars[i].FieldType.GetGenericTypeDefinition().IsSubclassOf(typeof(SyncVar<>)));
+
+                System.Type genericType = allVars[i].FieldType;
+
+                if (allVars[i].GetCustomAttributes(typeof(NetworkedVariable),true) != null && genericType.GetInterface("IDirtable") != null && genericType.GetInterface("ISerializable") != null)
+                {
+                    syncVars.Add(allVars[i]);
+                }
+            }
+
+            return syncVars.ToArray();
         }
 
 #if SERVER
@@ -372,6 +438,21 @@ namespace BC_Solution.UnetNetwork
             if (!m_serverConnectionListeners.Contains(conn) && serverAwareConnections.Contains(conn))
             {
                 m_serverConnectionListeners.Add(conn);
+
+                //Re-sync all vars
+                writer.SeekZero(true);
+                writer.StartMessage();
+                writer.Write(NetworkingMessageType.UpdateVars);
+
+                writer.Write(this.networkingIdentity.netId);
+                writer.Write(this.m_netId);
+
+                SerializeSyncVars(writer, int.MaxValue);
+                writer.FinishMessage();
+
+                conn.Send(writer, NetworkingChannel.DefaultReliableSequenced);
+                //
+
                 this.OnServerAddListener(conn);
             }
             else
@@ -397,7 +478,7 @@ namespace BC_Solution.UnetNetwork
         {
             for (int i = 0; i < methodInfo.Length; i++)
             {
-                if(methodInfo[i].Name == methodName)
+                if (methodInfo[i].Name == methodName)
                 {
                     return (byte)(i);
                 }
@@ -465,47 +546,9 @@ namespace BC_Solution.UnetNetwork
 #endif
         }
 
-        // these are masks, not bit numbers, ie. 0x004 not 2
-        /* public void SetDirtyBit(uint dirtyBit)
-         {
-             m_SyncVarDirtyBits |= dirtyBit;
-         }*/
-
-        /* public void ClearAllDirtyBits()
-         {
-             m_LastSendTime = Time.time;
-             m_syncVarDirtyBits = 0;
-         } */
-
-        internal int GetDirtyChannel()
-        {
-         /*   if (Time.time - m_LastSendTime > GetNetworkSendInterval())
-            {
-                if (m_syncVarDirtyBits != 0)
-                {
-                    return GetNetworkChannel();
-                }
-            }*/
-            return -1;
-        }
-
-        public virtual bool OnSerialize(NetworkingWriter writer, bool initialState)
-        {
-            if (!initialState)
-            {
-                writer.WritePackedUInt32(0);
-            }
-            return false;
-        }
-
-        public virtual void OnDeserialize(NetworkingReader reader, bool initialState)
-        {
-            if (!initialState)
-            {
-                reader.ReadPackedUInt32();
-            }
-        }
-
+        /// <summary>
+        /// Called when the Destroy function is called by server
+        /// </summary>
         public virtual void OnNetworkDestroy()
         {
         }
@@ -593,8 +636,8 @@ namespace BC_Solution.UnetNetwork
         {
 
         }
-
 #endif
+
         public virtual int GetNetworkChannel()
         {
             return NetworkingChannel.DefaultReliableSequenced;

@@ -19,44 +19,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. 
 */
 
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
 
 namespace BC_Solution.UnetNetwork
 {
-    public class NetworkingChat : NetworkingBehaviour
+    public class SyncVarWithAction<T> : SyncVar<T>
     {
-        [SerializeField]
-        Text text;
+        public System.Action<T> callback;
 
-        [NetworkedVariable]
-        SyncVarWithAction<string> message1 = new SyncVarWithAction<string>("blabla");
-       // SyncVar<string> message2 = new SyncVar<string>("test");
-
-
-        private void Awake()
+        public SyncVarWithAction(T val) : base(val)
         {
-            message1.callback += SetText;
         }
 
-        public void Send(string message)
+        public override void OnDeserialize(NetworkingReader reader, NetworkingConnection connection, NetworkingConnection serverConnection)
         {
-#if SERVER
-            if (isServer)
-            {
-                this.message1.Value = message;
-               // this.message2.Value = message + " 2";
-            }
-#endif
-        }
+            //UnityEngine.Debug.Log(callback + " : " + value);
+            base.OnDeserialize(reader, connection, serverConnection);
 
-        private void SetText(string message)
-        {
-            Debug.Log(message);
-            text.text = message;
-           // Debug.Log(message2.Value);
+            if (callback != null)
+                callback.Invoke(value);
         }
     }
 }

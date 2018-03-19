@@ -42,17 +42,17 @@ namespace BC_Solution.UnetNetwork
         public const ushort ObjectSpawnFinish = 9;
         //public const ushort Owner = 4;
 
-        public const ushort SyncEvent = 9;
-        public const ushort UpdateVars = 10;
-        public const ushort SyncList = 11;
-        public const ushort NetworkInfo = 12;
+        public const ushort SyncEvent = 10;
+        public const ushort UpdateVars = 11;
+        public const ushort SyncList = 12;
+        public const ushort NetworkInfo = 13;
 
-        public const ushort CRC = 13;
-        public const ushort AssignClientAuthority = 14;
-        public const ushort UnassignClientAuthority = 15;
-        public const ushort Fragment = 16;
-        public const ushort PeerClientAuthority = 17;
-        public const ushort ConnectionLoadScene = 18;
+        public const ushort CRC = 14;
+        public const ushort AssignClientAuthority = 15;
+        public const ushort UnassignClientAuthority = 16;
+        public const ushort Fragment = 17;
+        public const ushort PeerClientAuthority = 18;
+        public const ushort ConnectionLoadScene = 19;
 
         // used for profiling
         internal const ushort UserMessage = 0;

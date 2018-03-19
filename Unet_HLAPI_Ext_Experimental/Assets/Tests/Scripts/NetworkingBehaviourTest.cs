@@ -5,33 +5,111 @@ using BC_Solution.UnetNetwork;
 
 public class NetworkingBehaviourTest : NetworkingBehaviour {
 
+    public class TestSerializationClass : ISerializable
+    {
+        public string message = "blabla";
+
+        public void OnSerialize(NetworkingWriter writer)
+        {
+            writer.Write(": Serialization is possible " + Random.Range(0,100));
+        }
+
+        public void OnDeserialize(NetworkingReader reader, NetworkingConnection clientConn, NetworkingConnection serverConn)
+        {
+            message = reader.ReadString();
+        }
+    }
+
+
+    enum TESTENUM { TEST1, TEST2, TEST3}
+
     public float sendingRate = 0.5f;
+
+    public static List<NetworkingBehaviourTest> networkingBehaviourTests = new List<NetworkingBehaviourTest>();
+
+    SyncVar<TESTENUM> randomNum = new SyncVar<TESTENUM>(TESTENUM.TEST1);
 
     int cpt = 0;
 
     float timer;
-	// Update is called once per frame
-	void Update () {
+
+    TestSerializationClass testClass = new TestSerializationClass();
+
+    void Awake()
+    {
+        networkingBehaviourTests.Add(this);
+    }
+
+    private void Start()
+    {
+        if(this.networkingIdentity.type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB)
+            randomNum.Value =(TESTENUM)System.Enum.GetValues(typeof(TESTENUM)).GetValue(Random.Range(0,3));
+    }
+
+    // Update is called once per frame
+    void Update () {
 
         if (Time.time > timer)
         {
             timer = Time.time + sendingRate;
+
+#if CLIENT
             if (isClient)
             {
-                SendToServer("Test", NetworkingChannel.DefaultReliableSequenced, "[Command] hello world : ", cpt);
-                AutoSendToConnections("Test", NetworkingChannel.DefaultReliableSequenced, "[Auto Rpc] hello world : ", cpt);
+                SendToServer("Test", NetworkingChannel.DefaultReliableSequenced, "[Command] hello world : ", cpt, testClass);
+                AutoSendToConnections("Test", NetworkingChannel.DefaultReliableSequenced, "[Auto Rpc] hello world : ", cpt, testClass);
             }
+#endif
 
+#if SERVER
             if (isServer)
-                SendToAllConnections("Test", NetworkingChannel.DefaultReliableSequenced, "[Rpc] hello world : ", cpt);
+               SendToAllConnections("Test", NetworkingChannel.DefaultReliableSequenced, "[Rpc] hello world : ", cpt, testClass);
+#endif
 
             cpt++;
         }
     }
 
-    [NetworkedFunction]
-    void Test(string message, int cpt)
+    void OnDestroy()
     {
-        Debug.Log(message + cpt);
+        networkingBehaviourTests.Remove(this);
+    }
+
+    [NetworkedFunction]
+    void Test(string message, int cpt, TestSerializationClass testClass)
+    {
+        Debug.Log(message + cpt + testClass.message);
+    }
+
+    [ContextMenu("TestSendToOwner")]
+    public void TestSendToOwner()
+    {
+         SendToOwner(this.networkingIdentity, "HelloOwner", NetworkingChannel.DefaultReliable);
+    }
+
+    [NetworkedFunction]
+    void HelloOwner(NetworkingBehaviourTest s)
+    {
+        Debug.LogWarning("Hello =) : " + s);
+        GameObject.CreatePrimitive(PrimitiveType.Sphere).AddComponent<Rigidbody>();
+    }
+
+    void OnGUI()
+    {
+        int ypos = Screen.height - 50;
+
+        for (int i = 0; i < networkingBehaviourTests.Count; i++)
+        {
+            if (networkingBehaviourTests[i] == this)
+            {
+                ypos -= i*25;
+                if (GUI.Button(new Rect(50, ypos, 300, 20), "TestOwner   : " + randomNum.Value))
+                {
+                    SendToOwner(this.networkingIdentity, "HelloOwner", NetworkingChannel.DefaultReliable, this);
+                }
+                return;
+            }
+
+        }
     }
 }

@@ -9,6 +9,9 @@ namespace BC_Solution.UnetNetwork
         public const int DefaultReliableSequenced = 0;
         public const int DefaultReliable = 1;
         public const int DefaultUnreliable = 2;
+        public const int DefaultAllCostDelivery = 3;
+        public const int DefaultReliableStateUpdate = 4;
+        public const int DefaultStateUpdate = 5;
 
         public enum ChannelOption
         {

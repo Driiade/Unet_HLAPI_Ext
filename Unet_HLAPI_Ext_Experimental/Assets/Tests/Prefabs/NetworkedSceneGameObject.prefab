@@ -54,7 +54,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 0
-  sendingRate: 5
+  sendingRate: 1e+10
 --- !u!114 &114188726879029900
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -71,8 +71,6 @@ MonoBehaviour:
   m_assetId: 2
   m_serverId: MainServer
   m_localPlayerAuthority: 0
-  m_autoSetNetworkBehaviourNetId: 1
-  m_serverAutoSendToOwner: 1
-  m_serverAutoRpc: 1
+  autoSetNetworkBehaviourNetId: 1
   m_networkingBehaviours:
   - {fileID: 114155364404170798}

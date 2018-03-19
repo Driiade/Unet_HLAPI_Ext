@@ -65,6 +65,13 @@ namespace BC_Solution
             Vector3 B1 = ((t2 - t) * A1 + (t - t0) * A2) / (t2 - t0);
             Vector3 B2 = ((t3 - t) * A2 + (t - t1) * A3) / (t3 - t1);
 
+            if ((t2 - t1) == 0)
+            {
+                Debug.Log("t1 : " + t1);
+                Debug.Log("t2 : " + t2);
+                Debug.Log("t2 - t1 :" + (t2 - t1));
+            }
+
             return ((t2 - t) * B1 + (t - t1) * B2) / (t2 - t1);
         }
 
