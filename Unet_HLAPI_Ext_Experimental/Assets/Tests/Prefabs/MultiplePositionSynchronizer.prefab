@@ -427,6 +427,8 @@ MonoBehaviour:
   m_rigidbody2D: {fileID: 50457284989626114}
   positionSynchronizationMode: 4
   positionInterpolationMode: 1
+  minCatmullRomDistance: 0.1
+  minCatmullRomTime: 0.1
   velocitySynchronizationMode: 8
   positionThreshold: 0.01
   snapThreshold: 10
@@ -450,12 +452,14 @@ MonoBehaviour:
   automaticAddListener: 1
   m_netId: 3
   maxBufferSize: 60
-  useExtrapolation: 0
+  useExtrapolation: 1
   extrapolationTime: 0.25
-  interpolationErrorTime: 0.01
+  interpolationErrorTime: 0.1
   m_rigidbody: {fileID: 54041052144329094}
   positionSynchronizationMode: 7
   positionInterpolationMode: 1
+  minCatmullRomDistance: 0.1
+  minCatmullRomTime: 0.1
   velocitySynchronizationMode: 8
   positionThreshold: 0.01
   snapThreshold: 10
@@ -580,6 +584,8 @@ MonoBehaviour:
   m_rigidbody2D: {fileID: 50885173538471890}
   positionSynchronizationMode: 4
   positionInterpolationMode: 1
+  minCatmullRomDistance: 0.1
+  minCatmullRomTime: 0.1
   velocitySynchronizationMode: 8
   positionThreshold: 0.01
   snapThreshold: 10
@@ -609,7 +615,9 @@ MonoBehaviour:
   m_transform: {fileID: 4205423996803326}
   localSync: 1
   positionSynchronizationMode: 7
-  positionInterpolationMode: 1
+  positionInterpolationMode: 0
+  minCatmullRomDistance: 0.1
+  minCatmullRomTime: 0.1
   positionThreshold: 0.01
   snapThreshold: 10
   compressionMode: 1

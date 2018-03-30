@@ -649,14 +649,14 @@ namespace BC_Solution.UnetNetwork
         /// <param name="baseMode"></param>
         /// <param name="currentLhsIndex"></param>
         /// <returns></returns>
-        protected INTERPOLATION_MODE GetCurrentInterpolationMode(INTERPOLATION_MODE baseMode, int currentLhsIndex, Vector3 currentPosition, Vector3 lastPosition)
+        protected INTERPOLATION_MODE GetCurrentInterpolationMode(INTERPOLATION_MODE baseMode, int currentLhsIndex, Vector3 currentPosition, Vector3 lastPosition, float minDistance, float minTime)
         {
             switch (baseMode)
             {
                 case INTERPOLATION_MODE.CATMULL_ROM:
                     if (m_currentStatesIndex < 3 || currentLhsIndex == 0 || currentLhsIndex + 1 > m_currentStatesIndex || currentLhsIndex - 2 < 0 
-                        || (m_statesBuffer[currentLhsIndex].m_relativeTime - m_statesBuffer[currentLhsIndex + 1].m_relativeTime) > 0.1f // superior to 100ms the catmull-Rom interpolation can be very wrong.
-                        || (currentPosition - lastPosition).sqrMagnitude < 0.01) // 0.01 position threshold.
+                        || (m_statesBuffer[currentLhsIndex].m_relativeTime - m_statesBuffer[currentLhsIndex + 1].m_relativeTime) > minTime // superior to 100ms the catmull-Rom interpolation can be very wrong.
+                        || (currentPosition - lastPosition).sqrMagnitude < minDistance) // 0.01 position threshold.
                     {
                         return INTERPOLATION_MODE.LINEAR;
                     }

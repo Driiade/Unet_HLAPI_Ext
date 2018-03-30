@@ -53,7 +53,10 @@ namespace BC_Solution.UnetNetwork
         SYNCHRONISATION_MODE positionSynchronizationMode;
 
         public INTERPOLATION_MODE positionInterpolationMode = INTERPOLATION_MODE.CATMULL_ROM;
-
+        [Tooltip("Min distance to use CatmUllRom interpolation instead of Linear")]
+        public float minCatmullRomDistance = 0.1f;
+        [Tooltip("Min time between 2 states to use CatmUllRom interpolation instead of Linear")]
+        public float minCatmullRomTime = 0.1f;
 
         [Space(10)]
         [SerializeField]
@@ -125,7 +128,7 @@ namespace BC_Solution.UnetNetwork
             }
             else
             {
-                INTERPOLATION_MODE interpolationMode = GetCurrentInterpolationMode(positionInterpolationMode, lhsIndex, ((Rigidbody2DPositionState)rhs).m_position, ((Rigidbody2DPositionState)lhs).m_position);
+                INTERPOLATION_MODE interpolationMode = GetCurrentInterpolationMode(positionInterpolationMode, lhsIndex, ((Rigidbody2DPositionState)rhs).m_position, ((Rigidbody2DPositionState)lhs).m_position, minCatmullRomDistance, minCatmullRomTime);
 
                 switch (interpolationMode)
                 {
