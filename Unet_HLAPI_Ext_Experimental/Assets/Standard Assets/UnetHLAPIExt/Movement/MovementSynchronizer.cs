@@ -39,26 +39,36 @@ namespace BC_Solution.UnetNetwork
         public class State
         {
             public float m_relativeTime = -1;
+            public int m_timestamp;
+            public bool m_isLastState; //true if it's the final state of the object
         }
 
         [SerializeField]
         int maxBufferSize = 60;
-        public bool useAdaptativeSynchronizationBackTime = true;
 
-        protected State[] m_statesBuffer;
-        protected int m_currentStatesIndex = -1;
+        internal State[] m_statesBuffer;
+        internal int m_currentStatesIndex = -1;
 
 
         [Space(20)]
         public bool useExtrapolation = true;
-        public float extrapolationTime = 0.25f;
+        public float extrapolationTime = 0.1f;
 
         [Space(20)]
-        public float interpolationErrorTime = 0.1f;
-
+        public float interpolationErrorTime = 0.01f;
 
         internal float m_lastInterpolationUpdateTimer = -1;
-        internal bool m_sentEndInterpolation = false;
+
+#if CLIENT
+        internal bool m_clientSentEndInterpolation = false;
+#endif
+
+#if SERVER
+        internal Dictionary<NetworkingConnection, float> m_lastServerInterpolationUpdateTimers = new Dictionary<NetworkingConnection, float>();
+        internal Dictionary<NetworkingConnection, bool> m_serverSentEndInterpolation = new Dictionary<NetworkingConnection, bool>();
+        internal Dictionary<NetworkingConnection, State> m_serverLastestStateUpdated = new Dictionary<NetworkingConnection, State>();
+#endif
+
 
 #if CLIENT || SERVER
         private NetworkMovementSynchronization m_networkMovementSynchronization;
@@ -92,7 +102,12 @@ namespace BC_Solution.UnetNetwork
         protected State extrapolatingState;
 
         public abstract void GetCurrentState(NetworkingWriter networkWriter);
-        public abstract void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader);
+        public abstract void GetLastState(NetworkingWriter networkWriter);
+
+        public abstract void ReceiveCurrentState(int timestamp, float relativeTime,bool isLastState, NetworkingReader networkReader);
+
+        public abstract void AddCurrentStateToBuffer();
+
         public abstract void ReceiveSync(NetworkingReader networkReader);
         public abstract void OnInterpolation(State rhs, State lhs, int lhsIndex, float t);
         public abstract void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation);
@@ -112,6 +127,44 @@ namespace BC_Solution.UnetNetwork
         }
 
 
+
+#if SERVER
+        public void RegisterLastestState(NetworkingConnection connection)
+        {
+            m_serverLastestStateUpdated[connection] = m_statesBuffer[0];
+        }
+
+        public virtual bool ServerNeedUpdateLastestStateTo(NetworkingConnection connection)
+        {
+            if (m_currentStatesIndex < 0)
+                return false;
+
+            State lastestStateUpdated = m_serverLastestStateUpdated[connection];
+
+            if (lastestStateUpdated == null && m_statesBuffer[0] != null)
+                return true;
+
+             if (lastestStateUpdated != null && lastestStateUpdated.m_timestamp < m_statesBuffer[0].m_timestamp)
+                return true;
+            else
+                return false;
+        }
+
+
+        public override void OnServerDisconnect(NetworkingConnection conn)
+        {
+            m_serverLastestStateUpdated.Remove(conn);
+            m_serverSentEndInterpolation.Remove(conn);
+            m_lastServerInterpolationUpdateTimers.Remove(conn);
+        }
+
+        public override void OnStopServer()
+        {
+            ResetStatesBuffer();
+        }
+#endif
+
+
         internal void Init(NetworkMovementSynchronization movSynchronization)
         {
             m_statesBuffer = new State[maxBufferSize];
@@ -126,14 +179,20 @@ namespace BC_Solution.UnetNetwork
         /// <summary>
         /// Called by NEtworkingMovementSyncronization
         /// </summary>
-        protected internal void ManualUpdate()
+        protected internal void MovementUpdate()
         {
-           if (m_currentStatesIndex < 0)
+            if (m_currentStatesIndex < 0)
                 return;
 
-            if (hasAuthority)
+#if SERVER
+           if (isServer && this.serverConnection == null)
                 return;
+#endif
 
+#if CLIENT
+            if(this.isLocalClient)
+                return;
+#endif
             State lhs;
             int lhsIndex;
             State rhs;
@@ -147,31 +206,28 @@ namespace BC_Solution.UnetNetwork
             //Extrapolation
             if (useExtrapolation && (lhs == null || rhs == null))
             {
-                if (m_currentStatesIndex > 0)
+                if (m_currentStatesIndex >= 0 && !m_statesBuffer[0].m_isLastState) //Don't extrapolate after the final state
                 {
-                    if (Time.realtimeSinceStartup > m_extrapolationTimer)
+                    if (extrapolatingState == null)    // we are not yet extrapolating
                     {
-                        m_isExtrapolating = false;
-                        m_isInterpolating = true;
-                        OnEndExtrapolation(m_statesBuffer[0]);
+                            m_isExtrapolating = true;
+                            m_isInterpolating = false;
+                            extrapolatingState = m_statesBuffer[0];
+
+                            OnBeginExtrapolation(extrapolatingState, Time.realtimeSinceStartup - m_statesBuffer[0].m_relativeTime);
+                            m_extrapolationTimer = Time.realtimeSinceStartup + extrapolationTime;
                     }
-                    else if (extrapolatingState == null || extrapolatingState != m_statesBuffer[0])    // we are not yet extrapolating
+                    else if (extrapolatingState != null && Time.realtimeSinceStartup > m_extrapolationTimer)
                     {
                         m_isExtrapolating = true;
                         m_isInterpolating = false;
-                        OnBeginExtrapolation(extrapolatingState, Time.realtimeSinceStartup - m_statesBuffer[0].m_relativeTime);
-
-                        if (extrapolatingState == null)
-                            m_extrapolationTimer = Time.realtimeSinceStartup + extrapolationTime;
-
-                        extrapolatingState = m_statesBuffer[0];
+                        OnEndExtrapolation(m_statesBuffer[0]);
                     }
-                    else
+                    else if (extrapolatingState!= null && Time.realtimeSinceStartup < m_extrapolationTimer)
                     {
                         m_isExtrapolating = true;
                         m_isInterpolating = false;
                         OnExtrapolation();
-
                     }
                 }
             }
@@ -179,6 +235,7 @@ namespace BC_Solution.UnetNetwork
             {
                 OnInterpolation(rhs, lhs, lhsIndex, t);
 
+                m_isInterpolating = true;
                 extrapolatingState = null;
                 m_extrapolationTimer = -1;
             }
@@ -196,6 +253,18 @@ namespace BC_Solution.UnetNetwork
         {
            // ResetStatesBuffer();
         }
+
+#if SERVER
+
+        public override void OnServerAddListener(NetworkingConnection conn)
+        {
+            m_lastServerInterpolationUpdateTimers.Add(conn, -1);
+            m_serverSentEndInterpolation.Add(conn, false);
+            m_serverLastestStateUpdated.Add(conn, null);
+        }
+
+
+#endif
 
         /// <summary>
         /// Reset the states buffer by putting the currentStatesIndex et it initial value
@@ -267,14 +336,8 @@ namespace BC_Solution.UnetNetwork
             float currentTime = Time.realtimeSinceStartup;
             firstStateDelay = currentTime - m_statesBuffer[0].m_relativeTime;
 
-            float synchronisationBackTime = 0;
+            float synchronisationBackTime = m_networkMovementSynchronization.CurrentSynchronizationBackTime;
 
-#if SERVER || CLIENT
-            if (!useAdaptativeSynchronizationBackTime)
-                synchronisationBackTime = m_networkMovementSynchronization.m_nonAdaptativeBacktime;
-            else
-                synchronisationBackTime =  m_networkMovementSynchronization.m_adaptativeSynchronizationBackTime;
-#endif
 
            // Debug.Log("First delay : " + firstStateDelay);
           // Debug.Log("lastStateDelay : " + ((NetworkingSystem.Instance.ServerTimestamp - statesBuffer[currentStatesIndex-1].timestamp) / 1000f));

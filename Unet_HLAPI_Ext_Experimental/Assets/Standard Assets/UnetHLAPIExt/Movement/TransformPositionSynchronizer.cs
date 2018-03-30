@@ -33,15 +33,25 @@ namespace BC_Solution.UnetNetwork
         {
             public Vector3 m_position;
 
-            public TransformPositionState(Transform t, float relativeTime)
+            public TransformPositionState(Transform t,int timestamp, float relativeTime,bool isLastState, bool localPosition)
             {
-                m_relativeTime = relativeTime;
-                m_position = t.position;
+                this.m_timestamp = timestamp;
+                this.m_isLastState = isLastState;
+                this.m_relativeTime = relativeTime;
+
+                if(localPosition)
+                {
+                    m_position = t.localPosition;
+                }
+                else
+                    m_position = t.position;
             }
         }
 
         [SerializeField]
         Transform m_transform;
+
+        public bool localSync = false;
 
         [Space(10)]
         [SerializeField]
@@ -65,31 +75,70 @@ namespace BC_Solution.UnetNetwork
 
         public override void OnEndExtrapolation(State rhs)
         {
-            this.m_transform.position = Vector3.Lerp(this.m_transform.position, ((TransformPositionState)rhs).m_position, Time.deltaTime / interpolationErrorTime);
+            if(localSync)
+            {
+                this.m_transform.localPosition = Vector3.Lerp(this.m_transform.localPosition, ((TransformPositionState)rhs).m_position, Time.deltaTime / interpolationErrorTime);
+            }
+            else
+                this.m_transform.position = Vector3.Lerp(this.m_transform.position, ((TransformPositionState)rhs).m_position, Time.deltaTime / interpolationErrorTime);
         }
 
         public override void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation)
         {
-            extrapolationVelocity = (((TransformPositionState)m_statesBuffer[0]).m_position - ((TransformPositionState)m_statesBuffer[1]).m_position) / ((m_statesBuffer[0].m_relativeTime - m_statesBuffer[1].m_relativeTime));
+            if (m_currentStatesIndex >= 1)
+                extrapolationVelocity = (((TransformPositionState)m_statesBuffer[0]).m_position - ((TransformPositionState)m_statesBuffer[1]).m_position) / ((m_statesBuffer[0].m_relativeTime - m_statesBuffer[1].m_relativeTime));
+            else
+                extrapolationVelocity = Vector3.zero;
 
-            this.m_transform.position += extrapolationVelocity * Time.deltaTime;
+            if (localSync)
+            {
+                this.m_transform.localPosition += extrapolationVelocity * Time.deltaTime;
+            }
+            else
+            {
+                this.m_transform.position += extrapolationVelocity * Time.deltaTime;
+            }
         }
 
         public override void OnExtrapolation()
         {
-            this.m_transform.position += extrapolationVelocity * Time.deltaTime;
+            if (localSync)
+            {
+                this.m_transform.localPosition += extrapolationVelocity * Time.deltaTime;
+            }
+            else
+            {
+                this.m_transform.position += extrapolationVelocity * Time.deltaTime;
+            }
         }
 
         public override void OnErrorCorrection()
         {
-            this.m_transform.position += positionError;
-            positionError = Vector3.Lerp(positionError, Vector3.zero, Time.deltaTime / interpolationErrorTime); // smooth error compensation
-            this.m_transform.position -= positionError;
+            if (localSync)
+            {
+                this.m_transform.localPosition -= positionError;
+                positionError = Vector3.Lerp(positionError, Vector3.zero, Time.deltaTime / interpolationErrorTime); // smooth error compensation
+                this.m_transform.localPosition += positionError;
+            }
+            else
+            {
+                this.m_transform.position -= positionError;
+                positionError = Vector3.Lerp(positionError, Vector3.zero, Time.deltaTime / interpolationErrorTime); // smooth error compensation
+                this.m_transform.position += positionError;
+            }
         }
 
         public override void OnInterpolation(State rhs, State lhs, int lhsIndex, float t)
         {
-            Vector3 val = this.m_transform.position;
+            Vector3 val = Vector3.zero;
+            
+            if(localSync)
+            {
+                val = this.m_transform.localPosition;
+            }
+            else
+                val = this.m_transform.position;
+
             if (Vector3.SqrMagnitude(((TransformPositionState)rhs).m_position - ((TransformPositionState)lhs).m_position) > (snapThreshold * snapThreshold))
             {
                 GetVector3(positionSynchronizationMode, ref val, ((TransformPositionState)rhs).m_position);
@@ -116,27 +165,55 @@ namespace BC_Solution.UnetNetwork
             if (interpolationErrorTime > 0) /// We need to compensate error on extrapolation
             {
                 if (extrapolatingState != null)                     // We were extrapolating
-                    positionError = this.m_transform.position - val;
+                {
+                    if (localSync)
+                    {
+                        positionError = this.m_transform.localPosition - val;
+                    }
+                    else
+                        positionError = this.m_transform.position - val;
+                }
             }
             else
                 positionError = Vector3.zero;
 
-            this.m_transform.position = val + positionError;
+            if (localSync)
+            {
+                this.m_transform.localPosition = val + positionError;
+            }
+            else
+                this.m_transform.position = val + positionError;
         }
 
 
         public override void ResetStatesBuffer()
         {
             base.ResetStatesBuffer();
-            lastPosition = this.m_transform.position;
+
+            if (localSync)
+            {
+                lastPosition = this.m_transform.localPosition;
+            }
+            else
+                lastPosition = this.m_transform.position;
+
             positionError = Vector3.zero;
         }
 
         public override bool NeedToUpdate()
         {
-            if ((!base.NeedToUpdate()) ||
+            if (localSync)
+            {
+                if ((!base.NeedToUpdate()) ||
                  ((Vector3.SqrMagnitude(this.m_transform.position - lastPosition) < positionThreshold * positionThreshold)))
-                return false;
+                    return false;
+            }
+            else
+            {
+                if ((!base.NeedToUpdate()) ||
+                    ((Vector3.SqrMagnitude(this.m_transform.localPosition - lastPosition) < positionThreshold * positionThreshold)))
+                    return false;
+            }
 
             return true;
         }
@@ -144,14 +221,31 @@ namespace BC_Solution.UnetNetwork
 
         public override void GetCurrentState(NetworkingWriter networkWriter)
         {
-            lastPosition = this.m_transform.position;
-            SerializeVector3(positionSynchronizationMode, this.m_transform.position, networkWriter, compressionMode, minPositionValue, maxPositionValue);
+            if (localSync)
+            {
+                lastPosition = this.m_transform.localPosition;
+                SerializeVector3(positionSynchronizationMode, this.m_transform.localPosition, networkWriter, compressionMode, minPositionValue, maxPositionValue);
+            }
+            else
+            {
+                lastPosition = this.m_transform.position;
+                SerializeVector3(positionSynchronizationMode, this.m_transform.position, networkWriter, compressionMode, minPositionValue, maxPositionValue);
+            }
         }
 
-
-        public override void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader)
+        public override void GetLastState(NetworkingWriter networkWriter)
         {
-            TransformPositionState newState = new TransformPositionState(this.m_transform, relativeTime);
+            SerializeVector3(positionSynchronizationMode, ((TransformPositionState)m_statesBuffer[0]).m_position, networkWriter, compressionMode, minPositionValue, maxPositionValue);
+        }
+
+        public override void AddCurrentStateToBuffer()
+        {
+            AddState(new TransformPositionState(this.m_transform, NetworkTransport.GetNetworkTimestamp(), Time.realtimeSinceStartup, true, localSync));
+        }
+
+        public override void ReceiveCurrentState(int timestamp, float relativeTime,bool isLastState, NetworkingReader networkReader)
+        {
+            TransformPositionState newState = new TransformPositionState(this.m_transform,timestamp, relativeTime, isLastState, localSync);
             UnserializeVector3(positionSynchronizationMode, ref newState.m_position, networkReader, compressionMode, minPositionValue, maxPositionValue);
             AddState(newState);
         }
@@ -161,7 +255,13 @@ namespace BC_Solution.UnetNetwork
             Vector3 val = Vector3.zero;
 
             UnserializeVector3(positionSynchronizationMode, ref val, networkReader, compressionMode, minPositionValue, maxPositionValue);
-            this.m_transform.position = val;
+
+            if (localSync)
+            {
+                this.m_transform.localPosition = val;
+            }
+            else
+                this.m_transform.position = val;
 
             ResetStatesBuffer();
         }
@@ -245,15 +345,35 @@ namespace BC_Solution.UnetNetwork
             switch (compressionMode)
             {
                 case COMPRESS_MODE.USHORT:
-                    returnedValueOnCurrentPosition.x = Math.Decompress(Math.CompressToShort(this.m_transform.position.x, minPositionValue.x, maxPositionValue.x, out precisionAfterCompression.x), minPositionValue.x, maxPositionValue.x);
-                    returnedValueOnCurrentPosition.y = Math.Decompress(Math.CompressToShort(this.m_transform.position.y, minPositionValue.y, maxPositionValue.y, out precisionAfterCompression.y), minPositionValue.y, maxPositionValue.y);
-                    returnedValueOnCurrentPosition.z = Math.Decompress(Math.CompressToShort(this.m_transform.position.z, minPositionValue.z, maxPositionValue.z, out precisionAfterCompression.z), minPositionValue.z, maxPositionValue.z);
+
+                    if (localSync)
+                    {
+                        returnedValueOnCurrentPosition.x = Math.Decompress(Math.CompressToShort(this.m_transform.localPosition.x, minPositionValue.x, maxPositionValue.x, out precisionAfterCompression.x), minPositionValue.x, maxPositionValue.x);
+                        returnedValueOnCurrentPosition.y = Math.Decompress(Math.CompressToShort(this.m_transform.localPosition.y, minPositionValue.y, maxPositionValue.y, out precisionAfterCompression.y), minPositionValue.y, maxPositionValue.y);
+                        returnedValueOnCurrentPosition.z = Math.Decompress(Math.CompressToShort(this.m_transform.localPosition.z, minPositionValue.z, maxPositionValue.z, out precisionAfterCompression.z), minPositionValue.z, maxPositionValue.z);
+                    }
+                    else
+                    {
+                        returnedValueOnCurrentPosition.x = Math.Decompress(Math.CompressToShort(this.m_transform.position.x, minPositionValue.x, maxPositionValue.x, out precisionAfterCompression.x), minPositionValue.x, maxPositionValue.x);
+                        returnedValueOnCurrentPosition.y = Math.Decompress(Math.CompressToShort(this.m_transform.position.y, minPositionValue.y, maxPositionValue.y, out precisionAfterCompression.y), minPositionValue.y, maxPositionValue.y);
+                        returnedValueOnCurrentPosition.z = Math.Decompress(Math.CompressToShort(this.m_transform.position.z, minPositionValue.z, maxPositionValue.z, out precisionAfterCompression.z), minPositionValue.z, maxPositionValue.z);
+                    }
                     break;
 
                 case COMPRESS_MODE.NONE:
-                    returnedValueOnCurrentPosition.x = this.m_transform.position.x;
-                    returnedValueOnCurrentPosition.y = this.m_transform.position.y;
-                    returnedValueOnCurrentPosition.z = this.m_transform.position.z;
+
+                    if (localSync)
+                    {
+                        returnedValueOnCurrentPosition.x = this.m_transform.localPosition.x;
+                        returnedValueOnCurrentPosition.y = this.m_transform.localPosition.y;
+                        returnedValueOnCurrentPosition.z = this.m_transform.localPosition.z;
+                    }
+                    else
+                    {
+                        returnedValueOnCurrentPosition.x = this.m_transform.position.x;
+                        returnedValueOnCurrentPosition.y = this.m_transform.position.y;
+                        returnedValueOnCurrentPosition.z = this.m_transform.position.z;
+                    }
                     break;
             }
 

@@ -46,12 +46,14 @@ namespace BC_Solution.UnetNetwork
         [SerializeField] internal ushort m_sceneId;
         [SerializeField] internal ushort m_assetId;
 
-#if SERVER
+
         [SerializeField, Tooltip("The server that manages this networkingIdentity on scene, only used for SINGLE_SCENE_OBJECT and REPLICATED PREFAB_SCENE_PREFAB")] internal string m_serverId = "MainServer";
-#endif
 
         [SerializeField] bool m_localPlayerAuthority;
+
+#if UNITY_EDITOR
         [SerializeField] bool m_autoSetNetworkBehaviourNetId = true;
+#endif
 
 #if SERVER
         [Tooltip("if the networking Behaviour is not present on server and a send to owner is called, will automatically redirect the call to owner")]
@@ -319,7 +321,31 @@ namespace BC_Solution.UnetNetwork
         internal void OnStartServer(NetworkingServer networkingServer)
         {
             foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
-                b.OnStartServer(networkingServer);
+            {
+                try
+                {
+                    b.OnStartServer(networkingServer);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError(e);
+                }
+            }
+        }
+
+        internal void OnStopServer()
+        {
+            foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
+            {
+                try
+                {
+                    b.OnStopServer();
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError(e);
+                }
+            }
         }
 #endif
 
@@ -378,6 +404,21 @@ namespace BC_Solution.UnetNetwork
                 try
                 {
                     b.OnServerConnect(conn);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError(e);
+                }
+            }
+        }
+
+        internal void OnServerDisconnect(NetworkingConnection conn)
+        {
+            foreach (NetworkingBehaviour b in this.m_networkingBehaviours)
+            {
+                try
+                {
+                    b.OnServerDisconnect(conn);
                 }
                 catch (System.Exception e)
                 {

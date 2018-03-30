@@ -354,10 +354,6 @@ Prefab:
       propertyPath: m_type
       value: 2
       objectReference: {fileID: 0}
-    - target: {fileID: 1231402685847870, guid: d313bee6809531445a0186a4f8705868, type: 2}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: d313bee6809531445a0186a4f8705868, type: 2}
   m_IsPrefabParent: 0
@@ -1132,6 +1128,7 @@ GameObject:
   - component: {fileID: 1807647485}
   - component: {fileID: 1807647487}
   - component: {fileID: 1807647486}
+  - component: {fileID: 1807647488}
   m_Layer: 0
   m_Name: NetworkingSystem
   m_TagString: Untagged
@@ -1154,7 +1151,7 @@ MonoBehaviour:
   setReadyOnConnect: 1
   serverAdress: localhost
   serverPort: 7777
-  maxPlayer: 10
+  maxPlayer: 20
   additionnalChannel: 
   connectionTimeOut: 1000
   disconnectionTimeOut: 5000
@@ -1162,6 +1159,7 @@ MonoBehaviour:
   fragmentSize: 500
   maxSentMessageQueueSize: 150
   sendDelay: 5
+  debug: 1
 --- !u!4 &1807647483
 Transform:
   m_ObjectHideFlags: 0
@@ -1209,6 +1207,7 @@ MonoBehaviour:
   registeredNetworkedGameObjectsArray:
   - {fileID: 1231402685847870, guid: d313bee6809531445a0186a4f8705868, type: 2}
   - {fileID: 1722806640705446, guid: 62a041a6082f59648bf1f43dbe038b08, type: 2}
+  networkingSceneSystem: {fileID: 1807647488}
 --- !u!114 &1807647486
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1246,6 +1245,17 @@ MonoBehaviour:
   m_broadcastSubVersion: 1
   m_broadcastInterval: 1000
   timeToRemoveALanMatchFromList: 2
+--- !u!114 &1807647488
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1807647481}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0856e02c9734b34eb04a6eea6942938, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1961428247
 GameObject:
   m_ObjectHideFlags: 0

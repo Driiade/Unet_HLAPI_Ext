@@ -33,9 +33,11 @@ namespace BC_Solution.UnetNetwork
         {
             public Vector3 m_rotation;
 
-            public TransformRotationState(Transform t, float relativeTime, bool local)
+            public TransformRotationState(Transform t,int timestamp, float relativeTime,bool isLastState, bool local)
             {
+                this.m_timestamp = timestamp;
                 this.m_relativeTime = relativeTime;
+                this.m_isLastState = isLastState;
 
                 if (local)
                 {
@@ -67,11 +69,13 @@ namespace BC_Solution.UnetNetwork
 
         private Quaternion lastRotation = Quaternion.identity;
 
-        private Quaternion extrapolationAngularVelocity;
+        private Quaternion extrapolationAngularVelocity = Quaternion.identity;
 
         private Quaternion rotationError = Quaternion.identity;
 
-
+#if SERVER
+        Dictionary<NetworkingConnection, Quaternion> lastServerRotations = new Dictionary<NetworkingConnection, Quaternion>();
+#endif
 
         public override void OnEndExtrapolation(State rhs)
         {
@@ -85,12 +89,17 @@ namespace BC_Solution.UnetNetwork
 
         public override void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation)
         {
-            extrapolationAngularVelocity = (Quaternion.Euler(((TransformRotationState)m_statesBuffer[0]).m_rotation) * Quaternion.Inverse(Quaternion.Euler(((TransformRotationState)m_statesBuffer[1]).m_rotation)));
-            Vector3 axis;
-            float angle;
-            extrapolationAngularVelocity.ToAngleAxis(out angle, out axis);
-            angle /= ((m_statesBuffer[0].m_relativeTime - m_statesBuffer[1].m_relativeTime));
-            extrapolationAngularVelocity = Quaternion.AngleAxis(angle, axis);
+            if (m_currentStatesIndex >= 1)
+            {
+                extrapolationAngularVelocity = (Quaternion.Euler(((TransformRotationState)m_statesBuffer[0]).m_rotation) * Quaternion.Inverse(Quaternion.Euler(((TransformRotationState)m_statesBuffer[1]).m_rotation)));
+                Vector3 axis;
+                float angle;
+                extrapolationAngularVelocity.ToAngleAxis(out angle, out axis);
+                angle /= ((m_statesBuffer[0].m_relativeTime - m_statesBuffer[1].m_relativeTime));
+                extrapolationAngularVelocity = Quaternion.AngleAxis(angle, axis);
+            }
+            else
+                extrapolationAngularVelocity = Quaternion.identity;
         }
 
         public override void OnErrorCorrection()
@@ -187,17 +196,28 @@ namespace BC_Solution.UnetNetwork
             if (localSync)
             {
                 lastRotation = this.m_transform.localRotation;
+                SerializeVector3(rotationSynchronizationMode, this.m_transform.localEulerAngles, networkWriter, compressionRotationMode, minRotationValue, maxRotationValue);
             }
             else
+            {
                 lastRotation = this.m_transform.rotation;
-
-            SerializeVector3(rotationSynchronizationMode, localSync ? this.m_transform.localEulerAngles : this.m_transform.rotation.eulerAngles, networkWriter, compressionRotationMode, minRotationValue, maxRotationValue);
+                SerializeVector3(rotationSynchronizationMode, this.m_transform.rotation.eulerAngles, networkWriter, compressionRotationMode, minRotationValue, maxRotationValue);
+            }
         }
 
-
-        public override void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader)
+        public override void GetLastState(NetworkingWriter networkWriter)
         {
-            TransformRotationState newState = new TransformRotationState(this.m_transform, relativeTime, localSync);
+            SerializeVector3(rotationSynchronizationMode, ((TransformRotationState)m_statesBuffer[0]).m_rotation, networkWriter, compressionRotationMode, minRotationValue, maxRotationValue);
+        }
+
+        public override void AddCurrentStateToBuffer()
+        {
+            AddState(new TransformRotationState(this.m_transform, NetworkTransport.GetNetworkTimestamp(), Time.realtimeSinceStartup, true, localSync));
+        }
+
+        public override void ReceiveCurrentState(int timestamp, float relativeTime, bool isLastState, NetworkingReader networkReader)
+        {
+            TransformRotationState newState = new TransformRotationState(this.m_transform,timestamp, relativeTime, true, localSync);
             UnserializeVector3(rotationSynchronizationMode, ref newState.m_rotation, networkReader, compressionRotationMode, minRotationValue, maxRotationValue);
 
             AddState(newState);
@@ -217,26 +237,45 @@ namespace BC_Solution.UnetNetwork
             ResetStatesBuffer();
         }
 
+
 #if UNITY_EDITOR
 
         public override void OnInspectorGUI()
         {
-
             Vector3 precisionAfterCompression = Vector3.zero;
             Vector3 returnedValueOnCurrentRotation = Vector3.zero;
 
             switch (compressionRotationMode)
             {
                 case COMPRESS_MODE.USHORT:
-                    returnedValueOnCurrentRotation.x = Math.Decompress(Math.CompressToShort(this.m_transform.rotation.eulerAngles.x, minRotationValue.x, maxRotationValue.x, out precisionAfterCompression.x), minRotationValue.x, maxRotationValue.x);
-                    returnedValueOnCurrentRotation.y = Math.Decompress(Math.CompressToShort(this.m_transform.rotation.eulerAngles.y, minRotationValue.y, maxRotationValue.y, out precisionAfterCompression.y), minRotationValue.y, maxRotationValue.y);
-                    returnedValueOnCurrentRotation.z = Math.Decompress(Math.CompressToShort(this.m_transform.rotation.eulerAngles.z, minRotationValue.z, maxRotationValue.z, out precisionAfterCompression.z), minRotationValue.z, maxRotationValue.z);
+
+                    if (localSync)
+                    {
+                        returnedValueOnCurrentRotation.x = Math.Decompress(Math.CompressToShort(this.m_transform.localRotation.eulerAngles.x, minRotationValue.x, maxRotationValue.x, out precisionAfterCompression.x), minRotationValue.x, maxRotationValue.x);
+                        returnedValueOnCurrentRotation.y = Math.Decompress(Math.CompressToShort(this.m_transform.localRotation.eulerAngles.y, minRotationValue.y, maxRotationValue.y, out precisionAfterCompression.y), minRotationValue.y, maxRotationValue.y);
+                        returnedValueOnCurrentRotation.z = Math.Decompress(Math.CompressToShort(this.m_transform.localRotation.eulerAngles.z, minRotationValue.z, maxRotationValue.z, out precisionAfterCompression.z), minRotationValue.z, maxRotationValue.z);
+                    }
+                    else
+                    {
+                        returnedValueOnCurrentRotation.x = Math.Decompress(Math.CompressToShort(this.m_transform.rotation.eulerAngles.x, minRotationValue.x, maxRotationValue.x, out precisionAfterCompression.x), minRotationValue.x, maxRotationValue.x);
+                        returnedValueOnCurrentRotation.y = Math.Decompress(Math.CompressToShort(this.m_transform.rotation.eulerAngles.y, minRotationValue.y, maxRotationValue.y, out precisionAfterCompression.y), minRotationValue.y, maxRotationValue.y);
+                        returnedValueOnCurrentRotation.z = Math.Decompress(Math.CompressToShort(this.m_transform.rotation.eulerAngles.z, minRotationValue.z, maxRotationValue.z, out precisionAfterCompression.z), minRotationValue.z, maxRotationValue.z);
+                    }
                     break;
 
                 case COMPRESS_MODE.NONE:
-                    returnedValueOnCurrentRotation.x = this.m_transform.rotation.eulerAngles.x;
-                    returnedValueOnCurrentRotation.y = this.m_transform.rotation.eulerAngles.y;
-                    returnedValueOnCurrentRotation.z = this.m_transform.rotation.eulerAngles.z;
+                    if (localSync)
+                    {
+                        returnedValueOnCurrentRotation.x = this.m_transform.localRotation.eulerAngles.x;
+                        returnedValueOnCurrentRotation.y = this.m_transform.localRotation.eulerAngles.y;
+                        returnedValueOnCurrentRotation.z = this.m_transform.localRotation.eulerAngles.z;
+                    }
+                    else
+                    {
+                        returnedValueOnCurrentRotation.x = this.m_transform.rotation.eulerAngles.x;
+                        returnedValueOnCurrentRotation.y = this.m_transform.rotation.eulerAngles.y;
+                        returnedValueOnCurrentRotation.z = this.m_transform.rotation.eulerAngles.z;
+                    }
                     break;
             }
 

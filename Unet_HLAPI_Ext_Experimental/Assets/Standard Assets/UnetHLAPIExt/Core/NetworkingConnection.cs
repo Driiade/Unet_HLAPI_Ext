@@ -405,7 +405,7 @@ namespace BC_Solution.UnetNetwork
             {
                 if (LogFilter.logDebug) { Debug.Log("Async DNS START:" + serverIp); }
 
-                this.m_currentState = ConnectState.Resolved;
+                this.m_currentState = ConnectState.Resolving;
                 Dns.BeginGetHostAddresses(serverIp, GetHostAddressesCallback, this);
             }
         }

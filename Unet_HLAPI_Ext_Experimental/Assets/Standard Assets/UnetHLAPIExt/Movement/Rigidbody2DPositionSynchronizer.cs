@@ -22,6 +22,8 @@ SOFTWARE.
 using UnityEngine;
 using UnityEngine.Networking;
 using BC_Solution;
+using System;
+
 namespace BC_Solution.UnetNetwork
 {
     public class Rigidbody2DPositionSynchronizer : MovementSynchronizer
@@ -32,9 +34,12 @@ namespace BC_Solution.UnetNetwork
             public Vector2 m_position;
             public Vector2 m_velocity;
 
-            public Rigidbody2DPositionState(Rigidbody2D r, float relativeTime)
+            public Rigidbody2DPositionState(Rigidbody2D r,int timestamp, float relativeTime,bool isLastState)
             {
+                this.m_timestamp = timestamp;
                 this.m_relativeTime = relativeTime;
+                this.m_isLastState = isLastState;
+
                 m_position = r.position;
                 m_velocity = r.velocity;
             }
@@ -77,8 +82,12 @@ namespace BC_Solution.UnetNetwork
         public override void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation)
         {
             Vector2 acceleration = Vector3.zero;
-            acceleration = (((Rigidbody2DPositionState)extrapolatingState).m_velocity - ((Rigidbody2DPositionState)m_statesBuffer[1]).m_velocity) / ((extrapolatingState.m_relativeTime - m_statesBuffer[1].m_relativeTime));
-            acceleration += this.m_rigidbody2D.gravityScale * (Physics2D.gravity) * timeSinceInterpolation;
+
+            if (m_currentStatesIndex >= 1)
+            {
+                acceleration = (((Rigidbody2DPositionState)extrapolatingState).m_velocity - ((Rigidbody2DPositionState)m_statesBuffer[1]).m_velocity) / ((extrapolatingState.m_relativeTime - m_statesBuffer[1].m_relativeTime));
+                acceleration += this.m_rigidbody2D.gravityScale * (Physics2D.gravity) * timeSinceInterpolation;
+            }
 
             this.m_rigidbody2D.velocity = ((Rigidbody2DPositionState)extrapolatingState).m_velocity + acceleration * timeSinceInterpolation;
             this.m_rigidbody2D.freezeRotation = false;
@@ -94,9 +103,9 @@ namespace BC_Solution.UnetNetwork
 
         public override void OnErrorCorrection()
         {
-            this.m_rigidbody2D.position = (this.m_rigidbody2D.position + positionError);
-            positionError = Vector3.Lerp(positionError, Vector3.zero, Time.deltaTime / interpolationErrorTime); // smooth error compensation
             this.m_rigidbody2D.position = (this.m_rigidbody2D.position - positionError);
+            positionError = Vector3.Lerp(positionError, Vector3.zero, Time.deltaTime / interpolationErrorTime); // smooth error compensation
+            this.m_rigidbody2D.position = (this.m_rigidbody2D.position + positionError);
         }
 
         public override void OnExtrapolation()
@@ -136,12 +145,12 @@ namespace BC_Solution.UnetNetwork
             if (interpolationErrorTime > 0) /// We need to compensate error on extrapolation
             {
                 if (extrapolatingState != null) //We were extrapolating, we need to calcul the error
-                    positionError = val - this.m_rigidbody2D.position;
+                    positionError = this.m_rigidbody2D.position - val;
             }
             else
                 positionError = Vector2.zero;
 
-            this.m_rigidbody2D.position = (val - positionError);
+            this.m_rigidbody2D.position = (val + positionError);
 
             //VELOCITY
             this.m_rigidbody2D.velocity = Vector3.Lerp(((Rigidbody2DPositionState)lhs).m_velocity, ((Rigidbody2DPositionState)rhs).m_velocity, t);
@@ -172,9 +181,21 @@ namespace BC_Solution.UnetNetwork
             SerializeVector2(velocitySynchronizationMode, this.m_rigidbody2D.velocity, networkWriter, compressionVelocityMode, minVelocityValue, maxVelocityValue);
         }
 
-        public override void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader)
+        public override void GetLastState(NetworkingWriter networkWriter)
         {
-            Rigidbody2DPositionState newState = new Rigidbody2DPositionState(this.m_rigidbody2D, relativeTime);
+            SerializeVector2(positionSynchronizationMode, ((Rigidbody2DPositionState)m_statesBuffer[0]).m_position, networkWriter, compressionPositionMode, minPositionValue, maxPositionValue);
+            SerializeVector2(velocitySynchronizationMode, ((Rigidbody2DPositionState)m_statesBuffer[0]).m_velocity, networkWriter, compressionVelocityMode, minVelocityValue, maxVelocityValue);
+        }
+
+        public override void AddCurrentStateToBuffer()
+        {
+            AddState(new Rigidbody2DPositionState(this.m_rigidbody2D, NetworkTransport.GetNetworkTimestamp(), Time.realtimeSinceStartup, true));
+        }
+
+
+        public override void ReceiveCurrentState(int timestamp, float relativeTime,bool lastState, NetworkingReader networkReader)
+        {
+            Rigidbody2DPositionState newState = new Rigidbody2DPositionState(this.m_rigidbody2D, timestamp, relativeTime, lastState);
 
             UnserializeVector2(positionSynchronizationMode, ref newState.m_position, networkReader, compressionPositionMode, minPositionValue, maxPositionValue);
             UnserializeVector2(velocitySynchronizationMode, ref newState.m_velocity, networkReader, compressionVelocityMode, minVelocityValue, maxVelocityValue);

@@ -30,13 +30,25 @@ namespace BC_Solution.UnetNetwork
         {
         }
 
-        public override void OnDeserialize(NetworkingReader reader, NetworkingConnection connection, NetworkingConnection serverConnection)
-        {
-            //UnityEngine.Debug.Log(callback + " : " + value);
-            base.OnDeserialize(reader, connection, serverConnection);
 
-            if (callback != null)
-                callback.Invoke(value);
+        public override T Value
+        {
+            get
+            {
+                return value;
+            }
+            set
+            {
+                if (!value.Equals(this.value))
+                {
+                    isDirty = true;
+                    this.value = value;
+
+
+                    if (callback != null)
+                        callback.Invoke(value);
+                }
+            }
         }
     }
 }

@@ -20,6 +20,7 @@ SOFTWARE.
 */
 
 
+using System;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -28,14 +29,17 @@ namespace BC_Solution.UnetNetwork
     public class Rigidbody2DRotationSynchronizer : MovementSynchronizer
     {
 
-        class RigidbodyState : State
+        class Rigidbody2DRotationState : State
         {
             public float m_rotation;
             public float m_angularVelocity;
 
-            public RigidbodyState(Rigidbody2D r, float relativeTime)
+            public Rigidbody2DRotationState(Rigidbody2D r,int timestamp, float relativeTime,bool isLastState)
             {
+                this.m_timestamp = timestamp;
                 this.m_relativeTime = relativeTime;
+                this.m_isLastState = isLastState;
+
                 m_rotation = r.rotation;
                 m_angularVelocity = r.angularVelocity;
             }
@@ -72,14 +76,14 @@ namespace BC_Solution.UnetNetwork
 
         public override void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation)
         {
-            this.m_rigidbody2D.angularVelocity = ((RigidbodyState)extrapolatingState).m_angularVelocity;
+            this.m_rigidbody2D.angularVelocity = ((Rigidbody2DRotationState)extrapolatingState).m_angularVelocity;
 
             this.m_rigidbody2D.constraints = RigidbodyConstraints2D.None;
         }
 
         public override void OnEndExtrapolation(State rhs)
         {
-            Quaternion rhsQ = Quaternion.Euler(0, 0, ((RigidbodyState)rhs).m_rotation);
+            Quaternion rhsQ = Quaternion.Euler(0, 0, ((Rigidbody2DRotationState)rhs).m_rotation);
             Quaternion rigidBodyQ = Quaternion.Euler(0, 0, this.m_rigidbody2D.rotation);
             this.m_rigidbody2D.rotation = Quaternion.Slerp(rigidBodyQ, rhsQ, Time.deltaTime / interpolationErrorTime).eulerAngles.z;
 
@@ -106,8 +110,8 @@ namespace BC_Solution.UnetNetwork
             //ROTATION 
             float rotation = 0;
 
-            Quaternion rhsQ = Quaternion.Euler(0, 0, ((RigidbodyState)rhs).m_rotation);
-            Quaternion lhsQ = Quaternion.Euler(0, 0, ((RigidbodyState)lhs).m_rotation);
+            Quaternion rhsQ = Quaternion.Euler(0, 0, ((Rigidbody2DRotationState)rhs).m_rotation);
+            Quaternion lhsQ = Quaternion.Euler(0, 0, ((Rigidbody2DRotationState)lhs).m_rotation);
 
             rotation = Quaternion.Slerp(lhsQ, rhsQ, t).eulerAngles.z;
 
@@ -122,7 +126,7 @@ namespace BC_Solution.UnetNetwork
             this.m_rigidbody2D.rotation = rotation + rotationError;
 
             //ANGULAR VELOCITY
-            this.m_rigidbody2D.angularVelocity = Mathf.Lerp(((RigidbodyState)lhs).m_angularVelocity, ((RigidbodyState)rhs).m_angularVelocity, t);
+            this.m_rigidbody2D.angularVelocity = Mathf.Lerp(((Rigidbody2DRotationState)lhs).m_angularVelocity, ((Rigidbody2DRotationState)rhs).m_angularVelocity, t);
         }
 
         public override void ResetStatesBuffer()
@@ -180,9 +184,53 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public override void ReceiveCurrentState(float relativeTime, NetworkingReader networkReader)
+        public override void GetLastState(NetworkingWriter networkWriter)
         {
-            RigidbodyState newState = new RigidbodyState(this.m_rigidbody2D, relativeTime);
+            float precision;
+
+            if (synchronizeRotation)
+            {
+                switch (compressionRotationMode)
+                {
+                    case COMPRESS_MODE.NONE:
+                        networkWriter.Write(((Rigidbody2DRotationState)m_statesBuffer[0]).m_rotation);
+                        break;
+                    case COMPRESS_MODE.USHORT:
+                        networkWriter.Write(Math.CompressToShort(((Rigidbody2DRotationState)m_statesBuffer[0]).m_rotation, minRotationValue, maxRotationValue, out precision));
+                        break;
+                }
+            }
+
+            if (synchronizeAngularVelocity)
+            {
+                switch (compressionAngularVelocityMode)
+                {
+                    case COMPRESS_MODE.NONE:
+                        networkWriter.Write(((Rigidbody2DRotationState)m_statesBuffer[0]).m_angularVelocity);
+                        break;
+                    case COMPRESS_MODE.USHORT:
+                        networkWriter.Write(Math.CompressToShort(((Rigidbody2DRotationState)m_statesBuffer[0]).m_angularVelocity, minAngularVelocityValue, maxAngularVelocityValue, out precision));
+                        break;
+                }
+            }
+            else
+            {
+                byte direction = 0;
+                if (((Rigidbody2DRotationState)m_statesBuffer[0]).m_angularVelocity > 0)
+                    direction = (byte)(direction | (1 << 1));
+
+                networkWriter.Write(direction);
+            }
+        }
+
+        public override void AddCurrentStateToBuffer()
+        {
+            AddState(new Rigidbody2DRotationState(this.m_rigidbody2D, NetworkTransport.GetNetworkTimestamp(), Time.realtimeSinceStartup, true));
+        }
+
+        public override void ReceiveCurrentState(int timestamp, float relativeTime, bool isLastState, NetworkingReader networkReader)
+        {
+            Rigidbody2DRotationState newState = new Rigidbody2DRotationState(this.m_rigidbody2D,timestamp, relativeTime, isLastState);
 
             if (synchronizeRotation)
             {
@@ -219,15 +267,15 @@ namespace BC_Solution.UnetNetwork
                 byte direction = networkReader.ReadByte();
                 if (place != -1 && place < m_currentStatesIndex - 1)
                 {
-                    if (((RigidbodyState)m_statesBuffer[place]).m_rotation > ((RigidbodyState)m_statesBuffer[place + 1]).m_rotation && ((direction & 1 << 1) != 0)
-                        || ((RigidbodyState)m_statesBuffer[place]).m_rotation < ((RigidbodyState)m_statesBuffer[place + 1]).m_rotation && ((direction & 1 << 1) == 0))
+                    if (((Rigidbody2DRotationState)m_statesBuffer[place]).m_rotation > ((Rigidbody2DRotationState)m_statesBuffer[place + 1]).m_rotation && ((direction & 1 << 1) != 0)
+                        || ((Rigidbody2DRotationState)m_statesBuffer[place]).m_rotation < ((Rigidbody2DRotationState)m_statesBuffer[place + 1]).m_rotation && ((direction & 1 << 1) == 0))
                     {
-                        newState.m_angularVelocity = (((RigidbodyState)m_statesBuffer[place]).m_rotation - ((RigidbodyState)m_statesBuffer[place + 1]).m_rotation) / (m_statesBuffer[place].m_relativeTime - m_statesBuffer[place + 1].m_relativeTime);
+                        newState.m_angularVelocity = (((Rigidbody2DRotationState)m_statesBuffer[place]).m_rotation - ((Rigidbody2DRotationState)m_statesBuffer[place + 1]).m_rotation) / (m_statesBuffer[place].m_relativeTime - m_statesBuffer[place + 1].m_relativeTime);
                     }
-                    else if (((RigidbodyState)m_statesBuffer[place]).m_rotation > ((RigidbodyState)m_statesBuffer[place + 1]).m_rotation)
-                        newState.m_angularVelocity = (((RigidbodyState)m_statesBuffer[place]).m_rotation - (((RigidbodyState)m_statesBuffer[place + 1]).m_rotation + 360)) / (m_statesBuffer[place].m_relativeTime - m_statesBuffer[place + 1].m_relativeTime);
+                    else if (((Rigidbody2DRotationState)m_statesBuffer[place]).m_rotation > ((Rigidbody2DRotationState)m_statesBuffer[place + 1]).m_rotation)
+                        newState.m_angularVelocity = (((Rigidbody2DRotationState)m_statesBuffer[place]).m_rotation - (((Rigidbody2DRotationState)m_statesBuffer[place + 1]).m_rotation + 360)) / (m_statesBuffer[place].m_relativeTime - m_statesBuffer[place + 1].m_relativeTime);
                     else
-                        newState.m_angularVelocity = (((RigidbodyState)m_statesBuffer[place]).m_rotation - (((RigidbodyState)m_statesBuffer[place + 1]).m_rotation - 360)) / (m_statesBuffer[place].m_relativeTime - m_statesBuffer[place + 1].m_relativeTime);
+                        newState.m_angularVelocity = (((Rigidbody2DRotationState)m_statesBuffer[place]).m_rotation - (((Rigidbody2DRotationState)m_statesBuffer[place + 1]).m_rotation - 360)) / (m_statesBuffer[place].m_relativeTime - m_statesBuffer[place + 1].m_relativeTime);
                 }
             }
         }

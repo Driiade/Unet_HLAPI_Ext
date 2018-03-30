@@ -279,7 +279,7 @@ Rigidbody2D:
   m_Material: {fileID: 6200000, guid: 927889467797366498c4487db0509709, type: 2}
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!50 &50885173538471890
 Rigidbody2D:
@@ -299,7 +299,7 @@ Rigidbody2D:
   m_Material: {fileID: 6200000, guid: 927889467797366498c4487db0509709, type: 2}
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!54 &54041052144329094
 Rigidbody:
@@ -389,12 +389,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a44e4099fd6dda4c863e895c95b9a25, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_type: 2
+  m_type: 0
   m_sceneId: 1
   m_assetId: 0
   m_serverId: MainServer
   m_localPlayerAuthority: 1
-  autoSetNetworkBehaviourNetId: 1
+  m_autoSetNetworkBehaviourNetId: 1
+  m_serverAutoSendToOwner: 1
+  m_serverAutoRpc: 1
   m_networkingBehaviours:
   - {fileID: 114989741402422030}
   - {fileID: 114932352318098096}
@@ -419,10 +421,9 @@ MonoBehaviour:
   automaticAddListener: 1
   m_netId: 5
   maxBufferSize: 60
-  useAdaptativeSynchronizationBackTime: 1
   useExtrapolation: 1
   extrapolationTime: 0.25
-  interpolationErrorTime: 0.1
+  interpolationErrorTime: 0.01
   m_rigidbody2D: {fileID: 50457284989626114}
   positionSynchronizationMode: 4
   positionInterpolationMode: 1
@@ -449,10 +450,9 @@ MonoBehaviour:
   automaticAddListener: 1
   m_netId: 3
   maxBufferSize: 60
-  useAdaptativeSynchronizationBackTime: 1
-  useExtrapolation: 1
+  useExtrapolation: 0
   extrapolationTime: 0.25
-  interpolationErrorTime: 0.1
+  interpolationErrorTime: 0.01
   m_rigidbody: {fileID: 54041052144329094}
   positionSynchronizationMode: 7
   positionInterpolationMode: 1
@@ -496,7 +496,6 @@ MonoBehaviour:
   automaticAddListener: 1
   m_netId: 8
   maxBufferSize: 60
-  useAdaptativeSynchronizationBackTime: 1
   useExtrapolation: 0
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
@@ -524,7 +523,6 @@ MonoBehaviour:
   automaticAddListener: 1
   m_netId: 4
   maxBufferSize: 60
-  useAdaptativeSynchronizationBackTime: 1
   useExtrapolation: 1
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1
@@ -552,12 +550,11 @@ MonoBehaviour:
   automaticAddListener: 1
   m_netId: 2
   maxBufferSize: 60
-  useAdaptativeSynchronizationBackTime: 1
   useExtrapolation: 1
-  extrapolationTime: 0.25
-  interpolationErrorTime: 0.1
+  extrapolationTime: 0.1
+  interpolationErrorTime: 0.01
   m_transform: {fileID: 4205423996803326}
-  localSync: 0
+  localSync: 1
   rotationSynchronizationMode: 7
   rotationThreshold: 0.1
   compressionRotationMode: 1
@@ -577,10 +574,9 @@ MonoBehaviour:
   automaticAddListener: 1
   m_netId: 7
   maxBufferSize: 60
-  useAdaptativeSynchronizationBackTime: 1
   useExtrapolation: 1
   extrapolationTime: 0.25
-  interpolationErrorTime: 0.1
+  interpolationErrorTime: 0.01
   m_rigidbody2D: {fileID: 50885173538471890}
   positionSynchronizationMode: 4
   positionInterpolationMode: 1
@@ -607,11 +603,11 @@ MonoBehaviour:
   automaticAddListener: 1
   m_netId: 1
   maxBufferSize: 60
-  useAdaptativeSynchronizationBackTime: 1
   useExtrapolation: 1
-  extrapolationTime: 0.25
-  interpolationErrorTime: 0.1
+  extrapolationTime: 0.05
+  interpolationErrorTime: 0.01
   m_transform: {fileID: 4205423996803326}
+  localSync: 1
   positionSynchronizationMode: 7
   positionInterpolationMode: 1
   positionThreshold: 0.01
@@ -632,12 +628,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 0
+  useAdaptativeSynchronizationBackTime: 1
+  m_nonAdaptativeBacktime: 0.1
   m_adaptativeSynchronizationBackTime: 0.15
   m_maxSynchronizationBacktime: 0.3
   m_minSynchronisationBacktime: 0.1
   m_adaptationAmount: 1.5
-  updateRate: 20
-  m_nonAdaptativeBacktime: 0.1
+  clientUpdateRate: 30
+  maxServerUpdate: 30
   movementSynchronizers:
   - {fileID: 114932352318098096}
   - {fileID: 114411088824737412}
@@ -662,7 +660,6 @@ MonoBehaviour:
   automaticAddListener: 1
   m_netId: 6
   maxBufferSize: 60
-  useAdaptativeSynchronizationBackTime: 1
   useExtrapolation: 0
   extrapolationTime: 0.25
   interpolationErrorTime: 0.1

@@ -346,7 +346,7 @@ namespace BC_Solution.UnetNetwork
 
                 if (param.GetType() != methodParams[i].ParameterType)
                 {
-                    throw new System.Exception("Parameter mismatch : called with : " + param.GetType() + " expected : " + methodParams[i].ParameterType);
+                    throw new System.Exception(methodName + " on " + this.gameObject + " Parameter mismatch : called with : " + param.GetType() + " expected : " + methodParams[i].ParameterType);
                 }
 
                 writer.Write(param);
@@ -456,7 +456,7 @@ namespace BC_Solution.UnetNetwork
                 this.OnServerAddListener(conn);
             }
             else
-                Debug.LogWarning("Server connection listener already contain : " + conn + " Or conneciton is not aware of this gameObject : " + gameObject);
+                Debug.LogWarning("Server connection listener already contain : " + conn + " Or connection is not aware of this gameObject : " + gameObject);
         }
 
 
@@ -555,10 +555,17 @@ namespace BC_Solution.UnetNetwork
 
 #if SERVER
         /// <summary>
-        /// Called when the gameObject is attached to a server
+        /// Called when the gameObject is attached to a server (only on server side)
         /// </summary>
         /// <param name="networkingServer"></param>
         public virtual void OnStartServer(NetworkingServer networkingServer)
+        {
+        }
+
+        /// <summary>
+        /// Called when the server gameobejct stop (only on server side)
+        /// </summary>
+        public virtual void OnStopServer()
         {
         }
 #endif
@@ -603,6 +610,16 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         /// <param name="conn"></param>
         public virtual void OnServerAware(NetworkingConnection conn)
+        {
+
+        }
+
+
+        /// <summary>
+        /// Called on server when a connection is disconnected
+        /// </summary>
+        /// <param name="conn"></param>
+        public virtual void OnServerDisconnect(NetworkingConnection conn)
         {
 
         }
