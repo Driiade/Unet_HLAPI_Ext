@@ -73,9 +73,6 @@ namespace BC_Solution.UnetNetwork
 
         private Quaternion rotationError = Quaternion.identity;
 
-#if SERVER
-        Dictionary<NetworkingConnection, Quaternion> lastServerRotations = new Dictionary<NetworkingConnection, Quaternion>();
-#endif
 
         public override void OnEndExtrapolation(State rhs)
         {
