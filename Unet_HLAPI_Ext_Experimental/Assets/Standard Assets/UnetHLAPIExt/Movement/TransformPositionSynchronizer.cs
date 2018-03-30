@@ -96,11 +96,11 @@ namespace BC_Solution.UnetNetwork
 
             if (localSync)
             {
-                this.m_transform.localPosition += extrapolationVelocity * Time.deltaTime;
+                this.m_transform.localPosition += extrapolationVelocity * timeSinceInterpolation;
             }
             else
             {
-                this.m_transform.position += extrapolationVelocity * Time.deltaTime;
+                this.m_transform.position += extrapolationVelocity * timeSinceInterpolation;
             }
         }
 

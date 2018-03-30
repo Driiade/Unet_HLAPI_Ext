@@ -37,7 +37,7 @@ namespace BC_Solution.UnetNetwork
         public float m_adaptativeSynchronizationBackTime = 0.15f;
         public float m_maxSynchronizationBacktime = 0.3f;
         public float m_minSynchronisationBacktime = 0.1f;
-        public float m_adaptationAmount = 1.5f;
+        public float m_adaptationAmount = 2f;
 
         public float CurrentSynchronizationBackTime
         {
