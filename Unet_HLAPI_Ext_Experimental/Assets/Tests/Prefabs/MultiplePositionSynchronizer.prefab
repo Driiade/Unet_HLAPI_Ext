@@ -420,6 +420,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 5
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 1
   extrapolationTime: 0.25
@@ -451,6 +452,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 3
+  debug: 1
   maxBufferSize: 60
   useExtrapolation: 1
   extrapolationTime: 0.05
@@ -499,6 +501,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 8
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 0
   extrapolationTime: 0.25
@@ -526,6 +529,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 4
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 1
   extrapolationTime: 0.25
@@ -553,6 +557,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 2
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 1
   extrapolationTime: 0.1
@@ -577,6 +582,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 7
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 0
   extrapolationTime: 0.25
@@ -608,6 +614,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 1
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 1
   extrapolationTime: 0.05
@@ -667,6 +674,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 6
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 0
   extrapolationTime: 0.25

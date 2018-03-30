@@ -34,5 +34,13 @@ namespace BC_Solution.UnetNetwork
             base.OnInspectorGUI();
             ((MovementSynchronizer)target).OnInspectorGUI();
         }
+
+        void OnSceneGUI()
+        {
+            if (((MovementSynchronizer)target).debug)
+            {
+                Handles.Label(((MovementSynchronizer)target).transform.position + Vector3.up*0.5f, "is Extrapolating : " + ((MovementSynchronizer)target).m_isExtrapolating + (((MovementSynchronizer)target).m_isExtrapolating ? ("since : " + ((MovementSynchronizer)target).m_extrapolationTimer + " s") : ""));
+            }
+        }
     }
 }

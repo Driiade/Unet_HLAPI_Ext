@@ -86,11 +86,11 @@ namespace BC_Solution.UnetNetwork
         {
             Vector2 acceleration = Vector3.zero;
 
-            if (m_currentStatesIndex >= 1)
+           /* if (m_currentStatesIndex >= 1)
             {
                 acceleration = (((Rigidbody2DPositionState)extrapolatingState).m_velocity - ((Rigidbody2DPositionState)m_statesBuffer[1]).m_velocity) / ((extrapolatingState.m_relativeTime - m_statesBuffer[1].m_relativeTime));
                 acceleration += this.m_rigidbody2D.gravityScale * (Physics2D.gravity) * timeSinceInterpolation;
-            }
+            }*/
 
             this.m_rigidbody2D.velocity = ((Rigidbody2DPositionState)extrapolatingState).m_velocity + acceleration * timeSinceInterpolation;
         }

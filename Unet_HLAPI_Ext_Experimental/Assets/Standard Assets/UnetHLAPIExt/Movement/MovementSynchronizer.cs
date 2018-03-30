@@ -31,9 +31,9 @@ namespace BC_Solution.UnetNetwork
     public abstract class MovementSynchronizer : NetworkingBehaviour
     {
         public enum SYNCHRONISATION_MODE { NONE, X, Y, Z, XY, XZ, YZ, XYZ, CALCUL };
-        public enum SNAP_MODE { NONE, RESET, CALCUL};
-        public enum INTERPOLATION_MODE { LINEAR, CATMULL_ROM};
-        public enum COMPRESS_MODE {NONE, USHORT}
+        public enum SNAP_MODE { NONE, RESET, CALCUL };
+        public enum INTERPOLATION_MODE { LINEAR, CATMULL_ROM };
+        public enum COMPRESS_MODE { NONE, USHORT }
 
 
         public class State
@@ -43,7 +43,11 @@ namespace BC_Solution.UnetNetwork
             public bool m_isLastState; //true if it's the final state of the object
         }
 
-        [SerializeField]
+#if UNITY_EDITOR
+        public bool debug = true;
+#endif
+
+        [SerializeField, Space(10)]
         int maxBufferSize = 60;
 
         internal State[] m_statesBuffer;
@@ -74,7 +78,7 @@ namespace BC_Solution.UnetNetwork
         private NetworkMovementSynchronization m_networkMovementSynchronization;
 #endif
 
-        protected float m_extrapolationTimer = -1;
+        public float m_extrapolationTimer { get; private set; }
 
         private bool m_isActive = true;
         public bool IsActive
@@ -167,6 +171,7 @@ namespace BC_Solution.UnetNetwork
 
         internal void Init(NetworkMovementSynchronization movSynchronization)
         {
+            m_extrapolationTimer = -1;
             m_statesBuffer = new State[maxBufferSize];
 #if CLIENT || SERVER
             this.m_networkMovementSynchronization = movSynchronization;
@@ -233,9 +238,11 @@ namespace BC_Solution.UnetNetwork
             }
             else if ((lhs != null && rhs != null))
             {
+                m_isInterpolating = true;
+                m_isExtrapolating = false;
+
                 OnInterpolation(rhs, lhs, lhsIndex, t);
 
-                m_isInterpolating = true;
                 extrapolatingState = null;
                 m_extrapolationTimer = -1;
             }
@@ -664,6 +671,5 @@ namespace BC_Solution.UnetNetwork
             }
             return baseMode;
         }
-
     }
 }

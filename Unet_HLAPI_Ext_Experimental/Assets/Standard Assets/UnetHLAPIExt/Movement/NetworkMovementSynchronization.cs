@@ -27,6 +27,7 @@ namespace BC_Solution.UnetNetwork
     public class NetworkMovementSynchronization : NetworkingBehaviour
     {
 #if CLIENT || SERVER
+
         [Space(10)]
         public bool useAdaptativeSynchronizationBackTime = true;
 
@@ -532,7 +533,6 @@ namespace BC_Solution.UnetNetwork
             LocalGetStateMovementInformations(info, false);
 #endif
         }
-
 #endif
     }
 }
