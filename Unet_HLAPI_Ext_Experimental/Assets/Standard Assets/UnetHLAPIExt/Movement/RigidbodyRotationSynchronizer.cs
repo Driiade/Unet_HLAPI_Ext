@@ -82,7 +82,7 @@ namespace BC_Solution.UnetNetwork
         public override void OnEndExtrapolation(State rhs)
         {
             this.m_rigidbody.MoveRotation(Quaternion.Slerp(this.m_rigidbody.rotation, Quaternion.Euler(((RigidbodyRotationState)rhs).m_rotation), Time.deltaTime / interpolationErrorTime));
-            this.m_rigidbody.angularVelocity = Vector3.Lerp(this.m_rigidbody.angularVelocity, ((RigidbodyRotationState)rhs).m_angularVelocity, Time.deltaTime / interpolationErrorTime);
+            this.m_rigidbody.angularVelocity = Vector3.zero;
         }
 
         public override void OnErrorCorrection()

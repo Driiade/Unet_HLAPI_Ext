@@ -94,14 +94,12 @@ namespace BC_Solution.UnetNetwork
             }
       
             this.m_rigidbody.velocity = ((RigidbodyPositionState)extrapolatingState).m_velocity + acceleration*timeSinceInterpolation;
-            this.m_rigidbody.freezeRotation = false;
         }
 
         public override void OnEndExtrapolation(State rhs)
         {
             this.m_rigidbody.MovePosition(Vector3.Lerp(this.m_rigidbody.position, ((RigidbodyPositionState)m_statesBuffer[0]).m_position, Time.deltaTime / interpolationErrorTime));
-            this.m_rigidbody.velocity = Vector3.Lerp(this.m_rigidbody.velocity, ((RigidbodyPositionState)m_statesBuffer[0]).m_velocity, Time.deltaTime / interpolationErrorTime);
-            this.m_rigidbody.freezeRotation = true;
+            this.m_rigidbody.velocity = Vector3.zero;
         }
 
         public override void OnErrorCorrection()
@@ -118,10 +116,8 @@ namespace BC_Solution.UnetNetwork
 
         public override void OnInterpolation(State rhs, State lhs, int lhsIndex, float t)
         {
-            this.m_rigidbody.freezeRotation = true;
-
             //POSITION
-           Vector3 val = this.m_rigidbody.position;
+            Vector3 val = this.m_rigidbody.position;
             if (Vector3.SqrMagnitude(((RigidbodyPositionState)rhs).m_position - ((RigidbodyPositionState)lhs).m_position) > (snapThreshold * snapThreshold))
             {
                 GetVector3(positionSynchronizationMode, ref val, ((RigidbodyPositionState)rhs).m_position);

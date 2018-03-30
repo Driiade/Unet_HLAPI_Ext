@@ -77,8 +77,6 @@ namespace BC_Solution.UnetNetwork
         public override void OnBeginExtrapolation(State extrapolationState, float timeSinceInterpolation)
         {
             this.m_rigidbody2D.angularVelocity = ((Rigidbody2DRotationState)extrapolatingState).m_angularVelocity;
-
-            this.m_rigidbody2D.constraints = RigidbodyConstraints2D.None;
         }
 
         public override void OnEndExtrapolation(State rhs)
@@ -88,7 +86,6 @@ namespace BC_Solution.UnetNetwork
             this.m_rigidbody2D.rotation = Quaternion.Slerp(rigidBodyQ, rhsQ, Time.deltaTime / interpolationErrorTime).eulerAngles.z;
 
             this.m_rigidbody2D.angularVelocity = 0;
-            this.m_rigidbody2D.constraints = RigidbodyConstraints2D.FreezePosition;
         }
 
         public override void OnErrorCorrection()
@@ -105,8 +102,6 @@ namespace BC_Solution.UnetNetwork
 
         public override void OnInterpolation(State rhs, State lhs, int lhsIndex, float t)
         {
-            this.m_rigidbody2D.constraints = RigidbodyConstraints2D.FreezePosition;
-
             //ROTATION 
             float rotation = 0;
 

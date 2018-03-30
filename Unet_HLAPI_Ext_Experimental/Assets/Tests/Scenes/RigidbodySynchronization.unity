@@ -354,6 +354,11 @@ Prefab:
       propertyPath: m_type
       value: 2
       objectReference: {fileID: 0}
+    - target: {fileID: 114914137203933470, guid: d313bee6809531445a0186a4f8705868,
+        type: 2}
+      propertyPath: useExtrapolation
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: d313bee6809531445a0186a4f8705868, type: 2}
   m_IsPrefabParent: 0
