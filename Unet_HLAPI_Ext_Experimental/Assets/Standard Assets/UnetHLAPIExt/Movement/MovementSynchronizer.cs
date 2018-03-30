@@ -211,28 +211,38 @@ namespace BC_Solution.UnetNetwork
             //Extrapolation
             if (useExtrapolation && (lhs == null || rhs == null))
             {
-                if (m_currentStatesIndex >= 0 && !m_statesBuffer[0].m_isLastState) //Don't extrapolate after the final state
+                if (m_currentStatesIndex >= 0) 
                 {
-                    if (extrapolatingState == null)    // we are not yet extrapolating
+                    if (!m_statesBuffer[0].m_isLastState) //Don't extrapolate after the final state
                     {
+                        if (extrapolatingState == null)    // we are not yet extrapolating
+                        {
                             m_isExtrapolating = true;
                             m_isInterpolating = false;
                             extrapolatingState = m_statesBuffer[0];
 
                             OnBeginExtrapolation(extrapolatingState, Time.realtimeSinceStartup - m_statesBuffer[0].m_relativeTime);
                             m_extrapolationTimer = Time.realtimeSinceStartup + extrapolationTime;
+                        }
+                        else if (extrapolatingState != null && Time.realtimeSinceStartup > m_extrapolationTimer)
+                        {
+                            m_isExtrapolating = true;
+                            m_isInterpolating = false;
+                            OnEndExtrapolation(m_statesBuffer[0]);
+                        }
+                        else if (extrapolatingState != null && Time.realtimeSinceStartup < m_extrapolationTimer)
+                        {
+                            m_isExtrapolating = true;
+                            m_isInterpolating = false;
+                            OnExtrapolation();
+                        }
                     }
-                    else if (extrapolatingState != null && Time.realtimeSinceStartup > m_extrapolationTimer)
+                    else
                     {
-                        m_isExtrapolating = true;
+                        m_isExtrapolating = false;
                         m_isInterpolating = false;
-                        OnEndExtrapolation(m_statesBuffer[0]);
-                    }
-                    else if (extrapolatingState!= null && Time.realtimeSinceStartup < m_extrapolationTimer)
-                    {
-                        m_isExtrapolating = true;
-                        m_isInterpolating = false;
-                        OnExtrapolation();
+                        extrapolatingState = null;
+                        m_extrapolationTimer = -1;
                     }
                 }
             }
