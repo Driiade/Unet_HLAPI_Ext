@@ -98,8 +98,11 @@ namespace BC_Solution.UnetNetwork
 
         private void OnDrawGizmosSelected()
         {
-            Gizmos.color = Color.magenta;
-            Gizmos.DrawWireSphere(m_checkTransform.position, m_range);
+            if (m_checkTransform)
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawWireSphere(m_checkTransform.position, m_range);
+            }
         }
 #endif
     }

@@ -46,6 +46,14 @@ namespace BC_Solution.UnetNetwork
         [SerializeField] internal ushort m_sceneId;
         [SerializeField] internal ushort m_assetId;
 
+#if CLIENT
+        [SerializeField] internal ushort m_serverAssetId;
+#endif
+
+#if SERVER
+        [SerializeField, Tooltip("On server, will instantiate this prefab for the owner")] internal ushort m_ownerAssetId;
+        [SerializeField, Tooltip("On server, will instantiate this prefab for other connection (not owner)")] internal ushort m_otherClientAssetId;
+#endif
 
         [SerializeField, Tooltip("The server that manages this networkingIdentity on scene, only used for SINGLE_SCENE_OBJECT and REPLICATED PREFAB_SCENE_PREFAB")] internal string m_serverId = "MainServer";
 

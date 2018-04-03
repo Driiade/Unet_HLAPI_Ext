@@ -211,7 +211,7 @@ namespace BC_Solution.UnetNetwork
             //Extrapolation
             if (useExtrapolation && (lhs == null || rhs == null))
             {
-                if (m_currentStatesIndex >= 0) 
+                if (m_currentStatesIndex >= 0)
                 {
                     if (!m_statesBuffer[0].m_isLastState) //Don't extrapolate after the final state
                     {
@@ -221,7 +221,7 @@ namespace BC_Solution.UnetNetwork
                             m_isInterpolating = false;
                             extrapolatingState = m_statesBuffer[0];
 
-                            OnBeginExtrapolation(extrapolatingState, Time.realtimeSinceStartup - m_statesBuffer[0].m_relativeTime);
+                            OnBeginExtrapolation(extrapolatingState, Time.realtimeSinceStartup - m_statesBuffer[0].m_relativeTime - m_networkMovementSynchronization.CurrentSynchronizationBackTime);
                             m_extrapolationTimer = Time.realtimeSinceStartup + extrapolationTime;
                         }
                         else if (extrapolatingState != null && Time.realtimeSinceStartup > m_extrapolationTimer)

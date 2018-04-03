@@ -199,7 +199,7 @@ namespace BC_Solution.UnetNetwork
                                     movementSynchronizer.m_lastServerInterpolationUpdateTimers[connection] = Time.realtimeSinceStartup + 1f / this.maxServerUpdate; //Modif this by a sendRate modifier 
                                     movementSynchronizer.RegisterLastestState(connection);
 
-                                    movementSynchronizer.m_serverSentEndInterpolation[connection] = true;
+                                    movementSynchronizer.m_serverSentEndInterpolation[connection] = false;
                                 }
                                 else if //Had to synchronize the lastest position
                                     (Time.realtimeSinceStartup > lastServerInterpolationTimer && !movementSynchronizer.m_serverSentEndInterpolation[connection] && movementSynchronizer.m_currentStatesIndex >= 0)
