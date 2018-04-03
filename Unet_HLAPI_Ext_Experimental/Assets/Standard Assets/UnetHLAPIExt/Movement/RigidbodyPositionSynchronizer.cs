@@ -223,6 +223,7 @@ namespace BC_Solution.UnetNetwork
             this.m_rigidbody.velocity = val;
 
             ResetStatesBuffer();
+            AddState(new RigidbodyPositionState(this.m_rigidbody, NetworkTransport.GetNetworkTimestamp(), Time.realtimeSinceStartup, true));
         }
 
 #if UNITY_EDITOR

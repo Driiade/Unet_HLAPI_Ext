@@ -226,7 +226,7 @@ namespace BC_Solution.UnetNetwork
                         }
                         else if (extrapolatingState != null && Time.realtimeSinceStartup > m_extrapolationTimer)
                         {
-                            m_isExtrapolating = true;
+                            m_isExtrapolating = false;
                             m_isInterpolating = false;
                             OnEndExtrapolation(m_statesBuffer[0]);
                         }
@@ -243,6 +243,11 @@ namespace BC_Solution.UnetNetwork
                         m_isInterpolating = false;
                         extrapolatingState = null;
                         m_extrapolationTimer = -1;
+
+                        if (m_statesBuffer[0] != null)
+                        {
+                            OnEndExtrapolation(m_statesBuffer[0]);
+                        }
                     }
                 }
             }
@@ -255,6 +260,18 @@ namespace BC_Solution.UnetNetwork
 
                 extrapolatingState = null;
                 m_extrapolationTimer = -1;
+            }
+            else
+            {
+                m_isExtrapolating = false;
+                m_isInterpolating = false;
+                extrapolatingState = null;
+                m_extrapolationTimer = -1;
+
+                if (m_statesBuffer[0] != null)
+                {
+                    OnEndExtrapolation(m_statesBuffer[0]);
+                }
             }
 
             OnErrorCorrection();

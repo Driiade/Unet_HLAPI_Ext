@@ -306,6 +306,7 @@ namespace BC_Solution.UnetNetwork
                 networkReader.ReadByte();
 
             ResetStatesBuffer();
+            AddState(new Rigidbody2DRotationState(this.m_rigidbody2D, NetworkTransport.GetNetworkTimestamp(), Time.realtimeSinceStartup, true));
         }
 
 #if UNITY_EDITOR

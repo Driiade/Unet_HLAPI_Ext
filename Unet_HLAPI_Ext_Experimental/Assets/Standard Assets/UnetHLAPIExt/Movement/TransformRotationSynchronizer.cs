@@ -232,6 +232,7 @@ namespace BC_Solution.UnetNetwork
                 this.m_transform.rotation = Quaternion.Euler(val);
 
             ResetStatesBuffer();
+            AddState(new TransformRotationState(this.m_transform, NetworkTransport.GetNetworkTimestamp(), Time.realtimeSinceStartup, true, localSync));
         }
 
 

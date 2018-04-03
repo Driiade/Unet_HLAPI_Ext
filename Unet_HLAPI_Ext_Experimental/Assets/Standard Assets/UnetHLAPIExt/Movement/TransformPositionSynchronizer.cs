@@ -268,6 +268,7 @@ namespace BC_Solution.UnetNetwork
                 this.m_transform.position = val;
 
             ResetStatesBuffer();
+            AddState(new TransformPositionState(this.m_transform,NetworkTransport.GetNetworkTimestamp(), Time.realtimeSinceStartup, true, localSync));
         }
 
         public void Teleport(Vector3 position)
