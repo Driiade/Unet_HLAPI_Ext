@@ -41,6 +41,7 @@ GameObject:
   - component: {fileID: 4626436379127922}
   - component: {fileID: 114292577741408674}
   - component: {fileID: 114989741402422030}
+  - component: {fileID: 114461354723849972}
   m_Layer: 0
   m_Name: MultiplePositionSynchronizer
   m_TagString: Untagged
@@ -419,7 +420,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 5
-  debug: 1
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 1
   extrapolationTime: 0.25
@@ -470,6 +471,23 @@ MonoBehaviour:
   compressionVelocityMode: 0
   minVelocityValue: {x: 0, y: 0, z: 0}
   maxVelocityValue: {x: 0, y: 0, z: 0}
+--- !u!114 &114461354723849972
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1231402685847870}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ff324c1c6c28864a875ae7b54f6e37e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  networkingIdentity: {fileID: 114292577741408674}
+  m_checkTransform: {fileID: 4205423996803326}
+  m_range: 3
+  m_checkRate: 0.5
+  m_maxNearConnection: 20
+  m_mode: 1
 --- !u!114 &114555180304162554
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -483,7 +501,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 8
-  debug: 1
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 0
   extrapolationTime: 0.25
@@ -511,7 +529,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 4
-  debug: 1
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 1
   extrapolationTime: 0.25
@@ -539,7 +557,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 2
-  debug: 1
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 1
   extrapolationTime: 0.1
@@ -564,7 +582,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 7
-  debug: 1
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 0
   extrapolationTime: 0.25
@@ -596,13 +614,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 1
-  debug: 1
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 1
   extrapolationTime: 0.05
   interpolationErrorTime: 0.01
   m_transform: {fileID: 4205423996803326}
-  localSync: 0
+  localSync: 1
   positionSynchronizationMode: 7
   positionInterpolationMode: 1
   minCatmullRomDistance: 0.1
@@ -631,8 +649,8 @@ MonoBehaviour:
   m_maxSynchronizationBacktime: 0.3
   m_minSynchronisationBacktime: 0.1
   m_adaptationAmount: 2
-  clientUpdateRate: 20
-  maxServerUpdate: 20
+  clientUpdateRate: 30
+  maxServerUpdate: 30
   movementSynchronizers:
   - {fileID: 114932352318098096}
   - {fileID: 114411088824737412}
@@ -656,7 +674,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   automaticAddListener: 1
   m_netId: 6
-  debug: 1
+  debug: 0
   maxBufferSize: 60
   useExtrapolation: 0
   extrapolationTime: 0.25

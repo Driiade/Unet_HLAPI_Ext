@@ -37,8 +37,7 @@ namespace BC_Solution.UnetNetwork
         public GameObject[] spawnedGameObjectOnConnect;
         public string spawnSceneOnConnect = "";
 
-        [Space(10), Tooltip("All GameObject in this dictionary can be used on network")]
-        public GameObject[] registeredNetworkedGameObjectsArray;
+
 
         /// <summary>
         /// Registered gameObject with dictionary to find them quickly
@@ -77,10 +76,11 @@ namespace BC_Solution.UnetNetwork
         {
             base.Awake();
 
+            NetworkingIdentity[] registeredNetworkedGameObjectsArray = Resources.LoadAll<NetworkingIdentity>("");
+            registeredNetworkedGameObjectsDictionnary.Clear();
             for (int i = 0; i < registeredNetworkedGameObjectsArray.Length; i++)
             {
-                GameObject go = registeredNetworkedGameObjectsArray[i];
-                registeredNetworkedGameObjectsDictionnary.Add(go.GetComponent<NetworkingIdentity>().m_assetId, go);
+                registeredNetworkedGameObjectsDictionnary.Add(registeredNetworkedGameObjectsArray[i].m_assetId, registeredNetworkedGameObjectsArray[i].gameObject);
             }
 
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -974,17 +974,6 @@ namespace BC_Solution.UnetNetwork
             return go;
         }
 
-        public int GetIndexOfRegisteredGameObject(GameObject go)
-        {
-            for (int i = 0; i < registeredNetworkedGameObjectsArray.Length; i++)
-            {
-                if (registeredNetworkedGameObjectsArray[i] == go)
-                    return i;
-            }
-
-            return -1;
-        }
-
 
         public NetworkingIdentity FindSceneNetworkingIdentity(ushort sceneId)
         {
@@ -1063,10 +1052,13 @@ namespace BC_Solution.UnetNetwork
         #endregion
 #endif
 
+#if UNITY_EDITOR
         void OnValidate()
         {
             if(networkingSceneSystem == null)
                 networkingSceneSystem = this.GetComponent<NetworkingSceneSystem>();
         }
+
+#endif
     }
 }

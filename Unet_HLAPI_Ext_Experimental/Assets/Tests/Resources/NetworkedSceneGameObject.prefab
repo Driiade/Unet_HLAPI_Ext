@@ -69,9 +69,6 @@ MonoBehaviour:
   m_type: 0
   m_sceneId: 0
   m_assetId: 2
-  m_serverAssetId: 2
-  m_ownerAssetId: 2
-  m_otherClientAssetId: 2
   m_serverId: MainServer
   m_localPlayerAuthority: 0
   m_autoSetNetworkBehaviourNetId: 1
