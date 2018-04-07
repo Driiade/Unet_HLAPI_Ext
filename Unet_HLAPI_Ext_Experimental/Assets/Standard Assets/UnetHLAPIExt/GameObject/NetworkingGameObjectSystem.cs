@@ -482,7 +482,7 @@ namespace BC_Solution.UnetNetwork
             if (!string.IsNullOrEmpty(replicatedMessage.m_sceneName))
             {
                 Scene scene = SceneManager.GetSceneByName(replicatedMessage.m_sceneName);
-                if (default(Scene) == scene)
+                if (string.IsNullOrEmpty(scene.name))
                 {
                     Debug.LogError("Scene is unknown by server : " + replicatedMessage.m_sceneName);
                     return;
@@ -971,6 +971,10 @@ namespace BC_Solution.UnetNetwork
         {
             GameObject go = null;
             registeredNetworkedGameObjectsDictionnary.TryGetValue(assetId, out go);
+
+            if (go == null)
+                Debug.LogError("[Unet] GameObject not find for assetId : " + assetId);
+
             return go;
         }
 
