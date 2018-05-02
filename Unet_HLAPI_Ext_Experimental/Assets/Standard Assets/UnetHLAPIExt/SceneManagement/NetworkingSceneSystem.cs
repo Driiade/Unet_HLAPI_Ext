@@ -34,13 +34,29 @@ namespace BC_Solution.UnetNetwork
         public Action<NetworkingConnection, Scene> OnServerLoadScene;
 
 #endif
+#if CLIENT
+        public Action<NetworkingConnection, Scene> OnClientSendScene;
+#endif
 
         protected override void Awake()
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
-
 #if SERVER
             NetworkingSystem.RegisterServerHandler(NetworkingMessageType.ConnectionLoadScene, HandleServerSceneConnection);
+#endif
+#if CLIENT
+            NetworkingConnection.OnConnectionConnect += OnConnectionConnect;
+#endif
+        }
+
+        void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+#if SERVER
+            NetworkingSystem.UnRegisterServerHandler(NetworkingMessageType.ConnectionLoadScene, HandleServerSceneConnection);
+#endif
+#if CLIENT
+            NetworkingConnection.OnConnectionConnect -= OnConnectionConnect;
 #endif
         }
 
@@ -59,14 +75,20 @@ namespace BC_Solution.UnetNetwork
             {
                 if (conn.m_server == null) //not host
                 {
-                    conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(scene.name));
+                    conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(scene.name), NetworkingChannel.DefaultReliableSequenced);
+
+                    if (OnClientSendScene != null)
+                        OnClientSendScene(conn, scene);
                 }
              
             }
 #elif CLIENT
                 foreach (NetworkingConnection conn in NetworkingSystem.Instance.connections)
                 {
-                    conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(scene.name));
+                    conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(scene.name), NetworkingChannel.DefaultReliableSequenced);
+                   
+                    if (OnClientSendScene != null)
+                        OnClientSendScene(conn, scene);
                 }
 #endif
         }
@@ -79,7 +101,7 @@ namespace BC_Solution.UnetNetwork
 
             if (scene.name == null)
             {
-                Debug.LogWarning("The server don't know the scene : " + sceneName); //Can be normal
+                Debug.LogWarning("The server doesn't know the scene : " + sceneName); //Can be normal
             }
             else
             {
@@ -91,16 +113,33 @@ namespace BC_Solution.UnetNetwork
         }
 #endif
 
-
-        void OnDestroy()
+#if CLIENT
+        void OnConnectionConnect(NetworkingConnection conn)
         {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-
 #if SERVER
-            NetworkingSystem.UnRegisterServerHandler(NetworkingMessageType.ConnectionLoadScene, HandleServerSceneConnection);
+            if (conn.m_server == null)
+            {
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    Scene scene = SceneManager.GetSceneAt(i);
+                    conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(scene.name));
+
+                    if (OnClientSendScene != null)
+                        OnClientSendScene(conn, scene);
+                }
+            }
+#elif CLIENT
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    Scene scene = SceneManager.GetSceneAt(i);
+                    conn.Send(NetworkingMessageType.ConnectionLoadScene, new StringMessage(scene.name));
+
+                  if (OnClientSendScene != null)
+                       OnClientSendScene(conn, scene);
+                }
 #endif
         }
-
+#endif
 
     }
 }

@@ -534,5 +534,13 @@ namespace BC_Solution.UnetNetwork
 #endif
         }
 #endif
+
+
+#if UNITY_EDITOR
+        void OnValidate()
+        {
+            movementSynchronizers = this.GetComponentsInChildren<MovementSynchronizer>(true);
+        }
+#endif
     }
 }
