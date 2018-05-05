@@ -28,7 +28,9 @@ public class NetworkingBehaviourTest : NetworkingBehaviour {
     public static List<NetworkingBehaviourTest> networkingBehaviourTests = new List<NetworkingBehaviourTest>();
 
     [NetworkedVariable]
-    TESTENUM randomNum = TESTENUM.TEST1;
+    TESTENUM randomNum1 = TESTENUM.TEST1;
+    [NetworkedVariable]
+    TESTENUM randomNum2 = TESTENUM.TEST1;
 
     int cpt = 0;
 
@@ -43,8 +45,11 @@ public class NetworkingBehaviourTest : NetworkingBehaviour {
 
     private void Start()
     {
-        if(this.networkingIdentity.type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB)
-            randomNum =(TESTENUM)System.Enum.GetValues(typeof(TESTENUM)).GetValue(Random.Range(0,3));
+        if (this.networkingIdentity.type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB)
+        {
+            SetSyncVar("randomNum1", ref randomNum1, (TESTENUM)System.Enum.GetValues(typeof(TESTENUM)).GetValue(Random.Range(0, 3)));
+            SetSyncVar("randomNum2", ref randomNum2, (TESTENUM)System.Enum.GetValues(typeof(TESTENUM)).GetValue(Random.Range(0, 3)));
+        }
     }
 
     // Update is called once per frame
@@ -104,7 +109,7 @@ public class NetworkingBehaviourTest : NetworkingBehaviour {
             if (networkingBehaviourTests[i] == this)
             {
                 ypos -= i*25;
-                if (GUI.Button(new Rect(50, ypos, 300, 20), "TestOwner   : " + randomNum))
+                if (GUI.Button(new Rect(50, ypos, 300, 20), "TestOwner   : " + randomNum2))
                 {
                     SendToOwner(this.networkingIdentity, "HelloOwner", NetworkingChannel.DefaultReliable, this);
                 }
