@@ -56,6 +56,15 @@ namespace BC_Solution.UnetNetwork
         public bool isLocalClient { get { return m_networkingIdentity.isLocalClient; } }
 #endif
 
+#if CLIENT && SERVER
+        public bool isConnected { get { return m_networkingIdentity.m_server != null || m_networkingIdentity.m_connection != null; } }
+#elif CLIENT
+        public bool isConnected { get { return m_networkingIdentity.m_connection != null; } }
+#elif SERVER
+       public bool isConnected { get { return m_networkingIdentity.m_server != null; } }
+#endif
+
+
         /// <summary>
         /// Connection on server which listen for RPC/Command
         /// If you want to add / remove a NetworkingConnection and fire event : 
@@ -121,17 +130,14 @@ namespace BC_Solution.UnetNetwork
 
 
 #if SERVER && CLIENT
-                if (isServer) //Server can sync var except to the owner of the object
+                if (isServer) //Server can sync var
                 {
                     foreach (NetworkingConnection connection in this.m_serverConnectionListeners)
                     {
-                        if (connection != this.serverConnection)
-                        {
-                            connection.Send(writer, NetworkingChannel.DefaultReliableSequenced);
-                        }
+                       connection.Send(writer, NetworkingChannel.DefaultReliableSequenced);
                     }
                 }
-                else if (isLocalClient) //only local client can sync var
+                else if(connection != null)
                 {
                     connection.Send(writer, NetworkingChannel.DefaultReliableSequenced);
                 }
@@ -144,12 +150,9 @@ namespace BC_Solution.UnetNetwork
                     }
                 }
 #elif CLIENT
-                if (isLocalClient)
-                {
+                if(connection != null)
                     connection.Send(writer, NetworkingChannel.DefaultReliableSequenced);
-                }
 #endif
-
                 dirtyMask = 0;
             }
         }
@@ -188,33 +191,47 @@ namespace BC_Solution.UnetNetwork
                 }
             }
 
+            dirtyMask = 0;
             return writer.ToArray();
         }
 
         internal void UnSerializeSyncVars(NetworkingReader reader)
         {
 
-                int dirtyMask = 0;
-                dirtyMask = reader.ReadMask(syncVars.Length);
+            int dirtyMask = 0;
+            dirtyMask = reader.ReadMask(syncVars.Length);
 
             for (int i = 0; i < syncVars.Length; i++)
             {
                 if (((1 << i) & dirtyMask) != 0)
                     {
+                    object lastValue = syncVars[i].GetValue(this);
+                    object newValue = reader.Read(syncVars[i].FieldType, this.connection, this.serverConnection);
+
 #if CLIENT && SERVER
-                        syncVars[i].SetValue(this, reader.Read(syncVars[i].FieldType, this.connection, this.serverConnection));
+               syncVars[i].SetValue(this, newValue);
 #elif CLIENT
-               syncVars[item].SetValue(this, reader.Read(syncVars[i].FieldType, this.connection, null));
+               syncVars[item].SetValue(this, newValue);
 #elif SERVER
-               syncVars[item].SetValue(this, reader.Read(syncVars[i].FieldType, null, this.serverConnection));
+               syncVars[item].SetValue(this, newValue);
 #endif
 
                     NetworkedVariable networkedVariable = networkedVariableAttributes[syncVars[i]];
-                        if (networkedVariable.callbackName != null)
+                    if (networkedVariable.callbackName != null)
+                    {
+                       this.GetType().GetMethod(networkedVariable.callbackName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Invoke(this, new object[] { syncVars[i].GetValue(this) });
+                    }
+
+#if SERVER
+                    if (isServer) //Will sync this to all client if the value is different
+                    {
+                        if(lastValue != null && newValue != null && !lastValue.Equals(newValue))
                         {
-                            this.GetType().GetMethod(networkedVariable.callbackName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Invoke(this, new object[] { syncVars[i].GetValue(this) });
+                            this.dirtyMask = this.dirtyMask | (1 << i);
                         }
                     }
+#endif
+                }
                 }
         }
 
@@ -420,16 +437,23 @@ namespace BC_Solution.UnetNetwork
 
         public void SetSyncVar<T>(string nameOfVariable, ref T syncVar, T newValue)
         {
-            if (syncVar == null || !syncVar.Equals(newValue))
+            if (isConnected)
             {
-                int index = GetSyncVarIndex(nameOfVariable);
-                if (index == -1)
+                if (syncVar == null || !syncVar.Equals(newValue))
                 {
-                    Debug.LogError("SyncVar not found : " + this.gameObject + " : " + this + " : " + syncVar);
-                    return;
-                }
+                    int index = GetSyncVarIndex(nameOfVariable);
+                    if (index == -1)
+                    {
+                        Debug.LogError("SyncVar not found : " + this.gameObject + " : " + this + " : " + syncVar);
+                        return;
+                    }
 
-                dirtyMask = dirtyMask | (1 << index);
+                    dirtyMask = dirtyMask | (1 << index);
+                    syncVar = newValue;
+                }
+            }
+            else
+            {
                 syncVar = newValue;
             }
         }

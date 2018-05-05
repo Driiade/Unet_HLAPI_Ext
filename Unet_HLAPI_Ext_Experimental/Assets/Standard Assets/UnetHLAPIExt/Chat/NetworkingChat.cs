@@ -43,13 +43,8 @@ namespace BC_Solution.UnetNetwork
 
         public void Send(string message)
         {
-#if SERVER
-            if (isServer)
-            {
-               SetSyncVar("message1",ref this.message1, message);
+           SetSyncVar("message1",ref this.message1, message);
                // this.message2.Value = message + " 2";
-            }
-#endif
         }
 
         private void SetText(string message)

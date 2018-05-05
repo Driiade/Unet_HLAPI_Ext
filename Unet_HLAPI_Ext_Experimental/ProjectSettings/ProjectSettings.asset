@@ -640,7 +640,7 @@ PlayerSettings:
   cloudServicesEnabled:
     UNet: 1
   facebookSdkVersion: 7.9.4
-  apiCompatibilityLevel: 3
+  apiCompatibilityLevel: 2
   cloudProjectId: 20e5e300-2864-46cf-b205-0023598e1e0f
   projectName: Unet HLAPI ++
   organizationId: driiade
