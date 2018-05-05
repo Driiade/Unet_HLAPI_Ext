@@ -184,15 +184,14 @@ namespace BC_Solution.UnetNetwork
 
             if (dirtyMask != 0)
             {
-                writer.WriteMask(dirtyMask, syncVars.Length);
-
-                for (int i = 0; i < syncVars.Length; i++)
+                //Clear variable which can't be sync from this client
+                #region security
+                for (int i = 0; i < syncVars.Length; i++) 
                 {
                     NetworkedVariable networkedVariablAttribute = networkedVariableAttributes[syncVars[i]];
 
-                    #region security
 #if CLIENT
-                    if (networkedVariablAttribute.syncMode == NetworkedVariable.SYNC_MODE.ONLY_OWNER && this.m_networkingIdentity.m_type != NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB && !isLocalClient ) //you are not the owner, you can't sync this variable
+                    if (networkedVariablAttribute.syncMode == NetworkedVariable.SYNC_MODE.ONLY_OWNER && this.m_networkingIdentity.m_type != NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB && !isLocalClient) //you are not the owner, you can't sync this variable
                     {
                         dirtyMask &= ~(1 << i);
                         continue;
@@ -203,7 +202,7 @@ namespace BC_Solution.UnetNetwork
                     if (networkedVariablAttribute.syncMode == NetworkedVariable.SYNC_MODE.ONLY_OWNER)
                     {
 #if CLIENT
-                        if(!isLocalClient) //is not the owner
+                        if (!isLocalClient) //is not the owner
                         {
                             dirtyMask &= ~(1 << i);
                             continue;
@@ -230,10 +229,18 @@ namespace BC_Solution.UnetNetwork
                     }
 #endif
                     #endregion
+                }
 
-                    if (((1 << i) & dirtyMask) != 0)
+                if (dirtyMask != 0)
+                {
+                    writer.WriteMask(dirtyMask, syncVars.Length);
+
+                    for (int i = 0; i < syncVars.Length; i++)
                     {
+                        if (((1 << i) & dirtyMask) != 0)
+                        {
                             writer.Write(syncVars[i].GetValue(this));
+                        }
                     }
                 }
             }
