@@ -31,22 +31,22 @@ namespace BC_Solution.UnetNetwork
         [SerializeField]
         Text text;
 
-        [NetworkedVariable]
-        SyncVarWithAction<string> message1 = new SyncVarWithAction<string>("blabla");
+        [NetworkedVariable(callbackName ="SetText")]
+        string message1 = new string("blabla".ToCharArray());
        // SyncVar<string> message2 = new SyncVar<string>("test");
 
 
-        private void Awake()
+       /* private void Awake()
         {
             message1.callback += SetText;
-        }
+        }*/
 
         public void Send(string message)
         {
 #if SERVER
             if (isServer)
             {
-                this.message1.Value = message;
+               SetSyncVar("message1",ref this.message1, message);
                // this.message2.Value = message + " 2";
             }
 #endif

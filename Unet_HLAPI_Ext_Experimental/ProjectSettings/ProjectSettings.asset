@@ -204,6 +204,7 @@ PlayerSettings:
   tvOSSmallIconLayers: []
   tvOSSmallIconLayers2x: []
   tvOSLargeIconLayers: []
+  tvOSLargeIconLayers2x: []
   tvOSTopShelfImageLayers: []
   tvOSTopShelfImageLayers2x: []
   tvOSTopShelfImageWideLayers: []
@@ -639,7 +640,7 @@ PlayerSettings:
   cloudServicesEnabled:
     UNet: 1
   facebookSdkVersion: 7.9.4
-  apiCompatibilityLevel: 2
+  apiCompatibilityLevel: 3
   cloudProjectId: 20e5e300-2864-46cf-b205-0023598e1e0f
   projectName: Unet HLAPI ++
   organizationId: driiade

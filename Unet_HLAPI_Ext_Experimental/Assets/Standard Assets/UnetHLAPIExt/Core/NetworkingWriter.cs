@@ -528,6 +528,26 @@ namespace BC_Solution.UnetNetwork
                 throw new System.Exception("Serialization is impossible : " + type);
         }
 
+        public void WriteMask(int mask, int maxDifferentValue)
+        {
+            if(maxDifferentValue <= 1)
+            {
+                return; // nothing to write
+            }
+            else if (maxDifferentValue <= sizeof(byte) * 8)
+            {
+                Write((byte)mask);
+            }
+            else if (maxDifferentValue <= sizeof(short) * 8)
+            {
+                Write((short)mask);
+            }
+            else if (maxDifferentValue <= sizeof(int) * 8)
+            {
+                Write(mask);
+            }
+        }
+
 
         public void Write(GameObject value)
         {

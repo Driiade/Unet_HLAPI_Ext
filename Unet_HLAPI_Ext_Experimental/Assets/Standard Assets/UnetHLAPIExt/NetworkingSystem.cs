@@ -136,12 +136,6 @@ namespace BC_Solution.UnetNetwork
         }
 #endif
 
-
-        [Tooltip("Has the NetworkingSystem to autoReconnect on local network when a connection with the server is lost ?")]
-        public bool autoReconnectOnLocal = true;
-
-        public bool setReadyOnConnect = false;
-
         [Tooltip("The server adress to use(By default : local network)")]
         public string serverAdress = "localhost";
 

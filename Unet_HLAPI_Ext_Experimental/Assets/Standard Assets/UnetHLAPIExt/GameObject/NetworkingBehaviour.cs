@@ -93,20 +93,20 @@ namespace BC_Solution.UnetNetwork
 
         private MethodInfo[] networkedMethods;
         private FieldInfo[] syncVars;
+        Dictionary<FieldInfo, NetworkedVariable> networkedVariableAttributes;
 
         private NetworkingWriter writer = new NetworkingWriter();
+        private int dirtyMask = 0;
 
         internal void Init(NetworkingIdentity networkingIdentity)
         {
             m_networkingIdentity = networkingIdentity;
             networkedMethods = GetNetworkedMethods();
-            syncVars = GetSyncVars();
+             GetSyncVars(ref syncVars, ref networkedVariableAttributes);
         }
 
         internal void CheckSyncVars()
         {
-            int dirtyMask = GetSyncVarDirtyMask();
-
             if (dirtyMask != 0)
             {
                 writer.SeekZero(true);
@@ -150,50 +150,40 @@ namespace BC_Solution.UnetNetwork
                 }
 #endif
 
+                dirtyMask = 0;
             }
         }
 
-        internal int GetSyncVarDirtyMask()
-        {
-            int dirtyMask = 0;
+        /* internal int GetSyncVarDirtyMask()
+         {
+             int dirtyMask = 0;
 
-            //Check for dirty value
-            for (int i = 0; i < syncVars.Length; i++)
-            {
-                if (((IDirtable)((syncVars[i]).GetValue(this))).IsDirty())
-                {
-                    dirtyMask = ((1 << i)) | dirtyMask;
-                }
-            }
+             //Check for dirty value
+             for (int i = 0; i < syncVars.Length; i++)
+             {
+                 if (((IDirtable)((syncVars[i]).GetValue(this))).IsDirty())
+                 {
+                     dirtyMask = ((1 << i)) | dirtyMask;
+                 }
+             }
 
-            return dirtyMask;
-        }
+             return dirtyMask;
+         }*/
 
         internal byte[] SerializeSyncVars(NetworkingWriter writer, int dirtyMask)
         {
-            if (syncVars.Length > sizeof(int)*8)
+            if (syncVars.Length > sizeof(int) * 8)
                 throw new System.Exception("Too many syncVars in the networkingBehaviour : " + this);
-
-            if (syncVars.Length <= sizeof(byte)*8)
-            {
-                writer.Write((byte)dirtyMask);
-            }
-            else if (syncVars.Length <= sizeof(short)*8)
-            {
-                writer.Write((short)dirtyMask);
-            }
-            else if (syncVars.Length <= sizeof(int)*8)
-            {
-                writer.Write(dirtyMask);
-            }
 
             if (dirtyMask != 0)
             {
+                writer.WriteMask(dirtyMask, syncVars.Length);
+
                 for (int i = 0; i < syncVars.Length; i++)
                 {
-                    if( ((1<< i) & dirtyMask) != 0)
+                    if (((1 << i) & dirtyMask) != 0)
                     {
-                        writer.Write((syncVars[i]).GetValue(this));
+                        writer.Write(syncVars[i].GetValue(this));
                     }
                 }
             }
@@ -203,39 +193,34 @@ namespace BC_Solution.UnetNetwork
 
         internal void UnSerializeSyncVars(NetworkingReader reader)
         {
-            int dirtyMask = 0;
 
-            if (syncVars.Length <= sizeof(byte)*8)
-            {
-                dirtyMask = reader.ReadByte();
-            }
-            else if (syncVars.Length <= sizeof(short)*8)
-            {
-                dirtyMask = reader.ReadInt16();
-            }
-            else if (syncVars.Length <= sizeof(int)*8)
-            {
-                dirtyMask = reader.ReadInt32();
-            }
+                int dirtyMask = 0;
+                dirtyMask = reader.ReadMask(syncVars.Length);
 
             for (int i = 0; i < syncVars.Length; i++)
             {
                 if (((1 << i) & dirtyMask) != 0)
-                {
+                    {
 #if CLIENT && SERVER
-                    ((ISerializable)((syncVars[i]).GetValue(this))).OnDeserialize(reader, this.connection, this.serverConnection);
+                        syncVars[i].SetValue(this, reader.Read(syncVars[i].FieldType, this.connection, this.serverConnection));
 #elif CLIENT
-                    ((ISerializable)((syncVars[i]).GetValue(this))).OnDeserialize(reader, this.connection, null);
+               syncVars[item].SetValue(this, reader.Read(syncVars[i].FieldType, this.connection, null));
 #elif SERVER
-                    ((ISerializable)((syncVars[i]).GetValue(this))).OnDeserialize(reader, null, this.serverConnection);
+               syncVars[item].SetValue(this, reader.Read(syncVars[i].FieldType, null, this.serverConnection));
 #endif
+
+                    NetworkedVariable networkedVariable = networkedVariableAttributes[syncVars[i]];
+                        if (networkedVariable.callbackName != null)
+                        {
+                            this.GetType().GetMethod(networkedVariable.callbackName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Invoke(this, new object[] { syncVars[i].GetValue(this) });
+                        }
+                    }
                 }
-            }
         }
 
 
 #if CLIENT
-        public void SendToServer(string methodName, int channelId,params object[] parameters)
+        public void SendToServer(string methodName, int channelId, params object[] parameters)
         {
             writer.SeekZero(true);
             writer.StartMessage();
@@ -269,7 +254,7 @@ namespace BC_Solution.UnetNetwork
         }
 
 #if SERVER
-        public void SendToConnection(NetworkingConnection conn,string methodName, int channelId, params object[] parameters)
+        public void SendToConnection(NetworkingConnection conn, string methodName, int channelId, params object[] parameters)
         {
             writer.SeekZero(true);
             writer.StartMessage();
@@ -292,10 +277,10 @@ namespace BC_Solution.UnetNetwork
         public void SendToOwner(NetworkingIdentity networkingIdentity, string methodName, int channelId, params object[] parameters)
         {
 #if SERVER
-            if(networkingIdentity.m_serverConnection != null) //On Server
+            if (networkingIdentity.m_serverConnection != null) //On Server
             {
                 SendToConnection(networkingIdentity.m_serverConnection, methodName, channelId, parameters);
-              return;
+                return;
             }
 #endif
 #if CLIENT
@@ -309,7 +294,7 @@ namespace BC_Solution.UnetNetwork
                 writer.FinishMessage();
 
                 connection.Send(writer, channelId);
-            return;
+                return;
             }
 #endif
 
@@ -408,10 +393,12 @@ namespace BC_Solution.UnetNetwork
             return networkedMethods.ToArray();
         }
 
-        FieldInfo[] GetSyncVars()
+        void GetSyncVars(ref FieldInfo[] syncVars, ref Dictionary<FieldInfo, NetworkedVariable> networkedVariables)
         {
             FieldInfo[] allVars = this.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            List<FieldInfo> syncVars = new List<FieldInfo>();
+            List< FieldInfo> syncVarsList = new List<FieldInfo>();
+            networkedVariables = new Dictionary<FieldInfo, NetworkedVariable>();
+
             for (int i = 0; i < allVars.Length; i++)
             {
                 //if (allVars[i].FieldType.IsGenericType)
@@ -419,13 +406,46 @@ namespace BC_Solution.UnetNetwork
 
                 System.Type genericType = allVars[i].FieldType;
 
-                if (allVars[i].GetCustomAttributes(typeof(NetworkedVariable),true) != null && genericType.GetInterface("IDirtable") != null && genericType.GetInterface("ISerializable") != null)
+                NetworkedVariable[] networkedVariable = allVars[i].GetCustomAttributes(typeof(NetworkedVariable), true) as NetworkedVariable[];
+                if (networkedVariable.Length > 0)
                 {
-                    syncVars.Add(allVars[i]);
+                    object var = allVars[i].GetValue(this);
+                    syncVarsList.Add(allVars[i]);
+                    networkedVariables.Add(allVars[i], networkedVariable[0]);
                 }
             }
 
-            return syncVars.ToArray();
+            syncVars = syncVarsList.ToArray();
+        }
+
+        public void SetSyncVar<T>(string nameOfVariable, ref T syncVar, T newValue)
+        {
+            if (syncVar == null || !syncVar.Equals(newValue))
+            {
+                int index = GetSyncVarIndex(nameOfVariable);
+                if (index == -1)
+                {
+                    Debug.LogError("SyncVar not found : " + this.gameObject + " : " + this + " : " + syncVar);
+                    return;
+                }
+
+                dirtyMask = dirtyMask | (1 << index);
+                syncVar = newValue;
+            }
+        }
+
+        int GetSyncVarIndex(string varName)
+        {
+            for (int i = 0; i < syncVars.Length; i++)
+            {
+                Debug.Log(varName);
+                Debug.Log(syncVars[i].Name +"\n");
+                if (varName.Equals(syncVars[i].Name))
+                {
+                    return i;
+                }
+            }
+            return -1;
         }
 
 #if SERVER
@@ -510,9 +530,9 @@ namespace BC_Solution.UnetNetwork
         {
 #if SERVER
             if (isServer)
-               {
-            ServerRemoveAllAwareConnectionToListen();
-            return;
+            {
+                ServerRemoveAllAwareConnectionToListen();
+                return;
             }
 #endif
 #if CLIENT

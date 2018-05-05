@@ -544,6 +544,34 @@ namespace BC_Solution.UnetNetwork
             return (T)Read(typeof(T), clientConnection, serverConnection);
         }
 
+        public int ReadMask(int maxDifferentValue)
+        {
+            int mask = 0;
+
+            if(maxDifferentValue < 0)
+            {
+                return 0;
+            }
+            else if (maxDifferentValue == 1)
+            {
+                return 1;
+            }
+            else if (maxDifferentValue <= sizeof(byte) * 8)
+            {
+                mask = ReadByte();
+            }
+            else if (maxDifferentValue <= sizeof(short) * 8)
+            {
+                mask = ReadInt16();
+            }
+            else if (maxDifferentValue <= sizeof(int) * 8)
+            {
+                mask = ReadInt32();
+            }
+
+            return mask;
+        }
+
         /// <summary>
         /// generic read (check type )
         /// </summary>

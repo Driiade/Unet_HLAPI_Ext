@@ -28,6 +28,6 @@ namespace BC_Solution.UnetNetwork
     /// </summary>
     public class NetworkedVariable : Attribute
     {
-
+        public string callbackName = null;
     }
 }
