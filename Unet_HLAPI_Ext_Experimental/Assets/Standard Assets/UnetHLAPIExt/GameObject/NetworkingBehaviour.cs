@@ -57,13 +57,17 @@ namespace BC_Solution.UnetNetwork
 #endif
 
 #if CLIENT && SERVER
-        public bool isConnected { get { return m_networkingIdentity.m_server != null || m_networkingIdentity.m_connection != null; } }
+        public bool isConnected { get {return m_networkingIdentity.m_server != null || m_networkingIdentity.m_connection != null; } }
 #elif CLIENT
         public bool isConnected { get { return m_networkingIdentity.m_connection != null; } }
 #elif SERVER
        public bool isConnected { get { return m_networkingIdentity.m_server != null; } }
 #endif
 
+
+#if CLIENT && SERVER
+        public bool isHost { get { return isServer && isClient; } }
+#endif
 
         /// <summary>
         /// Connection on server which listen for RPC/Command
@@ -184,9 +188,52 @@ namespace BC_Solution.UnetNetwork
 
                 for (int i = 0; i < syncVars.Length; i++)
                 {
+                    NetworkedVariable networkedVariablAttribute = networkedVariableAttributes[syncVars[i]];
+
+                    #region security
+#if CLIENT
+                    if (networkedVariablAttribute.syncMode == NetworkedVariable.SYNC_MODE.ONLY_OWNER && this.m_networkingIdentity.m_type != NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB && !isLocalClient ) //you are not the owner, you can't sync this variable
+                    {
+                        dirtyMask &= ~(1 << i);
+                        continue;
+                    }
+#endif
+
+#if SERVER
+                    if (networkedVariablAttribute.syncMode == NetworkedVariable.SYNC_MODE.ONLY_OWNER)
+                    {
+#if CLIENT
+                        if(!isLocalClient) //is not the owner
+                        {
+                            dirtyMask &= ~(1 << i);
+                            continue;
+                        }
+#else
+                      if(serverConnection == null)  //server can be owner if no connection is owner
+                      {
+                        dirtyMask &= ~(1 << i);
+                        continue;
+                      }
+#endif
+                    }
+
+                    if (networkedVariablAttribute.syncMode == NetworkedVariable.SYNC_MODE.ONLY_SERVER && !isServer) //if you are not server, you are not allowed to sync this variable
+                    {
+                        dirtyMask &= ~(1 << i);
+                        continue;
+                    }
+#else
+                    if(networkedVariablAttribute.syncMode == NetworkedVariable.SYNC_MODE.ONLY_SERVER) //Can't be server !
+                    {
+                        dirtyMask &= ~(1 << i);
+                        continue;
+                    }
+#endif
+                    #endregion
+
                     if (((1 << i) & dirtyMask) != 0)
                     {
-                        writer.Write(syncVars[i].GetValue(this));
+                            writer.Write(syncVars[i].GetValue(this));
                     }
                 }
             }
@@ -195,46 +242,76 @@ namespace BC_Solution.UnetNetwork
             return writer.ToArray();
         }
 
-        internal void UnSerializeSyncVars(NetworkingReader reader)
+#if SERVER
+        internal void ServerUnSerializeSyncVars(NetworkingConnection fromConnection, NetworkingReader reader)
         {
-
             int dirtyMask = 0;
             dirtyMask = reader.ReadMask(syncVars.Length);
 
             for (int i = 0; i < syncVars.Length; i++)
             {
                 if (((1 << i) & dirtyMask) != 0)
+                {
+                    NetworkedVariable networkedVariable = networkedVariableAttributes[syncVars[i]];
+
+                    if (isServer)
                     {
-                    object lastValue = syncVars[i].GetValue(this);
+                        if (networkedVariable.syncMode == NetworkedVariable.SYNC_MODE.ONLY_OWNER)
+                        {
+                            if (fromConnection != serverConnection)
+                            {
+                                Debug.LogWarning(syncVars[i].Name + " trying to sync variable from : " + fromConnection + " which is not owner of networkingIdentity : " + this.networkingIdentity.netId);
+                                continue;
+                            }
+                        }
+                        else if (networkedVariable.syncMode == NetworkedVariable.SYNC_MODE.ONLY_SERVER)
+                        {
+                            Debug.LogWarning(syncVars[i].Name + " trying to sync variable from : " + fromConnection + " which is not server of networkingIdentity : " + this.networkingIdentity.netId);
+                            continue;
+                        }
+                    }
+
                     object newValue = reader.Read(syncVars[i].FieldType, this.connection, this.serverConnection);
 
-#if CLIENT && SERVER
-               syncVars[i].SetValue(this, newValue);
-#elif CLIENT
-               syncVars[item].SetValue(this, newValue);
-#elif SERVER
-               syncVars[item].SetValue(this, newValue);
-#endif
+                    syncVars[i].SetValue(this, newValue);
 
-                    NetworkedVariable networkedVariable = networkedVariableAttributes[syncVars[i]];
                     if (networkedVariable.callbackName != null)
                     {
                        this.GetType().GetMethod(networkedVariable.callbackName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Invoke(this, new object[] { syncVars[i].GetValue(this) });
                     }
 
-#if SERVER
-                    if (isServer) //Will sync this to all client if the value is different
+                    if (isServer) //Will sync this to all clients
                     {
-                        if(lastValue != null && newValue != null && !lastValue.Equals(newValue))
-                        {
-                            this.dirtyMask = this.dirtyMask | (1 << i);
-                        }
+                        this.dirtyMask = this.dirtyMask | (1 << i);
                     }
-#endif
                 }
-                }
+            }
         }
+#endif
 
+#if CLIENT
+        internal void ClientUnSerializeSyncVars(NetworkingReader reader)
+        {
+            int dirtyMask = 0;
+            dirtyMask = reader.ReadMask(syncVars.Length);
+
+            for (int i = 0; i < syncVars.Length; i++)
+            {
+                if (((1 << i) & dirtyMask) != 0)
+                {
+                    NetworkedVariable networkedVariable = networkedVariableAttributes[syncVars[i]];
+
+                    object newValue = reader.Read(syncVars[i].FieldType, this.connection, this.serverConnection);
+                    syncVars[i].SetValue(this, newValue);
+
+                    if (networkedVariable.callbackName != null)
+                    {
+                        this.GetType().GetMethod(networkedVariable.callbackName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Invoke(this, new object[] { syncVars[i].GetValue(this) });
+                    }
+                }
+            }
+        }
+#endif
 
 #if CLIENT
         public void SendToServer(string methodName, int channelId, params object[] parameters)
@@ -426,7 +503,6 @@ namespace BC_Solution.UnetNetwork
                 NetworkedVariable[] networkedVariable = allVars[i].GetCustomAttributes(typeof(NetworkedVariable), true) as NetworkedVariable[];
                 if (networkedVariable.Length > 0)
                 {
-                    object var = allVars[i].GetValue(this);
                     syncVarsList.Add(allVars[i]);
                     networkedVariables.Add(allVars[i], networkedVariable[0]);
                 }
@@ -447,6 +523,43 @@ namespace BC_Solution.UnetNetwork
                         Debug.LogError("SyncVar not found : " + this.gameObject + " : " + this + " : " + syncVar);
                         return;
                     }
+                    #region security
+                    NetworkedVariable networkedVariableAttribute = networkedVariableAttributes[syncVars[index]];
+#if CLIENT
+                    if (networkedVariableAttribute.syncMode == NetworkedVariable.SYNC_MODE.ONLY_OWNER && this.m_networkingIdentity.m_type != NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB && !isLocalClient) //you are not the owner, you can't sync this variable
+                    {
+                        Debug.LogError(nameOfVariable + "Trying to sync variable without authorization : " + networkedVariableAttribute.syncMode + " on netId : " + this.m_networkingIdentity.netId + " : " + this.gameObject);
+                    }
+#endif
+
+#if SERVER
+                    if (networkedVariableAttribute.syncMode == NetworkedVariable.SYNC_MODE.ONLY_OWNER)
+                    {
+#if CLIENT
+                        if (!isLocalClient) //is not the owner
+                        {
+                            Debug.LogError(nameOfVariable + "Trying to sync variable without authorization : " + networkedVariableAttribute.syncMode + " on netId : " + this.m_networkingIdentity.netId + " : " + this.gameObject);
+                        }
+#else
+                      if(serverConnection == null)  //server can be owner if no connection is owner
+                      {
+                        Debug.LogError(nameOfVariable + "Trying to sync variable without authorization : " + networkedVariableAttribute.syncMode + " on netId : " + this.m_networkingIdentity.netId + " : " + this.gameObject);
+                      }
+#endif
+                    }
+
+                    if (networkedVariableAttribute.syncMode == NetworkedVariable.SYNC_MODE.ONLY_SERVER && !isServer) //if you are not server, you are not allowed to sync this variable
+                    {
+                        Debug.LogError(nameOfVariable + "Trying to sync variable without authorization : " + networkedVariableAttribute.syncMode + " on netId : " + this.m_networkingIdentity.netId + " : " + this.gameObject);
+                    }
+#else
+                    if(networkedVariableAttribute.syncMode == NetworkedVariable.SYNC_MODE.ONLY_SERVER) //Can't be server !
+                    {
+                        Debug.LogError(nameOfVariable + "Trying to sync variable without authorization : " + networkedVariableAttribute.syncMode + " on netId : " + this.m_networkingIdentity.netId + " : " + this.gameObject);
+                    }
+#endif
+
+                    #endregion
 
                     dirtyMask = dirtyMask | (1 << index);
                     syncVar = newValue;
@@ -454,7 +567,20 @@ namespace BC_Solution.UnetNetwork
             }
             else
             {
+                int index = GetSyncVarIndex(nameOfVariable);
+                if (index == -1)
+                {
+                    Debug.LogError("SyncVar not found : " + this.gameObject + " : " + this + " : " + syncVar);
+                    return;
+                }
+
                 syncVar = newValue;
+
+                NetworkedVariable networkedVariable = networkedVariableAttributes[syncVars[index]];
+                if (networkedVariable.callbackName != null)
+                {
+                    this.GetType().GetMethod(networkedVariable.callbackName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Invoke(this, new object[] { syncVar });
+                }
             }
         }
 
@@ -462,8 +588,6 @@ namespace BC_Solution.UnetNetwork
         {
             for (int i = 0; i < syncVars.Length; i++)
             {
-                Debug.Log(varName);
-                Debug.Log(syncVars[i].Name +"\n");
                 if (varName.Equals(syncVars[i].Name))
                 {
                     return i;

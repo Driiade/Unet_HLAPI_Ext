@@ -277,7 +277,8 @@ namespace BC_Solution.UnetNetwork
         }
 #endif
 
-        internal void HandleUpdateVars(NetworkingReader reader)
+#if SERVER
+        internal void ServerHandleUpdateVars(NetworkingConnection fromConnection, NetworkingReader reader)
         {
             byte networkBehaviourNetId = reader.ReadByte();
 
@@ -285,19 +286,28 @@ namespace BC_Solution.UnetNetwork
             {
                 if (n.m_netId == networkBehaviourNetId)
                 {
-                    n.UnSerializeSyncVars(reader);
+                    n.ServerUnSerializeSyncVars(fromConnection, reader);
                     return;
                 }
             }                          
         }
+#endif
 
-        // only used in SetLocalObject
-        /* internal void UpdateClientServer(bool isClientFlag, bool isServerFlag)
-         {
-             m_isClient |= isClientFlag;
-             m_isServer |= isServerFlag;
-         }*/
+#if CLIENT
+        internal void ClientHandleUpdateVars(NetworkingConnection fromConnection, NetworkingReader reader)
+        {
+            byte networkBehaviourNetId = reader.ReadByte();
 
+            foreach (NetworkingBehaviour n in m_networkingBehaviours)
+            {
+                if (n.m_netId == networkBehaviourNetId)
+                {
+                    n.ClientUnSerializeSyncVars(reader);
+                    return;
+                }
+            }
+        }
+#endif
 
 
 #if UNITY_EDITOR
@@ -482,17 +492,30 @@ namespace BC_Solution.UnetNetwork
             return writer.ToArray();
         }
 
-        internal void GetAllSyncVars(byte[] syncVarsData)
+#if SERVER
+        internal void ServerGetAllSyncVars(NetworkingConnection fromConnection, byte[] syncVarsData)
         {
             NetworkingReader reader = new NetworkingReader(syncVarsData);
 
             for (int i = 0; i < m_networkingBehaviours.Length; i++)
             {
-                m_networkingBehaviours[i].UnSerializeSyncVars(reader);
+                m_networkingBehaviours[i].ServerUnSerializeSyncVars(fromConnection, reader);
             }
         }
+#endif
 
-      
+#if CLIENT
+        internal void ClientGetAllSyncVars(byte[] syncVarsData)
+        {
+            NetworkingReader reader = new NetworkingReader(syncVarsData);
+
+            for (int i = 0; i < m_networkingBehaviours.Length; i++)
+            {
+                m_networkingBehaviours[i].ClientUnSerializeSyncVars(reader);
+            }
+        }
+#endif
+
         internal void OnNetworkDestroy()
         {
             foreach(NetworkingBehaviour b in this.m_networkingBehaviours)
@@ -521,6 +544,7 @@ namespace BC_Solution.UnetNetwork
 #endif
 
 #if SERVER
+            m_server = null;
             m_serverConnection = null;
             m_isServer = false;
             foreach (NetworkingBehaviour networkingBehaviour in m_networkingBehaviours)

@@ -31,7 +31,7 @@ namespace BC_Solution.UnetNetwork
         [SerializeField]
         Text text;
 
-        [NetworkedVariable(callbackName ="SetText")]
+        [NetworkedVariable(callbackName ="SetText", syncMode = NetworkedVariable.SYNC_MODE.ONLY_SERVER)]
         string message1 = new string("blabla".ToCharArray());
        // SyncVar<string> message2 = new SyncVar<string>("test");
 

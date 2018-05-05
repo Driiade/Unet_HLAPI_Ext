@@ -28,6 +28,9 @@ namespace BC_Solution.UnetNetwork
     /// </summary>
     public class NetworkedVariable : Attribute
     {
+        public enum SYNC_MODE { ONLY_SERVER,ONLY_OWNER, EVERYONE}
+
         public string callbackName = null;
+        public SYNC_MODE syncMode = SYNC_MODE.EVERYONE;
     }
 }

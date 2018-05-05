@@ -263,7 +263,7 @@ namespace BC_Solution.UnetNetwork
 
             if (netIdentity)
             {
-                netIdentity.HandleUpdateVars(netMsg.reader);
+                netIdentity.ServerHandleUpdateVars(netMsg.m_connection, netMsg.reader);
             }
             else
                 Debug.LogWarning("GameObject not find on server : " + networkingIdentityID + " for updateVars "); //Can be normal due to non reliability      
@@ -292,7 +292,7 @@ namespace BC_Solution.UnetNetwork
 
             if (netIdentity)
             {
-                netIdentity.HandleUpdateVars(netMsg.reader);
+                netIdentity.ClientHandleUpdateVars(netMsg.m_connection, netMsg.reader);
             }
             else
                 Debug.LogWarning("Connection doesn't know : " + networkingIdentityID + " for updateVars"); //Can be normal due to non reliability
@@ -501,7 +501,7 @@ namespace BC_Solution.UnetNetwork
             networkingIdentity.m_serverConnection = netMsg.m_connection;
             networkingIdentity.m_serverId = ""; //No information about this (to be reliable with connection behaviour
 
-            networkingIdentity.GetAllSyncVars(replicatedMessage.m_networkingBehaviourSyncVars);
+            networkingIdentity.ServerGetAllSyncVars(netMsg.m_connection, replicatedMessage.m_networkingBehaviourSyncVars);
 
             netMsg.m_connection.Send(NetworkingMessageType.SceneObjectNetId, new SceneObjectNetIdMessage(networkingIdentity.m_netId, replicatedMessage.m_sceneId, replicatedMessage.m_networkingBehaviourSyncVars), NetworkingChannel.DefaultReliableSequenced); //Just send the assigned netId for the connection which ask replication
             networkingIdentity.OnServerSyncNetId(netMsg.m_connection);
@@ -580,7 +580,7 @@ namespace BC_Solution.UnetNetwork
                 netIdentity.isLocalClient = spawnMessage.m_isLocalConnection;
                 netIdentity.m_isClient = true;
                 netIdentity.hasAuthority = spawnMessage.m_hasAuthority;
-                netIdentity.GetAllSyncVars(spawnMessage.m_networkingBehaviourSyncVars);
+                netIdentity.ClientGetAllSyncVars(spawnMessage.m_networkingBehaviourSyncVars);
 
                 AddNetworkingIdentity(netIdentity, netMsg.m_connection, m_connectionNetworkedObjects);
             }
@@ -606,7 +606,7 @@ namespace BC_Solution.UnetNetwork
                 if (networkingIdentity.m_type == NetworkingIdentity.TYPE.REPLICATED_SCENE_PREFAB)
                     networkingIdentity.isLocalClient = true;
                 else
-                    networkingIdentity.GetAllSyncVars(mess.m_networkingBehaviourSyncVars);
+                    networkingIdentity.ClientGetAllSyncVars(mess.m_networkingBehaviourSyncVars);
 
                 networkingIdentity.hasAuthority = true;
                 AddNetworkingIdentity(networkingIdentity, netMsg.m_connection, m_connectionNetworkedObjects);
@@ -805,7 +805,7 @@ namespace BC_Solution.UnetNetwork
 #endif
 
 #if SERVER
-                void OnServerDisconnect(NetworkingServer server, NetworkingConnection conn)
+        void OnServerDisconnect(NetworkingServer server, NetworkingConnection conn)
         {
             Dictionary<ushort, NetworkingIdentity> netIdentities = null;
 
