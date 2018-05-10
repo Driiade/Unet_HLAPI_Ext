@@ -309,10 +309,15 @@ namespace BC_Solution.UnetNetwork
                     NetworkedVariable networkedVariable = networkedVariableAttributes[syncVars[i]];
                     object newValue = reader.Read(syncVars[i].FieldType, this.connection, this.serverConnection);
 #if SERVER
-                    if (isServer && networkedVariable.syncMode == NetworkedVariable.SYNC_MODE.ONLY_SERVER) //already done serverside
+                    if (isServer) //already done serverside
                     {
-                        continue;
+                        if (networkedVariable.syncMode == NetworkedVariable.SYNC_MODE.ONLY_SERVER)
+                            continue;
+                        else if (networkedVariable.syncMode == NetworkedVariable.SYNC_MODE.ONLY_OWNER && serverConnection == null) //Host is owner in case there is no owner connection
+                            continue;
                     }
+
+
 #endif
                     if (isLocalClient && networkedVariable.syncMode == NetworkedVariable.SYNC_MODE.ONLY_OWNER) //already done for owner
                         continue;

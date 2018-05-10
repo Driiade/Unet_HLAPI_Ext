@@ -343,7 +343,7 @@ namespace BC_Solution.UnetNetwork
                 List<NetworkingIdentity> netIdentities = new List<NetworkingIdentity>();
                 foreach (GameObject go in gameObjects)
                 {
-                    netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>());
+                    netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>(true));
                 }
 
                 foreach (NetworkingConnection conn in NetworkingSystem.Instance.connections)
@@ -402,7 +402,7 @@ namespace BC_Solution.UnetNetwork
             List<NetworkingIdentity> netIdentities = new List<NetworkingIdentity>();
             foreach (GameObject go in gameObjects)
             {
-                netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>());
+                netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>(true));
             }
 
             foreach (NetworkingConnection conn in NetworkingSystem.Instance.connections)
@@ -422,13 +422,13 @@ namespace BC_Solution.UnetNetwork
 #endif
 
 #if SERVER
-        void OnServerLoadScene(NetworkingConnection conn, Scene scene)
+ void OnServerLoadScene(NetworkingConnection conn, Scene scene)
         {
             GameObject[] gameObjects = scene.GetRootGameObjects();
             List<NetworkingIdentity> netIdentities = new List<NetworkingIdentity>();
             foreach (GameObject go in gameObjects)
             {
-                netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>());
+                netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>(true));
             }
 
             foreach (NetworkingIdentity i in netIdentities)
@@ -645,11 +645,8 @@ namespace BC_Solution.UnetNetwork
             List<NetworkingIdentity> netIdentities = new List<NetworkingIdentity>();
             foreach (GameObject go in gameObjects)
             {
-                netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>());
+                netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>(true));
             }
-
-            ushort currentNetId;
-            m_serverCurrentNetId.TryGetValue(server, out currentNetId);
 
             //All object in the scenes are for this server
             for (int i = 0; i < netIdentities.Count; i++)
@@ -663,24 +660,19 @@ namespace BC_Solution.UnetNetwork
                     networkingIdentity.hasAuthority = true;
                 }
             }
-
-            if (currentNetId != 0)
-            {
-                if (!m_serverCurrentNetId.ContainsKey(server))
-                    m_serverCurrentNetId.Add(server, currentNetId);
-                else
-                    m_serverCurrentNetId[server] = currentNetId;
-            }
         }
 #endif
 
 #if SERVER
         void ServerAssignNetId(NetworkingServer server, NetworkingIdentity networkingIdentity)
         {
-            ushort currentNetId;
-            m_serverCurrentNetId.TryGetValue(server, out currentNetId);
+            ushort currentNetId=0;
 
-            if (currentNetId == 0)
+            if(m_serverCurrentNetId.ContainsKey(server))
+            {
+                currentNetId = m_serverCurrentNetId[server];
+            }
+            else
             {
                 m_serverCurrentNetId.Add(server, currentNetId);
             }
@@ -773,7 +765,7 @@ namespace BC_Solution.UnetNetwork
                 List<NetworkingIdentity> netIdentities = new List<NetworkingIdentity>();
                 foreach (GameObject go in gameObjects)
                 {
-                    netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>());
+                    netIdentities.AddRange(go.GetComponentsInChildren<NetworkingIdentity>(true));
                 }
 
                 if(conn.m_server != null)
