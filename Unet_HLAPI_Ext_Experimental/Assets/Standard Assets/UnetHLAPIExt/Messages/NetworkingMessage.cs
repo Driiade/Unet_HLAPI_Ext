@@ -33,7 +33,7 @@ namespace BC_Solution.UnetNetwork
         public const int MaxMessageSize = (64 * 1024) - 1;
 
         [NonSerialized]
-        public ushort m_type;
+        public NetworkingMessageType m_type;
 
         [NonSerialized]
         public NetworkingConnection m_connection;

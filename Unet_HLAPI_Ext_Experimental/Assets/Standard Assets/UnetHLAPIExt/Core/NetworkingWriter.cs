@@ -518,7 +518,7 @@ namespace BC_Solution.UnetNetwork
             }
             else if (type.IsEnum)
             {
-                Write((int)((object)value));
+                WriteEnum(value);
             }
             else if(type.GetInterface("ISerializable") != null)
             {
@@ -526,6 +526,30 @@ namespace BC_Solution.UnetNetwork
             }
             else
                 throw new System.Exception("Serialization is impossible : " + type);
+        }
+
+        public void WriteEnum<T>(T value) //C# 7 support enum constraint
+        {
+            if (!value.GetType().IsEnum)
+            {
+                throw new System.Exception(value.GetType().FullName + " : WriteEnum not called with an enum type");
+            }
+
+            int enumLength = Enum.GetValues(value.GetType()).Length;
+            if (enumLength <= 1)
+            {
+                //Write nothing
+            }
+            else if (enumLength <= byte.MaxValue)
+            {
+                Write((byte)(int)((object)value));
+            }
+            else if (enumLength <= ushort.MaxValue)
+            {
+                Write((ushort)(int)((object)value));
+            }
+            else
+                Write((uint)((object)value));
         }
 
         public void WriteMask(int mask, int maxDifferentValue)
@@ -538,11 +562,11 @@ namespace BC_Solution.UnetNetwork
             {
                 Write((byte)mask);
             }
-            else if (maxDifferentValue <= sizeof(short) * 8)
+            else if (maxDifferentValue <= sizeof(ushort) * 8)
             {
-                Write((short)mask);
+                Write((ushort)mask);
             }
-            else if (maxDifferentValue <= sizeof(int) * 8)
+            else if (maxDifferentValue <= sizeof(uint) * 8)
             {
                 Write(mask);
             }

@@ -26,69 +26,31 @@ using UnityEngine.Networking;
 
 namespace BC_Solution.UnetNetwork
 {
-    public class NetworkingMessageType
+    public enum NetworkingMessageType
     {
+        Fragment,
+        Connect,
+        Disconnect,
+        Error,
 
-        #region core
         // internal system messages - cannot be replaced by user code
-        public const ushort ObjectDestroy = 1;
-        public const ushort Command = 2;
-        public const ushort Rpc = 3;
-        public const ushort AutoRpc = 4;
-        public const ushort SendToOwner = 5;
-        public const ushort ObjectSpawn = 6;
-        public const ushort SceneObjectNetId = 7;
-        public const ushort ReplicatedPrefabScene = 8;
-        public const ushort ObjectSpawnFinish = 9;
-        //public const ushort Owner = 4;
+        ObjectDestroy,
+        Command,
+        Rpc,
+        AutoRpc,
+        SendToOwner,
+        ObjectSpawn,
+        SceneObjectNetId,
+        ReplicatedPrefabScene,
+        ObjectSpawnFinish,
 
-        public const ushort SyncEvent = 10;
-        public const ushort UpdateVars = 11;
-        public const ushort SyncList = 12;
-        public const ushort NetworkInfo = 13;
+        UpdateVars,
+        AssignClientAuthority,
+        UnassignClientAuthority,
 
-        public const ushort CRC = 14;
-        public const ushort AssignClientAuthority = 15;
-        public const ushort UnassignClientAuthority = 16;
-        public const ushort Fragment = 17;
-        public const ushort PeerClientAuthority = 18;
-        public const ushort ConnectionLoadScene = 19;
-
-        // used for profiling
-        internal const ushort UserMessage = 0;
-
-        // public system messages - can be replaced by user code
-        public const ushort Connect = 32;
-        public const ushort Disconnect = 33;
-        public const ushort Error = 34;
-       // public const ushort Ready = 35;
-       // public const ushort NotReady = 36;
-       // public const ushort AddPlayer = 37;
-       // public const ushort RemovePlayer = 38;
-        public const ushort Scene = 39;
-
-       // public const ushort LocalClientConnectMessage = 40;
-        //public const ushort ClientConnectFromServerMessage = 41;
-        //public const ushort ClientReadyFromServerMessage = 42;
-#if ENABLE_UNET_HOST_MIGRATION
-        public const short ReconnectPlayer = 47;
-#endif
-        #endregion;
-
-        #region Standards Assets
+        ConnectionLoadScene,
 
 
-        public const ushort TimerSynchronisationMessage = 100;
-        public const ushort TimerUpdateMessage = 101;
-        public const ushort TimerStartMessage = 102;
-        public const ushort TimerStopMessage = 103;
-        public const ushort TimerAvortMessage = 104;
-
-        public const ushort ChatMessage = 105;
-        #endregion;
-
-        #region Custom Game Messages
-
-        #endregion;
+        CustomMessage,
     }
 }

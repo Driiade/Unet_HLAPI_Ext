@@ -88,11 +88,11 @@ namespace BC_Solution.UnetNetwork {
 
         List<NetworkingConnection> m_connections = new List<NetworkingConnection>();
         ReadOnlyCollection<NetworkingConnection> m_connectionsReadOnly;
-        Dictionary<ushort, Action<NetworkingMessage>> m_messageHandlers = new Dictionary<ushort, Action<NetworkingMessage>>();
+        Dictionary<NetworkingMessageType, Action<NetworkingMessage>> m_messageHandlers = new Dictionary<NetworkingMessageType, Action<NetworkingMessage>>();
 
         //public bool useWebSockets { get { return m_UseWebSockets; } set { m_UseWebSockets = value; } } No .. Create webSocket server if so
         public ReadOnlyCollection<NetworkingConnection> connections { get { return m_connectionsReadOnly; } }
-        public Dictionary<ushort, Action<NetworkingMessage>> messageHandlers { get { return m_messageHandlers; } }
+        public Dictionary<NetworkingMessageType, Action<NetworkingMessage>> messageHandlers { get { return m_messageHandlers; } }
 
         public byte[] messageBuffer { get { return m_MsgBuffer; } }
         public NetworkingReader messageReader { get { return m_messageReader; } }
@@ -293,7 +293,7 @@ namespace BC_Solution.UnetNetwork {
         }
 
 
-        public void RegisterHandler(ushort msgType, Action<NetworkingMessage> handler)
+        public void RegisterHandler(NetworkingMessageType msgType, Action<NetworkingMessage> handler)
         {
             Action<NetworkingMessage> callbacks;
             m_messageHandlers.TryGetValue(msgType, out callbacks);
@@ -316,7 +316,7 @@ namespace BC_Solution.UnetNetwork {
             }
         }
 
-        public void UnregisterHandler(ushort msgType, Action<NetworkingMessage> handler)
+        public void UnregisterHandler(NetworkingMessageType msgType, Action<NetworkingMessage> handler)
         {
             Action<NetworkingMessage> callbacks;
             m_messageHandlers.TryGetValue(msgType, out callbacks);
@@ -334,7 +334,7 @@ namespace BC_Solution.UnetNetwork {
             }
         }
 
-        public void UnregisterHandler(ushort msgType)
+        public void UnregisterHandler(NetworkingMessageType msgType)
         {
             m_messageHandlers.Remove(msgType);
         }
@@ -445,7 +445,7 @@ namespace BC_Solution.UnetNetwork {
 
             NetworkingConnection conn = new NetworkingConnection(address,port);
 
-            conn.m_messageHandlers = new Dictionary<ushort, Action<NetworkingMessage>>(this.m_messageHandlers);
+            conn.m_messageHandlers = new Dictionary<NetworkingMessageType, Action<NetworkingMessage>>(this.m_messageHandlers);
 
             //conn.SetMaxDelay(m_maxDelay);
             conn.Configure(this.m_hostTopology.DefaultConfig, this.m_hostTopology.MaxDefaultConnections);
@@ -533,7 +533,7 @@ namespace BC_Solution.UnetNetwork {
             return outConn.Send(writer, channelId);
         }
 
-        public bool SendTo(int connectionId, ushort msgType, NetworkingMessage msg, int channelId = NetworkingChannel.DefaultReliableSequenced)
+        public bool SendTo(int connectionId, NetworkingMessageType msgType, NetworkingMessage msg, int channelId = NetworkingChannel.DefaultReliableSequenced)
         {
             var outConn = m_connections[connectionId];
             return outConn.Send(msgType, msg, channelId);
@@ -564,7 +564,7 @@ namespace BC_Solution.UnetNetwork {
         }
 
 
-        public bool SendToAll(ushort msgType, NetworkingMessage msg, int channelId = NetworkingChannel.DefaultReliableSequenced)
+        public bool SendToAll(NetworkingMessageType msgType, NetworkingMessage msg, int channelId = NetworkingChannel.DefaultReliableSequenced)
         {
             msg.m_type = msgType;
 

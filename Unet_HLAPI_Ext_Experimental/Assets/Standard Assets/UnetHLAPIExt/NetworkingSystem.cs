@@ -44,12 +44,12 @@ namespace BC_Solution.UnetNetwork
 
         public struct NetworkingConfiguration
         {
-            public ushort message;
+            public NetworkingMessageType msgType;
             public Action<NetworkingMessage> func;
 
-            public NetworkingConfiguration(ushort message, Action<NetworkingMessage> func)
+            public NetworkingConfiguration(NetworkingMessageType msgType, Action<NetworkingMessage> func)
             {
-                this.message = message;
+                this.msgType = msgType;
                 this.func = func;
             }
         }
@@ -65,7 +65,7 @@ namespace BC_Solution.UnetNetwork
         /// Register Handler for all connected or futur connected connections on all server
         /// </summary>
         /// <param name="c"></param>
-        public static void RegisterConnectionHandler(ushort msgType, Action<NetworkingMessage> callback)
+        public static void RegisterConnectionHandler(NetworkingMessageType msgType, Action<NetworkingMessage> callback)
         {
             clientConfigurations.Add(new NetworkingConfiguration(msgType, callback));
 
@@ -82,9 +82,9 @@ namespace BC_Solution.UnetNetwork
         /// Register Handler for all connected or futur connected client on all server
         /// </summary>
         /// <param name="c"></param>
-        public static void UnRegisterConnectionHandler(ushort msgType, Action<NetworkingMessage> callback)
+        public static void UnRegisterConnectionHandler(NetworkingMessageType msgType, Action<NetworkingMessage> callback)
         {
-            clientConfigurations.Remove(clientConfigurations.Find(x => { return x.func == callback && x.message == msgType; }));
+            clientConfigurations.Remove(clientConfigurations.Find(x => { return x.func == callback && x.msgType == msgType; }));
 
             if (NetworkingSystem.Instance)
             {
@@ -102,7 +102,7 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         static List<NetworkingConfiguration> serverConfigurations = new List<NetworkingConfiguration>();
 
-        public static void RegisterServerHandler(ushort msgType, Action<NetworkingMessage> callback)
+        public static void RegisterServerHandler(NetworkingMessageType msgType, Action<NetworkingMessage> callback)
         {
             serverConfigurations.Add(new NetworkingConfiguration(msgType,callback));
 
@@ -119,9 +119,9 @@ namespace BC_Solution.UnetNetwork
 
         }
 
-        public static void UnRegisterServerHandler(ushort msgType, Action<NetworkingMessage> callback)
+        public static void UnRegisterServerHandler(NetworkingMessageType msgType, Action<NetworkingMessage> callback)
         {
-            serverConfigurations.Remove(serverConfigurations.Find(x => { return x.func == callback && x.message == msgType; }));
+            serverConfigurations.Remove(serverConfigurations.Find(x => { return x.func == callback && x.msgType == msgType; }));
 
             if (NetworkingSystem.Instance)
             {
@@ -405,7 +405,7 @@ namespace BC_Solution.UnetNetwork
         public void ConfigureConnection(NetworkingConnection connection)
         {
             foreach (NetworkingConfiguration i in clientConfigurations)
-                connection.RegisterHandler(i.message, i.func);
+                connection.RegisterHandler(i.msgType, i.func);
 
             connection.Configure(Configuration(), (int)maxPlayer);
         }
@@ -415,7 +415,7 @@ namespace BC_Solution.UnetNetwork
         public void ConfigureServer(NetworkingServer server, bool isMainServer)
         {
             foreach (NetworkingConfiguration i in serverConfigurations)
-                server.RegisterHandler(i.message, i.func);
+                server.RegisterHandler(i.msgType, i.func);
 
            server.Configure(Configuration(), (int)maxPlayer, isMainServer);
         }

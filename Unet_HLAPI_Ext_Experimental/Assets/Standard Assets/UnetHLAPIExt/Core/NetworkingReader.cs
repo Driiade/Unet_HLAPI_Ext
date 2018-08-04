@@ -258,6 +258,50 @@ namespace BC_Solution.UnetNetwork
             return (long)value;
         }
 
+        public object ReadEnum(Type t)
+        {
+            if (!t.IsEnum)
+                throw new System.Exception("WriteEnum not called with an enum type");
+
+            int enumLength = Enum.GetValues(t).Length;
+            if (enumLength <= 1)
+            {
+                return Enum.GetValues(t).GetValue(0);
+            }
+            else if (enumLength <= byte.MaxValue)
+            {
+                return Enum.ToObject(t, ReadByte());
+            }
+            else if (enumLength <= ushort.MaxValue)
+            {
+                return Enum.ToObject(t, ReadUInt16());
+            }
+            else
+                return Enum.ToObject(t, ReadUInt32());
+        }
+
+        public T ReadEnum<T>()
+        {
+            if (!typeof(T).IsEnum)
+                throw new System.Exception("WriteEnum not called with an enum type");
+
+            int enumLength = Enum.GetValues(typeof(T)).Length;
+            if (enumLength <= 1)
+            {
+                return (T)Enum.GetValues(typeof(T)).GetValue(0);
+            }
+            else if (enumLength <= byte.MaxValue)
+            {
+               return (T)Enum.ToObject(typeof(T),ReadByte());
+            }
+            else if (enumLength <= ushort.MaxValue * 8)
+            {
+                return (T)Enum.ToObject(typeof(T), ReadUInt16());
+            }
+            else
+                return (T)Enum.ToObject(typeof(T), ReadUInt32());
+        }
+
         public ulong ReadUInt64()
         {
             ulong value = 0;
@@ -633,7 +677,7 @@ namespace BC_Solution.UnetNetwork
             }
             else if (type.IsEnum)
             {
-                return ReadInt32();
+                return ReadEnum(type);
             }
             else if (type.GetInterface("ISerializable") != null)
             {

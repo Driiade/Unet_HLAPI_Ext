@@ -76,13 +76,11 @@ namespace BC_Solution.UnetNetwork
         }
 
         NetworkingChannelBuffer[] m_channels;
-        List<PlayerController> m_PlayerControllers = new List<PlayerController>();
 
         NetworkingWriter m_writer = new NetworkingWriter();
 
-        public Dictionary<ushort, Action<NetworkingMessage>> m_messageHandlers = new Dictionary<ushort, Action<NetworkingMessage>>();
+        public Dictionary<NetworkingMessageType, Action<NetworkingMessage>> m_messageHandlers = new Dictionary<NetworkingMessageType, Action<NetworkingMessage>>();
 
-        HashSet<ushort> m_clientOwnedObjects = new HashSet<ushort>();
         NetworkingMessage m_messageInfo = new NetworkingMessage();
 
         const int k_MaxMessageLogSize = 150;
@@ -95,8 +93,6 @@ namespace BC_Solution.UnetNetwork
 
 
         public float lastMessageTime;
-        public List<PlayerController> playerControllers { get { return m_PlayerControllers; } }
-        public HashSet<ushort> clientOwnedObjects { get { return m_clientOwnedObjects; } }
         public bool logNetworkMessages = false;
         public bool isConnected { get { return m_hostId != -1; } }
 
@@ -530,7 +526,7 @@ namespace BC_Solution.UnetNetwork
         }
 
 
-        public bool InvokeHandler(ushort msgType, NetworkingReader reader, int channelId)
+        public bool InvokeHandler(NetworkingMessageType msgType, NetworkingReader reader, int channelId)
         {
             Action<NetworkingMessage> msgDelegate;
             m_messageHandlers.TryGetValue(msgType, out msgDelegate);
@@ -586,12 +582,12 @@ namespace BC_Solution.UnetNetwork
             {
                 NetworkingReader msgReader = new NetworkingReader(channel.fragmentBuffer.ToArray());
                 msgReader.ReadInt16(); // size
-                ushort msgType = msgReader.ReadUInt16();
+                NetworkingMessageType msgType = msgReader.ReadEnum<NetworkingMessageType>();
                 InvokeHandler(msgType, msgReader, channelId);
             }
         }
 
-        public void RegisterHandler(ushort msgType, Action<NetworkingMessage> handler)
+        public void RegisterHandler(NetworkingMessageType msgType, Action<NetworkingMessage> handler)
         {
             Action<NetworkingMessage> callbacks;
             m_messageHandlers.TryGetValue(msgType, out callbacks);
@@ -608,7 +604,7 @@ namespace BC_Solution.UnetNetwork
             }
         }
 
-        public void UnregisterHandler(ushort msgType, Action<NetworkingMessage> handler)
+        public void UnregisterHandler(NetworkingMessageType msgType, Action<NetworkingMessage> handler)
         {
             Action<NetworkingMessage> callbacks;
             m_messageHandlers.TryGetValue(msgType, out callbacks);
@@ -639,13 +635,13 @@ namespace BC_Solution.UnetNetwork
         /// </summary>
         /// <param name="msg"></param>
         /// <returns></returns>
-        public bool Send(ushort msgType, NetworkingMessage msg, int channelId = NetworkingChannel.DefaultReliableSequenced)
+        public bool Send(NetworkingMessageType msgType, NetworkingMessage msg, int channelId = NetworkingChannel.DefaultReliableSequenced)
         {
             return SendByChannel(msgType, msg, channelId);
         }
 
 
-        bool SendByChannel(ushort msgType, NetworkingMessage msg, int channelId)
+        bool SendByChannel(NetworkingMessageType msgType, NetworkingMessage msg, int channelId)
         {
             m_writer.StartMessage();
             m_writer.Write(msgType);
@@ -741,7 +737,7 @@ namespace BC_Solution.UnetNetwork
                 // the reader passed to user code has a copy of bytes from the real stream. user code never touches the real stream.
                 // this ensures it can never get out of sync if user code reads less or more than the real amount.
                 ushort sz = reader.ReadUInt16();
-                ushort msgType = reader.ReadUInt16(); //BC : Mode by ushort
+                NetworkingMessageType msgType = reader.ReadEnum<NetworkingMessageType>(); //BC : Mode by byte
 
                 //Debug.Log("Size : " + sz);
                 //Debug.Log("Message type : " + msgType);
