@@ -535,21 +535,24 @@ namespace BC_Solution.UnetNetwork
                 throw new System.Exception(value.GetType().FullName + " : WriteEnum not called with an enum type");
             }
 
-            int enumLength = Enum.GetValues(value.GetType()).Length;
+            Array enumValues = Enum.GetValues(value.GetType());
+            int enumLength = enumValues.Length;
+            int index = Array.IndexOf(enumValues, value);
+
             if (enumLength <= 1)
             {
                 //Write nothing
             }
             else if (enumLength <= byte.MaxValue)
             {
-                Write((byte)(int)((object)value));
+                Write((byte)index);
             }
             else if (enumLength <= ushort.MaxValue)
             {
-                Write((ushort)(int)((object)value));
+                Write((ushort)index);
             }
             else
-                Write((uint)((object)value));
+                Write((uint)(index));
         }
 
         public void WriteMask(int mask, int maxDifferentValue)

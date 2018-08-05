@@ -263,21 +263,23 @@ namespace BC_Solution.UnetNetwork
             if (!t.IsEnum)
                 throw new System.Exception("WriteEnum not called with an enum type");
 
-            int enumLength = Enum.GetValues(t).Length;
+            Array enumValues = Enum.GetValues(t);
+            int enumLength = enumValues.Length;
+
             if (enumLength <= 1)
             {
-                return Enum.GetValues(t).GetValue(0);
+                return enumValues.GetValue(0);
             }
             else if (enumLength <= byte.MaxValue)
             {
-                return Enum.ToObject(t, ReadByte());
+                return enumValues.GetValue(ReadByte());
             }
             else if (enumLength <= ushort.MaxValue)
             {
-                return Enum.ToObject(t, ReadUInt16());
+                return enumValues.GetValue(ReadUInt16());
             }
             else
-                return Enum.ToObject(t, ReadUInt32());
+                return enumValues.GetValue(ReadUInt32());
         }
 
         public T ReadEnum<T>()
@@ -285,21 +287,22 @@ namespace BC_Solution.UnetNetwork
             if (!typeof(T).IsEnum)
                 throw new System.Exception("WriteEnum not called with an enum type");
 
-            int enumLength = Enum.GetValues(typeof(T)).Length;
+            Array enumValues = Enum.GetValues(typeof(T));
+            int enumLength = enumValues.Length;
             if (enumLength <= 1)
             {
                 return (T)Enum.GetValues(typeof(T)).GetValue(0);
             }
             else if (enumLength <= byte.MaxValue)
             {
-               return (T)Enum.ToObject(typeof(T),ReadByte());
+                return (T)enumValues.GetValue(ReadByte());
             }
             else if (enumLength <= ushort.MaxValue * 8)
             {
-                return (T)Enum.ToObject(typeof(T), ReadUInt16());
+                return (T)enumValues.GetValue(ReadUInt16());
             }
             else
-                return (T)Enum.ToObject(typeof(T), ReadUInt32());
+                return (T)enumValues.GetValue(ReadUInt32());
         }
 
         public ulong ReadUInt64()
